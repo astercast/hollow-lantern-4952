@@ -449,7 +449,7 @@ nav.main-nav a .hash { display: none; }
 label.field { display: block; margin: 18px 0; }
 label.field > span { display: block; font-weight: 600; margin-bottom: 7px; font-size: 15px; }
 label.field > small { display: block; margin-top: 7px; font-size: 13.5px; color: var(--ink-soft); }
-input[type="text"], textarea {
+input[type="text"], input[type="password"], textarea {
   width: 100%;
   font: inherit;
   padding: 13px 15px;
@@ -458,7 +458,7 @@ input[type="text"], textarea {
   background: var(--card);
   color: var(--ink);
 }
-input[type="text"]:focus, textarea:focus {
+input[type="text"]:focus, input[type="password"]:focus, textarea:focus {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-soft);

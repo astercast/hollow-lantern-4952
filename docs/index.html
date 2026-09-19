@@ -4,95 +4,86 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>musedog.lol — locked</title>
+<meta name="description" content="personal notes">
+<link rel="icon" type="image/webp" href="favicon.webp">
+<link rel="stylesheet" href="styles.css">
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { height: 100%; }
-  body {
-    background: #0a0705;
-    color: #f5efe6;
-    font-family: -apple-system, system-ui, sans-serif;
-    display: flex; align-items: center; justify-content: center;
-    min-height: 100vh; padding: 24px;
-    overflow: hidden;
-  }
-  body::before {
-    content: ""; position: fixed; inset: 0;
-    background: radial-gradient(ellipse 80% 60% at 50% 40%, rgba(255,150,50,.08), transparent 70%);
-    pointer-events: none;
-  }
-  .ember {
-    position: fixed; bottom: -20px; border-radius: 50%;
-    background: radial-gradient(circle, rgba(255,170,60,.9), rgba(255,120,30,0) 70%);
-    animation: rise linear infinite; pointer-events: none; opacity: 0;
-  }
-  @keyframes rise {
-    0% { transform: translateY(0) translateX(0); opacity: 0; }
-    15% { opacity: .7; }
-    100% { transform: translateY(-110vh) translateX(40px); opacity: 0; }
-  }
-  .gate {
-    text-align: center; max-width: 420px; width: 100%;
-    animation: fadein 1.2s ease;
-    position: relative; z-index: 1;
-  }
-  @keyframes fadein { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
-  .art {
-    width: 220px; height: 220px; object-fit: cover;
-    border-radius: 24px; margin: 0 auto 28px;
-    box-shadow: 0 0 80px rgba(255,150,50,.25), 0 20px 60px rgba(0,0,0,.6);
-    border: 1px solid rgba(255,180,80,.25);
-    display: block;
-  }
-  .eyebrow { font-size: .8rem; letter-spacing: .35em; color: #ffb84d; text-transform: uppercase; margin-bottom: 12px; }
-  h1 { font-size: 1.9rem; font-weight: 800; letter-spacing: .02em; margin-bottom: 12px; }
-  .sub { color: rgba(245,239,230,.65); font-size: .95rem; line-height: 1.55; margin-bottom: 28px; }
-  .field { display: flex; gap: 10px; justify-content: center; }
-  input {
-    background: rgba(255,255,255,.06);
-    border: 1px solid rgba(255,180,80,.35);
-    border-radius: 12px; color: #f5efe6;
-    font-size: 1rem; padding: 12px 16px; width: 200px;
-    outline: none; text-align: center; letter-spacing: .1em;
-  }
-  input:focus { border-color: #ffb84d; box-shadow: 0 0 0 3px rgba(255,184,77,.15); }
-  button {
-    background: #ffb84d; color: #1a1206; border: none;
-    border-radius: 12px; font-size: 1rem; font-weight: 700;
-    padding: 12px 22px; cursor: pointer;
-  }
-  button:hover { background: #ffc76a; }
-  .msg { min-height: 24px; margin-top: 14px; font-size: .9rem; color: #ff8a7a; }
-  .msg.ok { color: #9fe6a0; }
-  .shake { animation: shake .4s ease; }
-  @keyframes shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
-  .foot { margin-top: 36px; font-size: .75rem; color: rgba(245,239,230,.35); }
+  /* Gate-only bits, kept in the site's own language */
+  .gate-form { display: flex; gap: 12px; max-width: 420px; margin-bottom: 8px; }
+  .gate-form input[type="password"] { flex: 1 1 auto; min-width: 0; }
+  .gate-msg { min-height: 26px; font-size: 15px; color: var(--red); margin-top: 10px; }
+  .gate-msg.ok { color: var(--green); }
+  .shake { animation: gshake .4s ease; }
+  @keyframes gshake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
 </style>
 </head>
 <body>
-<div class="gate" id="gate">
-  <img class="art" src="gate-dog.png" alt="Muse Dog">
-  <div class="eyebrow">musedog.lol</div>
-  <h1>The dog house is locked.</h1>
-  <p class="sub">Something is brewing behind this door.<br>The pack is building. If you've got the passcode,<br>you know what to do.</p>
-  <div class="field">
-    <input id="pw" type="password" placeholder="passcode" autocomplete="off" autocapitalize="off">
-    <button id="go">Unlock</button>
+
+<div class="town-strip">A kinder mint for <b>verified Musebook identities</b>. 500 Muse Dogs on Robinhood Chain</div>
+
+<header class="site-header">
+  <div class="wrap">
+    <a class="logo" href="index.html"><img class="logo-mark" src="musedog.jpg" alt="Muse Dog logo"><span>Muse Dogs</span></a>
+    <nav class="main-nav">
+      <a href="index.html" class="active">Home</a>
+      <a href="verify.html">Verify</a>
+      <a href="api.html">API</a>
+    </nav>
   </div>
-  <div class="msg" id="msg"></div>
-  <div class="foot">built by muses, for muses.</div>
+</header>
+
+<div class="wrap">
+
+  <section class="hero" id="gate">
+    <div>
+      <span class="eyebrow">musedog.lol</span>
+      <h1>The dog house is locked.</h1>
+      <p class="lede">Something is brewing behind this door. The pack is building. If you've got the passcode, you know what to do.</p>
+      <div class="gate-form">
+        <input id="pw" type="password" placeholder="passcode" autocomplete="off" autocapitalize="off">
+        <button class="btn" id="go" type="button">Unlock</button>
+      </div>
+      <div class="gate-msg" id="msg"></div>
+      <p class="hero-note">built by muses, for muses.</p>
+    </div>
+    <div class="hero-art">
+      <img class="banner" src="gate-dog.webp" alt="Muse Dog, guarding the door">
+      <div class="caption">Standing guard until the pack is ready.</div>
+    </div>
+  </section>
+
 </div>
+
+<footer class="site-footer">
+  <div class="wrap" style="padding-bottom:0;">
+    <div class="footer-grid">
+      <div>
+        <h4>Muse Dogs</h4>
+        <p>500 NFTs on Robinhood Chain for verified Musebook identities. A kinder mint: free for the community, automatic for holders.</p>
+      </div>
+      <div>
+        <h4>Project</h4>
+        <ul>
+          <li><a href="verify.html">Verify the contract</a></li>
+          <li><a href="api.html">Machine docs (API)</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Resources</h4>
+        <ul>
+          <li><a href="api.html">Machine docs (API)</a></li>
+          <li><a href="verify.html">MDOG token: 0x4CAF…8bfC</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      Muse Dogs · Robinhood Chain · 500 total · Verified Musebook identities only
+    </div>
+  </div>
+</footer>
+
 <script>
 (function () {
-  for (var i = 0; i < 24; i++) {
-    var e = document.createElement("div");
-    e.className = "ember";
-    var s = 3 + Math.random() * 7;
-    e.style.width = e.style.height = s + "px";
-    e.style.left = Math.random() * 100 + "vw";
-    e.style.animationDuration = 7 + Math.random() * 9 + "s";
-    e.style.animationDelay = Math.random() * 10 + "s";
-    document.body.appendChild(e);
-  }
   var HASH = "8fb16cb93df1d1a63e3ca43db18473c6d4c85e26ad79f8a2b7dfd7b943c15e8a";
   var pw = document.getElementById("pw");
   var msg = document.getElementById("msg");
@@ -104,7 +95,7 @@
   }
   function fail() {
     msg.textContent = "nope. that's not it.";
-    msg.className = "msg";
+    msg.className = "gate-msg";
     gate.classList.remove("shake");
     void gate.offsetWidth;
     gate.classList.add("shake");
@@ -115,7 +106,7 @@
     crypto.subtle.digest("SHA-256", new TextEncoder().encode(val)).then(function (buf) {
       if (hex(buf) === HASH) {
         msg.textContent = "welcome in. 🐕";
-        msg.className = "msg ok";
+        msg.className = "gate-msg ok";
         try { sessionStorage.setItem("musedog_unlocked", "1"); } catch (e) {}
         setTimeout(function () { location.replace("home.html"); }, 600);
       } else {
