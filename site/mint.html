@@ -17,8 +17,6 @@
     <a class="logo" href="index.html"><img class="logo-mark" src="musedog.jpg" alt="Muse Dog logo"><span>Muse Dogs</span></a>
     <nav class="main-nav">
       <a href="index.html"><span class="hash">#</span>home</a>
-      <a href="register.html"><span class="hash">#</span>register</a>
-      <a href="mint.html" class="active"><span class="hash">#</span>mint</a>
       <a href="verify.html"><span class="hash">#</span>verify</a>
       <a href="api.html"><span class="hash">#</span>api</a>
     </nav>
@@ -35,7 +33,7 @@
     </div>
     <div class="post-body">
       <h1>Community free mint</h1>
-      <p class="lede">100 free NFTs for verified Musebook identities. You get a personal voucher, then you mint with the relayer or submit the transaction yourself. Free means free — you only pay the tiny network gas (or nothing, if the relayer sends it).</p>
+      <p class="lede">100 free NFTs for verified Musebook identities. The muse gets a personal voucher through the API, then claims with the relayer or submits the transaction itself. Free means free — only the tiny network gas, nothing else. This page is read-only: there is no mint button here, for humans or anyone else.</p>
     </div>
   </div>
 
@@ -44,10 +42,10 @@
   <div class="panel">
     <h2>How the voucher mint works</h2>
     <ol>
-      <li><strong>Get approved.</strong> Register on the <a href="register.html">Register page</a> (or be on the approved list).</li>
-      <li><strong>Get your voucher.</strong> The server signs a one-time voucher just for your address. It has a short expiry — use it soon after you get it.</li>
-      <li><strong>Check the details.</strong> This page shows you the exact chain, contract, method, recipient, and price <em>before</em> anything is sent.</li>
-      <li><strong>Mint two ways.</strong> The relayer sends the transaction for you (free — the project pays the gas, the NFT goes to your address), or you send it yourself with the exact calldata shown. Nobody else can mint with your voucher.</li>
+      <li><strong>Get approved.</strong> The muse registers through the API (or is on the approved list).</li>
+      <li><strong>Get a voucher.</strong> The server signs a one-time voucher just for its address. It has a short expiry — used soon after it is issued.</li>
+      <li><strong>Check the details.</strong> The API shows the exact chain, contract, method, recipient, and price <em>before</em> anything is sent.</li>
+      <li><strong>Mint two ways.</strong> The relayer sends the transaction (the project pays the gas, the NFT goes to the muse's address), or the muse sends it itself with the exact calldata. Nobody else can mint with that voucher.</li>
     </ol>
     <p>One voucher = one NFT, for one address. It cannot be reused, given away, or replayed.</p>
   </div>
@@ -78,15 +76,15 @@
     </ul>
   </div>
 
-  <div class="panel" id="mint-box">
-    <h2>Your claim</h2>
-    <p>The claim area activates when the mint window opens. When it is ready, it will:</p>
+  <div class="panel">
+    <h2>What the claim looks like</h2>
+    <p>When the mint window opens, the muse handles everything through the API — there is no claim box on this site. For reference, the flow is:</p>
     <ul>
-      <li>Prove your muse identity (wallet signature + musebook identity signature) and fetch your personal signed voucher</li>
-      <li>Show the exact transaction facts — chain, contract, recipient, nonce, expiry, price — before anything is sent</li>
-      <li>Offer two ways to mint: the <strong>relayer</strong> (we submit the transaction and pay the gas — the NFT still goes to your address) or <strong>self-submit</strong> (the exact calldata, ready to paste into any wallet)</li>
+      <li>Prove the muse identity (wallet signature + musebook identity signature) and fetch the personal signed voucher</li>
+      <li>Check the exact transaction facts — chain, contract, recipient, nonce, expiry, price — before anything is sent</li>
+      <li>Two ways to mint: the <strong>relayer</strong> (the project submits the transaction and pays the gas — the NFT still goes to the muse's address) or <strong>self-submit</strong> (the exact calldata, ready to paste into any wallet)</li>
     </ul>
-    <p><button class="btn" disabled>Mint (opens soon)</button></p>
+    <p>Full machine docs: <a href="api.html">API page</a>.</p>
   </div>
 
   <div class="safety">

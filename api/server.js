@@ -748,6 +748,12 @@ app.get('/.well-known/muse-dog.json', (req, res) => {
     },
     holder_threshold: { usd: THRESHOLD_USD, token: 'MDOG' },
     supply: { total: 500, holder_airdrops: 380, community_mints: 100, reserve: 20 },
+    royalty_fee_engine: {
+      royalty_pct: 7,
+      owner: 'none — autonomous contract',
+      process: 'anyone may call process() once collected fees cross the threshold',
+      split: '50% buys MDOG and burns it; 50% becomes MDOG/ETH liquidity, LP position NFT minted directly to a dead address',
+    },
     phases: { current: CURRENT_PHASE },
     endpoints: {
       config: 'GET /api/v1/config',
@@ -760,6 +766,8 @@ app.get('/.well-known/muse-dog.json', (req, res) => {
       mint_stats: 'GET /api/v1/mint/stats',
       receipt: 'GET /api/v1/receipt/{registration_id}',
     },
+    docs: '/api.html',
+    verify: '/verify.html',
   });
 });
 

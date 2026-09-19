@@ -93,7 +93,7 @@ contract MuseDogFeeEngine is ReentrancyGuard {
     IERC20 public immutable WETH;
     address public immutable UNIVERSAL_ROUTER;
     address public immutable POSITION_MANAGER;
-    PoolKey public immutable POOL_KEY;
+    PoolKey public POOL_KEY; // storage (structs can't be immutable); set once in constructor
     /// @notice True when MDOG is currency0 of the pool (address ordering).
     bool public immutable MDOG_IS_CURRENCY0;
     /// @notice Minimum ETH balance before process() can run (dust guard).

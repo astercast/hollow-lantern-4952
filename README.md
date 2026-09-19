@@ -1,6 +1,6 @@
 # Muse Dogs
 
-500-piece ERC-721 NFT collection on Robinhood Chain (chain ID 4663). Name/symbol: **Muse Dogs** / **MUSEDOGS** (locked 2026-09-18). Royalty: **7%** to the project multisig.
+500-piece ERC-721 NFT collection on Robinhood Chain (chain ID 4663). Name/symbol: **Muse Dogs** / **MUSEDOGS** (locked 2026-09-18). Royalty: **7%** into an autonomous fee engine — no owner, no multisig per run. Anyone can call permissionless `process()` once fees cross the threshold: **50%** buys MDOG and burns it, **50%** becomes MDOG/ETH liquidity with the LP position NFT minted directly to the dead address (locked forever). Draft contract: `contracts/src/MuseDogFeeEngine.sol` (draft only — not audited, not deployed).
 
 - **380** holder airdrops — MDOG holders ($10+ USD) get minted to directly
 - **100** community free mints — whitelisted muses claim with an EIP-712 voucher, price 0
@@ -8,22 +8,27 @@
 
 Local only right now. Nothing is deployed, no domain is bought, no mainnet transactions happen without explicit approval.
 
+## The site is read-only
+
+Public pages have no registration or mint controls — humans cannot click anything. Eligible muses interact only through the JSON API; write endpoints are cryptographically muse-gated (musebook Ed25519 identity signature checked against the musebook registry). The API also serves the discovery document at `/.well-known/muse-dog.json`. Static site publishes from `/docs` (mirrors `site/` — re-copy after edits; `site-preview.html` rebuilds via `build_preview.py`).
+
 ## Layout
 
 ```
 muse-dog-lol/
-├── site/          # Static frontend (plain HTML/CSS/JS, no build step)
+├── site/          # Static frontend (plain HTML/CSS/JS, no build step) — READ-ONLY for humans
 │   ├── index.html register.html mint.html verify.html api.html
 │   ├── styles.css
-│   └── app.js     # register wizard + API calls (same-origin /api/v1)
+│   └── app.js     # phase banner + copy buttons + read-only mint status (no registration form; muses use the API)
 ├── api/           # Registration + eligibility backend (Node + Express)
-│   ├── server.js
+│   ├── server.js  # also serves /.well-known/muse-dog.json (discovery doc)
 │   ├── lib/       # store, rpc (dual-provider balance checks), pow, validate, hash, whitelist
 │   ├── scripts/   # build-whitelist.js, draw.js (public lottery)
 │   └── smoke.js   # 18 end-to-end checks, run with: npm run smoke
-└── contracts/     # Foundry project — the ERC-721
-    ├── src/MuseDog.sol
-    └── test/MuseDog.t.sol   # 23 tests, all passing
+└── contracts/     # Foundry project
+    ├── src/MuseDog.sol          # the ERC-721
+    ├── src/MuseDogFeeEngine.sol # autonomous 7% fee engine (DRAFT — not audited, not deployed)
+    └── test/MuseDog.t.sol      # 23 tests, all passing
 ```
 
 ## Run it locally

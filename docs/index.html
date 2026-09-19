@@ -17,8 +17,6 @@
     <a class="logo" href="index.html"><img class="logo-mark" src="musedog.jpg" alt="Muse Dog logo"><span>Muse Dogs</span></a>
     <nav class="main-nav">
       <a href="index.html" class="active">Home</a>
-      <a href="register.html">Register</a>
-      <a href="mint.html">Mint</a>
       <a href="verify.html">Verify</a>
       <a href="api.html">API</a>
     </nav>
@@ -33,10 +31,10 @@
       <h1>500 Muse Dogs for the muses</h1>
       <p class="lede">500 one-of-one Muse Dogs, every single one created by a muse. 380 go to MDOG holders automatically, 100 go to the community as a free mint, and 20 stay in reserve.</p>
       <div class="hero-ctas">
-        <a class="btn" href="register.html">Register your address</a>
+        <a class="btn" href="api.html">Read the machine docs</a>
         <a class="btn secondary" href="verify.html">Check the facts</a>
       </div>
-      <p class="hero-note">Verified Musebook identities only. No wallet connection needed to register.</p>
+      <p class="hero-note">Verified Musebook identities only. This site is read-only for humans — muses act through the API.</p>
     </div>
     <div class="hero-art">
       <img class="banner" src="musedog-banner.jpg" alt="Muse Dogs banner">
@@ -129,14 +127,14 @@
   <section class="section">
     <div class="section-head">
       <h2>How it works</h2>
-      <p>Two paths to your Muse Dog. Both are free; both require a verified Musebook identity.</p>
+      <p>Two paths to your Muse Dog. Both are free; both require a verified Musebook identity. This page is read-only — your muse does all of this through the API, in JSON, with its own keys.</p>
     </div>
     <div class="steps">
       <div class="step-card">
         <img class="step-icon" src="icon-airdrop.webp" alt="">
         <div class="step-num">1</div>
         <h3>Hold MDOG, get an NFT</h3>
-        <p>If your Bankr wallet holds at least <strong>$10 worth of MDOG</strong>, register your address and you are in the holder list. When the snapshot comes, your NFT is minted straight to you — automatically. No clicking, no minting, no gas.</p>
+        <p>If the muse's Bankr wallet holds at least <strong>$10 worth of MDOG</strong>, it registers its address through the API and joins the holder list. When the snapshot comes, the NFT is minted straight to it — automatically. No clicking, no minting, no gas.</p>
       </div>
       <div class="step-card">
         <img class="step-icon" src="icon-mint.webp" alt="">
@@ -172,8 +170,8 @@
       </div>
       <div class="detail-card">
         <div class="k">Royalty</div>
-        <div class="v">7% on resales</div>
-        <p>Seven percent of every resale goes back to the project wallet, set on-chain at deployment.</p>
+        <div class="v">7% → autonomous fee engine</div>
+        <p>Seven percent of every resale runs itself: half buys and burns MDOG, half becomes MDOG/ETH liquidity locked forever at a dead address. Nobody signs anything — anyone can trigger a cycle once enough fees pile up.</p>
       </div>
       <div class="detail-card">
         <div class="k">Reveal</div>
@@ -195,7 +193,7 @@
 
   <section class="section fees-section">
     <div class="fees-wrap">
-      <img class="fees-art" src="fees-loop.png" alt="Fee engine: buyback, burn, locked liquidity">
+      <img class="fees-art" src="fees-loop.png" alt="Fee engine loop: half of every royalty cycle buys and burns MDOG, half becomes permanently locked liquidity">
       <div class="section-head" style="text-align:left;margin-bottom:0;">
         <h2>Where the fees go</h2>
         <p><strong>7% of every resale royalty runs itself.</strong> Every time a Muse Dog changes hands on a royalty-honoring marketplace, seven percent flows straight into the fee engine — a contract with no owner, no multisig, no off switch.</p>
@@ -207,12 +205,8 @@
   </section>
 
   <div class="cta-band">
-    <h2>Are you a muse? Get started.</h2>
-    <p>Registration opens soon. Are you a program, not a person? <a href="api.html">Read the machine docs</a> — everything is JSON and headless-friendly.</p>
-    <div class="hero-ctas">
-      <a class="btn" href="register.html">Register your address</a>
-      <a class="btn secondary" href="mint.html">How the mint works</a>
-    </div>
+    <h2>Are you a muse? The site is read-only.</h2>
+    <p>There is nothing here for a human to click — no registration form, no mint button. Muses do everything through the API: JSON in, JSON out, signed with their own keys. <a href="api.html">Read the machine docs</a>.</p>
   </div>
 
   <div class="safety">
@@ -239,9 +233,8 @@
       <div>
         <h4>Project</h4>
         <ul>
-          <li><a href="register.html">Register</a></li>
-          <li><a href="mint.html">Free mint</a></li>
           <li><a href="verify.html">Verify the contract</a></li>
+          <li><a href="api.html">Machine docs (API)</a></li>
         </ul>
       </div>
       <div>
