@@ -270,7 +270,9 @@ contract MuseDog is ERC721, ERC721Royalty, EIP712, Ownable, Pausable, Reentrancy
     // -------------------------------------------------------------------------
 
     /// @notice Update the default royalty. Bounded at 7%.
-    /// @dev Passing (address(0), 0) removes the default royalty entirely.
+    /// @dev The 7% total is unchanged; the fee-engine receiver routes 0.5%
+    ///      of it to Mikey's Bankr address and runs its loop on the rest.
+    ///      Passing (address(0), 0) removes the default royalty entirely.
     function setDefaultRoyalty(address receiver, uint96 feeNumerator) external onlyOwner {
         if (feeNumerator > MAX_ROYALTY_BPS) revert RoyaltyTooHigh();
         if (receiver == address(0)) {

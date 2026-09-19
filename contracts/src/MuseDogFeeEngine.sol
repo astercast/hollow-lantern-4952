@@ -14,8 +14,11 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 ///         up, ANYONE can call process() to run the full loop. There is no
 ///         owner, no multisig signing, no middleman, no off switch.
 ///
-///         Every process() run does three things:
-///           1. BUYBACK — half the ETH buys MDOG on the MDOG/ETH Uniswap V4 pool.
+///         Every process() run does four things:
+///           0. MIKEY'S CUT — 0.5% of the 7% royalty (1/14th of the pot) is
+///              sent in raw ETH to Mikey's Bankr address, off the top.
+///              Baked in at deploy; unchangeable, like everything else here.
+///           1. BUYBACK — half the remainder buys MDOG on the MDOG/ETH Uniswap V4 pool.
 ///           2. BURN — that MDOG is sent to the dead address. Supply shrinks forever.
 ///           3. LIQUIDITY — the other half is split: 50% swapped to MDOG, paired
 ///              with the remaining ETH, and minted as a full-range V4 LP
@@ -100,6 +103,14 @@ contract MuseDogFeeEngine is ReentrancyGuard {
     uint256 public immutable MIN_PROCESS_AMOUNT;
     /// @notice Share of each run going to buyback-and-burn, in bps (5000 = 50%).
     uint256 public immutable BURN_BPS;
+    /// @notice Mikey's Bankr address. Receives 0.5% of the 7% royalty
+    ///         (MIKEY_BPS of ROYALTY_BPS_TOTAL) in raw ETH at the start of
+    ///         every process() run. Set once at deploy, never changeable.
+    address public immutable MIKEY;
+    /// @notice Mikey's cut in basis points of the royalty: 50 bps = 0.5%.
+    uint256 private constant MIKEY_BPS = 50;
+    /// @notice Total royalty the engine receives, in bps: 700 = 7%.
+    uint256 private constant ROYALTY_BPS_TOTAL = 700;
     int24 public immutable TICK_LOWER;
     int24 public immutable TICK_UPPER;
 
@@ -111,7 +122,8 @@ contract MuseDogFeeEngine is ReentrancyGuard {
         uint256 ethIn,
         uint256 mdogBurned,
         uint256 ethIntoLp,
-        uint256 mdogIntoLp
+        uint256 mdogIntoLp,
+        uint256 mikeyPaid
     );
     event RoyaltyReceived(address indexed from, uint256 amount);
 
@@ -126,10 +138,12 @@ contract MuseDogFeeEngine is ReentrancyGuard {
         address positionManager,
         PoolKey memory poolKey,
         uint256 minProcessAmount,
-        uint256 burnBps
+        uint256 burnBps,
+        address mikey
     ) {
         require(mdog != address(0) && weth != address(0), "FeeEngine: zero token");
         require(universalRouter != address(0) && positionManager != address(0), "FeeEngine: zero venue");
+        require(mikey != address(0), "FeeEngine: zero mikey");
         require(burnBps <= 10_000, "FeeEngine: bad bps");
 
         bool ethIsCurrency0 = poolKey.currency0 == NATIVE || poolKey.currency0 == weth;
@@ -146,6 +160,7 @@ contract MuseDogFeeEngine is ReentrancyGuard {
         MDOG_IS_CURRENCY0 = mdogIsCurrency0;
         MIN_PROCESS_AMOUNT = minProcessAmount;
         BURN_BPS = burnBps;
+        MIKEY = mikey;
         // Full-range position, snapped to the pool's tick spacing.
         TICK_LOWER = (MIN_TICK / poolKey.tickSpacing) * poolKey.tickSpacing;
         TICK_UPPER = (MAX_TICK / poolKey.tickSpacing) * poolKey.tickSpacing;
@@ -181,8 +196,16 @@ contract MuseDogFeeEngine is ReentrancyGuard {
         uint256 balance = address(this).balance;
         require(balance >= MIN_PROCESS_AMOUNT, "FeeEngine: below threshold");
 
-        uint256 burnLeg = (balance * BURN_BPS) / 10_000;
-        uint256 lpLeg = balance - burnLeg;
+        // Mikey's cut comes off the top: 0.5% of the 7% royalty.
+        uint256 mikeyShare = (balance * MIKEY_BPS) / ROYALTY_BPS_TOTAL;
+        if (mikeyShare > 0) {
+            (bool ok, ) = MIKEY.call{value: mikeyShare}("");
+            require(ok, "FeeEngine: mikey payout failed");
+        }
+
+        uint256 loopBalance = balance - mikeyShare;
+        uint256 burnLeg = (loopBalance * BURN_BPS) / 10_000;
+        uint256 lpLeg = loopBalance - burnLeg;
 
         // Leg 1 + 2: buy back MDOG and burn it. Supply shrinks forever.
         uint256 mdogBurned = _swapExactEthForMdog(burnLeg, minMdogOutBurn);
@@ -196,7 +219,7 @@ contract MuseDogFeeEngine is ReentrancyGuard {
         uint256 mdogForLp = _swapExactEthForMdog(lpLeg - ethForLp, minMdogOutLp);
         _mintPositionToDeadAddress(ethForLp, mdogForLp);
 
-        emit Processed(burnLeg, mdogBurned, ethForLp, mdogForLp);
+        emit Processed(burnLeg, mdogBurned, ethForLp, mdogForLp, mikeyShare);
     }
 
     // -------------------------------------------------------------------------
