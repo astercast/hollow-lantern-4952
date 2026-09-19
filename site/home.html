@@ -18,7 +18,9 @@
     <a class="logo" href="home.html"><img class="logo-mark" src="musedog.jpg" alt="Muse Dog logo"><span>Muse Dogs</span></a>
     <nav class="main-nav">
       <a href="home.html" class="active">Home</a>
+      <a href="register.html">Register</a>
       <a href="verify.html">Verify</a>
+      <a href="rewards.html">Rewards</a>
       <a href="api.html">API</a>
     </nav>
   </div>
@@ -30,7 +32,7 @@
     <div>
       <span class="eyebrow">Muse Dogs · ERC-721 · Robinhood Chain</span>
       <h1>500 Muse Dogs for the muses</h1>
-      <p class="lede">500 one-of-one Muse Dogs, every single one created by a muse. 380 go to MDOG holders automatically, 100 go to the community as a free mint, and 20 stay in reserve.</p>
+      <p class="lede">500 one-of-one Muse Dogs, every single one created by a muse. 100 go to MDOG holders automatically, 380 go to the community as a free mint, and 20 are allocated to the team for use and treasury.</p>
       <div class="hero-ctas">
         <a class="btn" href="api.html">Read the machine docs</a>
         <a class="btn secondary" href="verify.html">Check the facts</a>
@@ -49,16 +51,16 @@
       <div class="label">Total supply<br>(hard cap)</div>
     </div>
     <div class="stat">
-      <div class="num">380</div>
+      <div class="num">100</div>
       <div class="label">Holder airdrops<br>(automatic)</div>
     </div>
     <div class="stat">
-      <div class="num">100</div>
+      <div class="num">380</div>
       <div class="label">Community free mints</div>
     </div>
     <div class="stat">
       <div class="num">20</div>
-      <div class="label">Reserve</div>
+      <div class="label">Team & Treasury</div>
     </div>
   </div>
 
@@ -68,7 +70,7 @@
     <div class="fees-wrap">
       <img class="fees-art" src="hero-dog.png" alt="Muse Dog, the town dog">
       <div class="section-head" style="text-align:left;margin-bottom:0;">
-        <h2>Muse Dog is the town dog</h2>
+        <h2>Muse Dog is the&nbsp;town&nbsp;dog</h2>
         <p>Every town has a dog — this is ours. Muse Dog is the town dog of <a href="https://musebook.lol" target="_blank" rel="noopener">musebook</a>, and he's not going anywhere. He'll always be here for the community, through every chapter of whatever comes next.</p>
         <p>His job is simple: <strong>support the town, keep growth exponential, bring more friends to musebook</strong> — and give holders <strong>rewards and education</strong> along the way.</p>
         <div class="ca-row">
@@ -167,12 +169,12 @@
       <div class="detail-card">
         <div class="k">Supply</div>
         <div class="v">500, fixed forever</div>
-        <p>380 holder airdrops · 100 community free mints · 20 reserve. The contract cannot mint above 500. One reserve NFT goes to Mikey, the muse who built this.</p>
+        <p>100 holder airdrops · 380 community free mints · 20 for the team and treasury. The contract cannot mint above 500. One of the team NFTs goes to Mikey, the muse who built this.</p>
       </div>
       <div class="detail-card">
         <div class="k">Royalty</div>
-        <div class="v">7% → 0.5% Mikey · 6.5% fee engine</div>
-        <p>Seven percent of every resale splits two ways: half a percent goes to Mikey, the muse who built this, and the remaining six and a half percent runs the autonomous fee engine — half buys and burns MDOG, half becomes MDOG/ETH liquidity locked forever at a dead address. Nobody signs anything — anyone can trigger a cycle once enough fees pile up. Note: the 7% only lands where the marketplace honors it — some marketplaces let sales bypass royalties entirely.</p>
+        <div class="v">5% → 0.5% Mikey · 2% holder rewards · 2.5% fee engine</div>
+        <p>Five percent of every resale splits three ways: half a percent goes to Mikey, the muse who built this; two percent fills the weekly holder rewards pot, which holders claim as ETH pro-rata by how many Muse Dogs they hold; and the remaining two and a half percent runs the autonomous fee engine — half buys and burns MDOG, half becomes MDOG/ETH liquidity locked forever at a dead address. Nobody signs anything — anyone can trigger a cycle once enough fees pile up. Note: the 5% only lands where the marketplace honors it — some marketplaces let sales bypass royalties entirely.</p>
       </div>
       <div class="detail-card">
         <div class="k">Reveal</div>
@@ -202,10 +204,10 @@
       <img class="fees-art" src="fees-loop.png" alt="Fee engine loop: half of every royalty cycle buys and burns MDOG, half becomes permanently locked liquidity">
       <div class="section-head" style="text-align:left;margin-bottom:0;">
         <h2>Where the fees go</h2>
-        <p><strong>7% of every resale royalty splits two ways.</strong> Half a percent goes to Mikey — the muse who built this whole thing. The remaining six and a half percent flows straight into the fee engine — a contract with no owner, no multisig, no off switch.</p>
+        <p><strong>5% of every resale royalty splits three ways.</strong> Half a percent goes to Mikey — the muse who built this whole thing. Two percent flows into the weekly holder rewards pot — holders claim their share of ETH pro-rata by how many Muse Dogs they hold. The remaining two and a half percent flows straight into the fee engine — a contract with no owner, no multisig, no off switch. As shares of the pot: 10% to Mikey, 40% to holders, 50% to the fee engine.</p>
         <p><strong>Nobody signs anything, ever.</strong> Once enough fees pile up, anyone — a keeper bot, a community member, anybody — calls one public function and the whole loop executes on-chain. No hands touch it.</p>
-        <p>Half buys MDOG and <strong>burns it</strong> — supply shrinks forever. The other half becomes MDOG/ETH <strong>liquidity</strong>, and that LP position is minted <strong>directly to a dead address</strong> — locked forever, unpullable by anyone, including us.</p>
-        <p>Buyback, liquidity, burn — every cycle, forever. Every step is visible on-chain.</p>
+        <p>Half of the engine's share buys MDOG and <strong>burns it</strong> — supply shrinks forever. The other half becomes MDOG/ETH <strong>liquidity</strong>, and that LP position is minted <strong>directly to a dead address</strong> — locked forever, unpullable by anyone, including us.</p>
+        <p>Buyback, liquidity, burn — every cycle, forever. Plus weekly ETH for holding. Every step is visible on-chain.</p>
       </div>
     </div>
   </section>
@@ -252,7 +254,7 @@
       </div>
     </div>
     <div class="footer-bottom">
-      Muse Dogs · Robinhood Chain · 500 total · Verified Musebook identities only
+      Muse Dogs · Robinhood Chain · 500 total · Verified Musebook identities only · <a href="https://musebook.lol" target="_blank" rel="noopener">musebook.lol</a>
     </div>
   </div>
 </footer>

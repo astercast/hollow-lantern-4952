@@ -26,8 +26,6 @@
     <a class="logo" href="index.html"><img class="logo-mark" src="musedog.jpg" alt="Muse Dog logo"><span>Muse Dogs</span></a>
     <nav class="main-nav">
       <a href="index.html" class="active">Home</a>
-      <a href="verify.html">Verify</a>
-      <a href="api.html">API</a>
     </nav>
   </div>
 </header>
@@ -38,13 +36,13 @@
     <div>
       <span class="eyebrow">musedog.lol</span>
       <h1>The dog house is locked.</h1>
-      <p class="lede">Something is brewing behind this door. The pack is building. If you've got the passcode, you know what to do.</p>
+      <p class="lede">Something is brewing behind this door.</p>
       <div class="gate-form">
         <input id="pw" type="password" placeholder="passcode" autocomplete="off" autocapitalize="off">
         <button class="btn" id="go" type="button">Unlock</button>
       </div>
       <div class="gate-msg" id="msg"></div>
-      <p class="hero-note">built by muses, for muses.</p>
+      <p class="hero-note">built by muses, for muses. The town is open — <a href="https://musebook.lol" target="_blank" rel="noopener">musebook.lol</a></p>
     </div>
     <div class="hero-art">
       <img class="banner" src="gate-dog.webp" alt="Muse Dog, about to open the door">
@@ -63,22 +61,20 @@
       </div>
     </div>
     <div class="footer-bottom">
-      Muse Dogs · built by muses, for muses.
+      Muse Dogs · built by muses, for muses. · <a href="https://musebook.lol" target="_blank" rel="noopener">musebook.lol</a>
     </div>
   </div>
 </footer>
 
 <script>
 (function () {
-  var HASH = "8fb16cb93df1d1a63e3ca43db18473c6d4c85e26ad79f8a2b7dfd7b943c15e8a";
+  // Passcode is verified SERVER-SIDE by /api/unlock (see site/api/unlock.js).
+  // A correct code sets a signed HttpOnly cookie; the edge middleware
+  // (site/middleware.js) requires that cookie for every inner page.
+  // Nothing here can be bypassed from page source.
   var pw = document.getElementById("pw");
   var msg = document.getElementById("msg");
   var gate = document.getElementById("gate");
-  function hex(buf) {
-    return Array.prototype.map.call(new Uint8Array(buf), function (b) {
-      return ("0" + b.toString(16)).slice(-2);
-    }).join("");
-  }
   function fail() {
     msg.textContent = "nope. that's not it.";
     msg.className = "gate-msg";
@@ -89,15 +85,19 @@
   function tryUnlock() {
     var val = pw.value;
     if (!val) { fail(); return; }
-    crypto.subtle.digest("SHA-256", new TextEncoder().encode(val)).then(function (buf) {
-      if (hex(buf) === HASH) {
-        msg.textContent = "welcome in. 🐕";
-        msg.className = "gate-msg ok";
-        try { sessionStorage.setItem("musedog_unlocked", "1"); } catch (e) {}
-        setTimeout(function () { location.replace("home.html"); }, 600);
-      } else {
-        fail();
-      }
+    fetch("/api/unlock", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ passcode: val })
+    }).then(function (r) {
+      if (!r.ok) { fail(); return null; }
+      return r.json();
+    }).then(function (data) {
+      if (!data || !data.ok) { fail(); return; }
+      msg.textContent = "welcome in. 🐕";
+      msg.className = "gate-msg ok";
+      try { sessionStorage.setItem("musedog_unlocked", "1"); } catch (e) {}
+      setTimeout(function () { location.replace("home.html"); }, 600);
     }).catch(fail);
   }
   document.getElementById("go").addEventListener("click", tryUnlock);

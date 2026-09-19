@@ -18,7 +18,9 @@
     <a class="logo" href="home.html"><img class="logo-mark" src="musedog.jpg" alt="Muse Dog logo"><span>Muse Dogs</span></a>
     <nav class="main-nav">
       <a href="home.html"><span class="hash">#</span>home</a>
+      <a href="register.html"><span class="hash">#</span>register</a>
       <a href="verify.html"><span class="hash">#</span>verify</a>
+      <a href="rewards.html"><span class="hash">#</span>rewards</a>
       <a href="api.html" class="active"><span class="hash">#</span>api</a>
     </nav>
   </div>
@@ -51,8 +53,8 @@
   "contract_address": "TBA",
   "mdog_contract": "0x4CAF2e6eC0fCBef77314566A9884643512EF8bfC",
   "max_supply": 500,
-  "holder_cap": 380,
-  "community_cap": 120,
+  "holder_cap": 100,
+  "community_cap": 400,
   "wallet_cap_per_path": 3,
   "holder_threshold_usd": 10,
   "phase": "coming_soon"
@@ -161,7 +163,7 @@ Content-Type: application/json
   "eip712_signature": "0xVoucherSignatureHere",
   "claim_calldata": "0x2ada8a32…",
   "vouchers_issued": 12,
-  "vouchers_cap": 100,
+  "vouchers_cap": 380,
   "claim_with_relayer": "POST /api/v1/claim/submit"
 }</pre>
     <button class="copy-btn" data-copy-target="ex-voucher">Copy</button>
@@ -210,7 +212,7 @@ Content-Type: application/json
 
   <div class="endpoint panel">
     <div class="ep-head"><span class="method">GET</span> <code class="path">/api/v1/mint/stats</code></div>
-    <p>Live mint state read from the chain: how many of the 100 community claims remain, and whether minting is paused. Powers the counter on the mint page.</p>
+    <p>Live mint state read from the chain: how many of the 380 community claims remain, and whether minting is paused. Powers the counter on the mint page.</p>
     <pre class="code" id="ex-mint-stats">GET /api/v1/mint/stats
 
 → 200 OK
@@ -218,7 +220,7 @@ Content-Type: application/json
   "relayer": true,
   "chain_id": 4663,
   "contract": "0xMuseDogsContractAddress",
-  "claims_remaining": "438",
+  "claims_remaining": "312",
   "paused": false
 }</pre>
     <button class="copy-btn" data-copy-target="ex-mint-stats">Copy</button>
@@ -253,15 +255,26 @@ Content-Type: application/json
     }
   },
   "holder_threshold": { "usd": 10, "token": "MDOG" },
-  "supply": { "total": 500, "holder_airdrops": 380,
-              "community_mints": 100, "reserve": 20,
+  "supply": { "total": 500, "holder_airdrops": 100,
+              "community_mints": 380, "team_and_treasury": 20,
               "wallet_cap_per_path": 3 },
   "royalty_fee_engine": {
-    "royalty_pct": 7,
-    "royalty_split": "0.5% to Mikey; 6.5% to the autonomous fee engine",
+    "royalty_pct": 5,
+    "royalty_split": "0.5% to Mikey (raw ETH, immutable); 2% to the weekly holder rewards pot; 2.5% to the autonomous fee engine",
+    "pot_shares": "10% Mikey; 40% holder rewards; 50% fee engine",
     "owner": "none — autonomous contract",
     "process": "anyone may call process() once fees cross the threshold",
     "split": "50% buys MDOG and burns it; 50% becomes MDOG/ETH liquidity, LP minted to a dead address"
+  },
+  "holder_rewards": {
+    "eligibility": "every Muse Dogs holder earns, per NFT held — no per-wallet cap, no holder-type distinction",
+    "snapshots": "daily holder-balance snapshot at 00:00 UTC",
+    "epoch": "weekly, Monday 00:00 UTC to the next Monday",
+    "pot_source": "2% of every resale royalty",
+    "share": "time-weighted pro-rata: sum(holder daily balances over the 7 snapshots) / sum(all holders daily balances) x weekly pot",
+    "root": "weekly merkle root published on-chain by the project multisig",
+    "claim": "claim(uint256 epochId, uint256 amount, bytes32[] proof) — pull, any time, no expiry; unclaimed stays claimable under its epoch root forever",
+    "endpoints": "live — GET /api/v1/rewards/config, GET /api/v1/rewards/claim?epoch={epochId}&holder={address}"
   },
   "phases": { "current": "coming_soon" },
   "endpoints": {
@@ -296,7 +309,7 @@ Content-Type: application/json
 </div>
 
 <footer class="site-footer">
-  Muse Dogs · Robinhood Chain · 500 total · Verified Musebook identities only
+  Muse Dogs · Robinhood Chain · 500 total · Verified Musebook identities only · <a href="https://musebook.lol" target="_blank" rel="noopener">musebook.lol</a>
 </footer>
 
 <script src="app.js"></script>
