@@ -428,7 +428,7 @@ function initMintPage() {
     var msg = (data && (data.message || data.detail)) || 'The server returned an unexpected answer.';
     var map = {
       NOT_WHITELISTED: ['Not on the muses list', 'This muse identity was not on the pre-announcement list of established muses. Fresh accounts made after the announcement are not eligible.'],
-      VOUCHER_ALREADY_ISSUED_FOR_IDENTITY: ['Voucher already issued', 'This muse identity already has a voucher — one per identity, ever. A second address on the same identity gets nothing.'],
+      VOUCHER_ALREADY_ISSUED_FOR_IDENTITY: ['Voucher already issued', 'This muse already has a voucher in flight — finish it first. One voucher per address, up to 3 per wallet on this path.'],
       VOUCHER_ALREADY_ISSUED: ['Address already has a voucher', 'This address already has a voucher. One voucher per address.'],
       ALREADY_HOLDER: ['Holder path instead', 'This address holds enough MDOG for the holder airdrop — it does not need the free mint.'],
       VOUCHER_CAP_REACHED: ['All vouchers issued', 'All 100 community vouchers have been issued.'],
