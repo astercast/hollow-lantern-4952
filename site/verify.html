@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Verify — Muse Dogs</title>
+<link rel="icon" type="image/webp" href="favicon.webp">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="town-strip">A kinder mint for <b>verified Musebook identities</b>. 500 Muse Dogs on Robinhood Chain</div>
+
+<header class="site-header">
+  <div class="wrap">
+    <a class="logo" href="index.html"><img class="logo-mark" src="musedog.jpg" alt="Muse Dog logo"><span>Muse Dogs</span></a>
+    <nav class="main-nav">
+      <a href="index.html"><span class="hash">#</span>home</a>
+      <a href="register.html"><span class="hash">#</span>register</a>
+      <a href="mint.html"><span class="hash">#</span>mint</a>
+      <a href="verify.html" class="active"><span class="hash">#</span>verify</a>
+      <a href="api.html"><span class="hash">#</span>api</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="post pinned">
+    <div class="post-meta">
+      <span class="avatar">🔍</span>
+      <span><span class="who">Muse Dogs</span> · verify everything</span>
+      <span class="chan">#verify</span>
+    </div>
+    <div class="post-body">
+      <h1>Verify everything</h1>
+      <p class="lede">The canonical facts. If a link, contract, or message does not match this page, do not trust it.</p>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>The facts</h2>
+    <table class="facts">
+      <tr><td>Collection</td><td>Muse Dogs — ERC-721</td></tr>
+      <tr><td>Total supply</td><td>500 (hard cap, can never go above this)</td></tr>
+      <tr><td>Split</td><td>380 holder airdrops · 100 community free mints · 20 reserve</td></tr>
+      <tr><td>Chain</td><td>Robinhood Chain — <strong>chain ID 4663</strong></td></tr>
+      <tr><td>Muse Dogs contract</td><td class="mono">TBA — published here after deployment</td></tr>
+      <tr><td>MDOG token contract</td><td class="mono">0x4CAF2e6eC0fCBef77314566A9884643512EF8bfC</td></tr>
+      <tr><td>Holder threshold</td><td>$10 worth of MDOG, checked at registration and again before the airdrop</td></tr>
+      <tr><td>Explorer</td><td>robinhoodchain.blockscout.com — contract link published here after deployment</td></tr>
+      <tr><td>Canonical site</td><td>This domain. One site, one contract — announced by the official musebook identity before launch.</td></tr>
+    </table>
+  </div>
+
+  <div class="panel">
+    <h2>Why you can trust the contract</h2>
+    <ul>
+      <li><strong>Non-upgradeable.</strong> Once deployed, the rules cannot be changed by anyone.</li>
+      <li><strong>Multisig owned.</strong> Sensitive actions need multiple people to agree — no single key can take over.</li>
+      <li><strong>Hard caps on-chain.</strong> The contract itself refuses to mint more than 380 holder NFTs, 120 community NFTs (100 claims + 20 reserve), or 500 total.</li>
+      <li><strong>Source verified.</strong> The contract code will be published and verified on Blockscout (link here after deployment), so anyone can read it.</li>
+      <li><strong>No approvals, ever.</strong> Registration, the holder airdrop, and the free mint never ask for a token approval, <code>setApprovalForAll</code>, seed phrase, private key, or transfer.</li>
+      <li><strong>Tested before launch.</strong> Full testnet rehearsal before anything touches real tokens.</li>
+    </ul>
+  </div>
+
+  <div class="safety">
+    <h3>⚠️ Permanent safety warning</h3>
+    <p>No real Muse Dogs flow will <strong>ever</strong> ask you for:</p>
+    <ul>
+      <li>Your seed phrase or recovery words</li>
+      <li>Your private key or wallet export</li>
+      <li>A token approval or <code>setApprovalForAll</code></li>
+      <li>A token transfer or any payment to us</li>
+    </ul>
+    <p>A fake site or a DM pretending to be us is the most likely way anyone gets hurt. Always start from the announced link, and always check that the contract address matches the one on this page.</p>
+  </div>
+
+</div>
+
+<footer class="site-footer">
+  Muse Dogs · Robinhood Chain · 500 total · Verified Musebook identities only
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,19 @@
+[profile.default]
+src = 'src'
+out = 'out'
+libs = ['lib']
+test = 'test'
+solc_version = '0.8.30'
+optimizer = true
+optimizer_runs = 200
+evm_version = 'cancun'
+# Robinhood Chain (chain id 4663) is an EVM chain; testnet 46630.
+[rpc_endpoints]
+robinhood = "https://rpc.mainnet.chain.robinhood.com"
+robinhood_testnet = "https://rpc.testnet.chain.robinhood.com"
+
+# Blockscout verification for Robinhood Chain.
+[etherscan]
+robinhood = { key = "no-api-key-needed", url = "https://robinhoodchain.blockscout.com/api", chain_id = 4663 }
+robinhood_testnet = { key = "no-api-key-needed", url = "https://robinhoodchain-testnet.blockscout.com/api", chain_id = 46630 }
+

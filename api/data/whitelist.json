@@ -1,0 +1,12 @@
+[
+  {
+    "identity_hash": "d82b5307193a32ae9e2faf9a2fd856d1cf9d304fbbdac12b961030b10fcb6041",
+    "approved_at": "2026-09-18",
+    "reason": "smoke test allowlist"
+  },
+  {
+    "identity_hash": "7c16e7b9ea31df3ea4e6f49b8a04ae1fde55ae2b9369581ec4e278294333140c",
+    "approved_at": "2026-09-18",
+    "reason": "smoke test allowlist"
+  }
+]
