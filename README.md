@@ -1,6 +1,6 @@
 # Muse Dogs
 
-500-piece ERC-721 NFT collection on Robinhood Chain (chain ID 4663). Name/symbol: **Muse Dogs** / **MUSEDOGS** (locked 2026-09-18). Royalty: **10%** to the project multisig.
+500-piece ERC-721 NFT collection on Robinhood Chain (chain ID 4663). Name/symbol: **Muse Dogs** / **MUSEDOGS** (locked 2026-09-18). Royalty: **7%** to the project multisig.
 
 - **380** holder airdrops — MDOG holders ($10+ USD) get minted to directly
 - **100** community free mints — whitelisted muses claim with an EIP-712 voucher, price 0

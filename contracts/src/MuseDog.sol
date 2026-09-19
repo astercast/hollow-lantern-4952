@@ -35,8 +35,8 @@ contract MuseDog is ERC721, ERC721Royalty, EIP712, Ownable, Pausable, Reentrancy
     uint256 public constant COMMUNITY_CLAIM_MAX = COMMUNITY_CAP - RESERVE_MAX;
     /// @notice Max recipients per holderMintBatch call (gas safety).
     uint256 public constant MAX_BATCH = 100;
-    /// @notice Royalty ceiling: 1000 bps = 10%. Never changeable above this.
-    uint96 public constant MAX_ROYALTY_BPS = 1000;
+    /// @notice Royalty ceiling: 700 bps = 7%. Never changeable above this.
+    uint96 public constant MAX_ROYALTY_BPS = 700;
     /// @notice Robinhood Chain mainnet chain id, bound into every voucher.
     uint256 public constant CHAIN_ID = 4663;
 
@@ -105,7 +105,7 @@ contract MuseDog is ERC721, ERC721Royalty, EIP712, Ownable, Pausable, Reentrancy
     ///                           set once the 500 images + metadata are uploaded (see storage-plan-arweave.md).
     ///                           Reveal is immediate, so this must be final before the mint opens.
     /// @param royaltyReceiver  EIP-2981 royalty receiver (zero address disables).
-    /// @param royaltyBps       EIP-2981 royalty in basis points, bounded at 1000 (10%).
+    /// @param royaltyBps       EIP-2981 royalty in basis points, bounded at 700 (7%).
     constructor(
         address initialOwner,
         address initialVoucherSigner,
@@ -269,7 +269,7 @@ contract MuseDog is ERC721, ERC721Royalty, EIP712, Ownable, Pausable, Reentrancy
     // Royalties (EIP-2981)
     // -------------------------------------------------------------------------
 
-    /// @notice Update the default royalty. Bounded at 10%.
+    /// @notice Update the default royalty. Bounded at 7%.
     /// @dev Passing (address(0), 0) removes the default royalty entirely.
     function setDefaultRoyalty(address receiver, uint96 feeNumerator) external onlyOwner {
         if (feeNumerator > MAX_ROYALTY_BPS) revert RoyaltyTooHigh();

@@ -22,7 +22,7 @@ contract MuseDogTest is Test {
 
     function setUp() public {
         voucherSigner = vm.addr(signerKey);
-        muse = new MuseDog(owner, voucherSigner, BASE, owner, 1000); // 10% royalty (locked)
+        muse = new MuseDog(owner, voucherSigner, BASE, owner, 700); // 7% royalty (locked)
     }
 
     // -------------------------------------------------------------------------
@@ -476,13 +476,13 @@ contract MuseDogTest is Test {
     function test_RoyaltyBounded() public {
         vm.prank(owner);
         vm.expectRevert(MuseDog.RoyaltyTooHigh.selector);
-        muse.setDefaultRoyalty(owner, 1001); // above 10%
+        muse.setDefaultRoyalty(owner, 701); // above 7%
 
         vm.prank(owner);
-        muse.setDefaultRoyalty(owner, 1000); // exactly 10% is fine
+        muse.setDefaultRoyalty(owner, 700); // exactly 7% is fine
         (address receiver, uint256 amount) = muse.royaltyInfo(0, 10_000);
         assertEq(receiver, owner);
-        assertEq(amount, 1000);
+        assertEq(amount, 700);
 
         // Zero receiver with nonzero fee is rejected; (0,0) removes royalty.
         vm.prank(owner);
