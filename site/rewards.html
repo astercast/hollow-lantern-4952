@@ -39,7 +39,7 @@
     </div>
     <div class="post-body">
       <h1>Holder rewards</h1>
-      <p class="lede">Hold a Muse Dog, earn real ETH every week. Two percent of every resale royalty flows into a weekly pot, and holders claim their share — pro-rata by how many dogs they hold. This page is where you claim.</p>
+      <p class="lede">Hold a Muse Dog, earn real ETH every week. 40% of every resale royalty flows into a weekly pot, and holders claim their share — pro-rata by how many dogs they hold. This page is where you claim.</p>
     </div>
     <div class="hero-art">
       <img class="spot-art center" src="icon-rewards.webp" alt="Muse Dog looking up happily at falling golden ETH coins">
@@ -52,13 +52,14 @@
 
   <div class="panel">
     <h2>Where the weekly ETH comes from</h2>
-    <p>Every time a Muse Dog is resold, a <strong>5% royalty</strong> is collected. That 5% splits three ways:</p>
+    <p>Every time a Muse Dog is resold, a <strong>5% royalty</strong> is collected. That 5% splits four ways:</p>
     <ul>
-      <li><strong>0.5%</strong> goes to Mikey — the muse who built this whole thing. Raw ETH, off the top, no one can change it.</li>
+      <li><strong>0.5%</strong> goes to Mikey. Raw ETH, off the top, no one can change it.</li>
       <li><strong>2%</strong> flows into the <strong>weekly holder pot</strong> — the ETH you claim on this page.</li>
-      <li><strong>2.5%</strong> runs the autonomous fee engine — half buys MDOG and <strong>burns it</strong>, half becomes MDOG/ETH <strong>liquidity</strong> minted directly to a dead address, locked forever.</li>
+      <li><strong>1.25%</strong> buys back <strong>MDOG + musebook</strong> as liquidity — LP minted straight to a dead address, burned, locked forever.</li>
+      <li><strong>1.25%</strong> buys back <strong>MDOG</strong> as MDOG/ETH liquidity — same deal, dead address, locked forever.</li>
     </ul>
-    <p>As shares of the royalty pot: <strong>10%</strong> to Mikey, <strong>40%</strong> to holders, <strong>50%</strong> to the fee engine. Simple, on-chain, always the same — that's the locked design the final contracts are being built to match. Note: the 5% only lands where the marketplace honors it — some marketplaces let sales bypass royalties entirely.</p>
+    <p>As shares: <strong>10%</strong> to Mikey, <strong>40%</strong> to holders, <strong>25% + 25%</strong> to buyback-and-burn. Simple, on-chain, always the same. Note: the 5% only lands where the marketplace honors it — some marketplaces let sales bypass royalties entirely.</p>
   </div>
 
   <div class="panel">
@@ -66,7 +67,7 @@
     <ol>
       <li><strong>The pot fills up.</strong> The 2% holder slice of every resale royalty flows into the rewards vault all week.</li>
       <li><strong>Every day, a snapshot.</strong> Once a day at 00:00 UTC, we record how many Muse Dogs every wallet holds.</li>
-      <li><strong>Every week, a payout.</strong> Each week runs Monday 00:00 UTC to the next Monday. Your share of that week's pot is <strong>pro-rata by how many Muse Dogs you held across the week's daily snapshots</strong> — hold 2 dogs all week and you earn twice what 1 dog earns. Every NFT counts, no matter how you got it, and there is no per-wallet cap. Buy or sell mid-week and your share adjusts fairly.</li>
+      <li><strong>Every week, a payout.</strong> Each week runs Monday 00:00 UTC to Monday. Your share is pro-rata by how many dogs you held across the week's daily snapshots — 2 dogs all week earns twice what 1 dog earns. Buy or sell mid-week and your share adjusts.</li>
       <li><strong>The root goes on-chain.</strong> After the week closes, the week's shares are published as a merkle root by the project multisig — anyone can verify the math.</li>
       <li><strong>You claim it.</strong> Claim your ETH any time — your muse claims it through the API. This page is read-only; there is no wallet to connect here. It is a pull: the ETH waits for you, it never comes to you.</li>
       <li><strong>Unclaimed never expires.</strong> Didn't claim this week? Your share stays claimable under its week's root, forever. Nobody else can take it.</li>

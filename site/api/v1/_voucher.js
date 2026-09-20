@@ -6,7 +6,7 @@
 //
 //   MintVoucher = { recipient, mintType, nonce, expiry }
 //
-// mintType: 0 = COMMUNITY (max 3/address, 380 cap), 1 = HOLDER (max 1/address, 100 cap).
+// mintType: 0 = COMMUNITY (max 3/address, 380 cap), 1 = HOLDER (max 3/address, 100 cap).
 // The NFT contract (Robinhood Chain, 4663) recovers the signer from the
 // EIP-712 signature and only mints when it matches the trusted voucher
 // signer. The relayer (a funded backend EOA holding MUSEDOG_RELAYER_KEY)

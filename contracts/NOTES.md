@@ -58,54 +58,86 @@ Files:
 - **No pause mechanism.** Deliberate least-privilege choice (see audit log).
   The voucher signer is rotatable by the owner at any time with an event;
   rotation instantly kills the old key's vouchers.
-- **Fee splitter: NO autonomous DEX swaps.** See §2.
+- **Fee splitter: autonomous Uniswap DEX legs** (decision reversed 2026-09-20,
+  see §2). The manual `forwardBuyback`/`forwardLiquidity` functions are kept
+  as owner-only emergency hatches.
 
 ## 2. The fee-splitter decision (read before changing)
 
 The task allowed two designs for the 25% buyback-burn and 25% LP legs:
 (a) fully-autonomous on-chain swaps, or (b) escrow + multisig forwarding.
-**We shipped (b), deliberately.**
+**We first shipped (b), deliberately — then Andrew reversed the decision on
+2026-09-19: "uniswap is very trustworthy we can do it automated."**
+The contracts below now implement (a), with (b) retained as the emergency
+fallback.
 
-Rationale: an autonomous swapper must hard-code a DEX router/quoter for
-Robinhood Chain. That surface cannot be pinned safely at build time — router
-addresses change, pools may be thin, and a stale or misconfigured router
-turns the splitter into an MEV/loss machine with no human in the loop.
-A "minimal, audited swap interface" against a chain whose DEX landscape is
-still being mapped is not airtight — so per the task's own fallback rule, we
-did not ship it.
+Why (a) became shippable: the blocker for (a) was pinning the DEX surface on
+Robinhood Chain. On 2026-09-19 the official Uniswap deployment page
+(`github.com/Uniswap/uniswapx` playbook/chains/robinhood.md, chain id 4663)
+was verified, and every pinned address was confirmed live via `eth_getCode`
+on `https://rpc.mainnet.chain.robinhood.com`:
+- v3 factory `0x1f7d7550B1b028f7571E69A784071F0205FD2EfA` (official page + code)
+- SwapRouter02 `0xCaf681a66D020601342297493863E78C959E5cb2` (official page + code)
+- WETH9 `0x0Bd7D308f8E1639FAb988df18A8011f41EAcAD73` (official page + code)
+- NonfungiblePositionManager `0x73991a25C818Bf1f1128dEAaB1492D45638DE0D3`
+  (code + on-chain `factory()`/`WETH9()` point at the two official contracts
+  above — first-party linkage, not a docs claim)
 
-What shipped instead:
+What ships now:
 
 - `process()` (permissionless keeper, runs when new funds ≥ threshold) splits
-  ONLY newly arrived funds into four escrow buckets: 10% Mikey, 40% vault,
-  25% buyback, 25% liquidity. **Escrowed funds are never re-split** —
-  `process()` splits `balance - totalPending()`, so a second call cannot
-  dilute the buyback/liquidity buckets (invariant covered by
-  `test_ProcessNeverReSplitsEscrowedFunds`).
-- The 10%/40% legs are **pushed immediately, failing OPEN**: if a recipient
-  reverts, the amount stays in its pending bucket (no revert of `process()`,
-  no stuck funds) and anyone can retry via `claimMikey()` / `claimRewards()`.
-- The 25%/25% legs accumulate in `buybackPending` / `liquidityPending` and are
-  forwarded **only by the owner (multisig)**, only up to the bucket balance,
-  to a destination the multisig chooses per call, with an event per forward.
-  The multisig executes the MDOG buyback-and-burn and the MDOG/ETH LP mint to
-  the dead address (`0x000000000000000000000000000000000000dEaD`) transparently,
-  or points a forward at a future separately-audited swapper contract.
-- Rounding dust from bps floor math flows to the liquidity leg via remainder
-  arithmetic (`liquidityShare = newFunds - mikey - rewards - buyback`), so the
-  four legs sum to exactly the processed amount and no wei can ever be
-  stranded outside the buckets.
+  ONLY newly arrived funds into the four buckets exactly as before
+  (**escrowed funds are never re-split** — invariant unchanged), pushes the
+  10%/40% legs failing-open as before, then settles the two DEX legs
+  **fail-SAFE**: each leg runs inside `try/catch`; a leg that cannot complete
+  (no pool, MDOG unset, TWAP guard tripped, router revert) is SKIPPED with a
+  `DexLegSkipped` event, its ETH stays escrowed, and `process()` still
+  succeeds. Any keeper can retry a leg via `executeBuyback()` /
+  `executeLiquidity()`.
+- **Buyback leg:** wraps the bucket to WETH, `exactInputSingle` WETH→MDOG on
+  the configured fee-tier pool with `deadline = block.timestamp`, checks the
+  ACTUAL received amount against the pool's TWAP (default 30-min window,
+  default 3% tolerance) and reverts the whole leg on shortfall — a sandwich
+  that moves execution >3% off TWAP just burns the attacker's gas — then
+  burns the full MDOG balance to the dead address.
+- **Liquidity leg:** wraps the bucket, swaps half to MDOG (same TWAP guard),
+  and mints a FULL-RANGE v3 position (ticks aligned to the pool's tick
+  spacing) DIRECTLY to the dead address — locked forever on mint, no
+  withdrawal possible, no exit to front-run. WETH dust is unwrapped back to
+  ETH so the next `process()` sweeps it; MDOG dust stays for the next leg.
+- **Why the router/NPM/factory/WETH are IMMUTABLE:** an owner-updatable
+  router would let a compromised owner key point the DEX legs at a malicious
+  contract and drain the escrowed buckets. Immutable means even a stolen
+  multisig key cannot redirect DEX funds — only the pre-existing `forward*`
+  trust assumption remains. If Uniswap ever migrates, the autonomous legs
+  brick safely (skip forever) and the multisig falls back to `forward*`.
+- **Owner-tunable DEX policy** (guarded): `mdogToken` (required before legs
+  run; zero/ EOA/ WETH rejected), `feeTier`, `twapWindow` (5 min–24 h),
+  `maxSlippageBps` (0–20%), `processThreshold`. The constructor refuses to
+  deploy on any chain other than 4663.
+- Tick math (`_getSqrtRatioAtTick`) is a clean-room implementation of the
+  1.0001-tick curve (constants are fixed-point encodings of powers of the
+  tick base — mathematical facts), pinned by canonical vectors in
+  `test_TickMathVectors` (tick 0 → 2^96, MIN/MAX ticks, tick 1 verified
+  against exact arbitrary-precision math).
+- Rounding dust from bps floor math still flows to the liquidity leg via
+  remainder arithmetic, so the four legs sum to exactly the processed amount
+  and no wei can ever be stranded outside the buckets.
 
 ## 3. Trust assumptions (explicit)
 
 1. **The owner is the project Safe multisig** (after the post-test-mint
    handover). It is trusted to: rotate the voucher signer only when needed,
-   set the base URI to the true final Arweave manifest, forward the
-   buyback/liquidity legs to the right destinations, and tune the process
-   threshold sanely. It CANNOT: exceed any mint cap, change metadata after the
-   freeze, change the royalty rate or receiver after wiring, redirect the
-   mikey/vault legs (immutable recipients), or forward more than each escrow
-   bucket holds.
+   set the base URI to the true final Arweave manifest, set the correct
+   `mdogToken` address, tune the DEX policy (`feeTier`, `twapWindow`,
+   `maxSlippageBps`) and the process threshold sanely, and use the manual
+   `forwardBuyback`/`forwardLiquidity` hatches only as intended. It CANNOT:
+   exceed any mint cap, change metadata after the freeze, change the royalty
+   rate or receiver after wiring, redirect the mikey/vault legs (immutable
+   recipients), forward more than each escrow bucket holds, **or change the
+   pinned Uniswap wiring** (router/factory/NPM/WETH are immutable — see §2,
+   this is deliberate: a mutable router would let a compromised owner key
+   drain the DEX buckets via a fake router).
 2. **The voucher signer key is dedicated** (signs vouchers only, never sends
    transactions, ideally in KMS/HSM). If compromised, the owner rotates it;
    the blast radius is bounded by the bucket caps (380/100) and voucher
@@ -222,10 +254,47 @@ double-dip. Lesson recorded: assert the invariant, not the mechanism.
 - Gas snapshot (for the record, not a target): community mint ~243k,
   holder mint ~213k, team mint of 20 ~1.18M, `process()` ~200k.
 
+### Pass 4 — autonomous DEX legs (2026-09-20). Decision reversed by Andrew:
+
+> "uniswap is very trustworthy we can do it automated"
+
+Rewrote `MuseDogsFeeSplitter` to execute the 25%/25% legs itself against
+pinned Uniswap v3 on Robinhood Chain (4663). Verification trail (§2):
+official Uniswap docs page + on-chain code + cross-contract linkage for the
+NPM. `Deploy.s.sol` wires the pinned addresses (overridable via env at
+script time, immutable after deploy).
+
+Design review summary (see §2 for the full rationale):
+
+- **Fail-safe, not fail-open, for DEX legs:** `try this.executeBuyback()` /
+  `try this.executeLiquidity()` inside `process()`; any failure (no pool,
+  MDOG unset, TWAP shortfall, router/NPM revert, OOG) skips the leg with a
+  `DexLegSkipped` event, escrowed ETH untouched, `process()` still succeeds.
+- **Sandwich bound:** actual received amount is checked against the pool's
+  TWAP (30-min default, 3% default tolerance) AFTER the swap; a sandwich that
+  moves execution >3% off TWAP reverts the leg and burns the attacker's gas.
+  Residual profit is bounded by the tolerance.
+- **Reentrancy:** `process()` is `nonReentrant`. The DEX executors zero their
+  bucket BEFORE any external call (CEI); a reentrant `process()` from a
+  token hook either finds nothing new or legitimately splits new funds
+  (no double-spend — covered by `test_ReentrantMdogCannotDrain`).
+- **Tick math** pinned by canonical vectors; tick-1 value verified against
+  exact arbitrary-precision math (the remembered "canonical" value in the
+  first test draft was wrong; the contract was right).
+- **Negative-tick TWAP** floor-division path covered end-to-end
+  (`test_TwapNegativeTickFloorDivision`).
+- **Router/NPM immutability is a security feature:** a mutable router would
+  let a compromised owner key drain the buckets via a fake router.
+- **Dead-address LP is irreversible by design** — `mdogToken`/`feeTier` must
+  be verified on Blockscout before `setMdogToken` (pre-mainnet checklist).
+
+Full suite after Pass 4: **87/87 passing** (37 NFT + 36 splitter + 14
+rewards vault). No deployment, no gas spent, nothing broadcast.
+
 ### Residual risks / open questions for Andrew
 
-1. **No independent third-party audit yet.** These contracts passed three
-   internal passes and 70 tests, but a second set of eyes (paid audit or at
+1. **No independent third-party audit yet.** These contracts passed four
+   internal passes and 87 tests, but a second set of eyes (paid audit or at
    minimum a review by a trusted Solidity dev) is strongly recommended before
    mainnet — this is real money and 500 permanent NFTs.
 2. **`_voucher.js` migration (§4)** is the single most likely launch-day
@@ -233,27 +302,42 @@ double-dip. Lesson recorded: assert the invariant, not the mechanism.
 3. **Robinhood Chain testnet rehearsal** (chain 46630, in foundry.toml)
    should run the FULL flow before mainnet: deploy → setBaseURI → teamMint
    20 → transfer both contracts to the Safe → accept → issue real vouchers
-   from the backend → relayer submits → `process()` a royalty → forward a
-   DEX leg. The old README's rehearsal checklist still applies.
+   from the backend → relayer submits → `process()` a royalty → DEX legs
+   execute on a testnet MDOG/ETH pool (or verify skip-and-hatch path if no
+   pool exists).
 4. **Voucher-signer compromise window** (P2-I1): no pause; rotation is the
    response. Keep voucher expiries short (hours, not days) to shrink it.
 5. **Royalty bypass** is inherent to ERC-2981 (§3.5) — honest disclosure only.
 6. **Threshold tuning**: `processThreshold` should be set so `process()` is
    worth calling but not spammable; the multisig can tune it later.
-7. The old autonomous fee-engine contracts were deleted per the locked
-   decision. If a future audited swapper is built, it becomes a *forward
-   destination*, not a change to these contracts.
+7. **DEX-leg residuals (accepted):** (a) sandwich tolerance is bounded by
+   `maxSlippageBps` (default 3%) — a price move within tolerance can extract
+   a small profit from a buyback leg; (b) TWAP manipulation costs scale with
+   the window (default 30 min) and pool depth — thin MDOG liquidity makes
+   legs expensive or skippable; (c) a dead-address LP is IRREVERSIBLE — a
+   mistyped `mdogToken` or wrong `feeTier` burns funds into the wrong pool
+   forever; the multisig must verify the pool on Blockscout before setting
+   `mdogToken`; (d) if Uniswap deprecates the pinned router, the autonomous
+   legs brick safely and the multisig falls back to `forward*`; (e) an
+   immature pool without enough TWAP observations fails SAFE (legs skip) but
+   could delay automation until the pool matures.
+8. The old escrow-only splitter design is preserved in git history
+   (pre-autonomous commits). The manual `forward*` hatches are kept in the
+   contract as the emergency path.
 
 ### Pre-mainnet checklist
 
 - [ ] `_voucher.js` updated to the new EIP-712 type + re-cross-verified
 - [ ] Independent Solidity review — no unresolved high/criticals
-- [ ] Testnet (46630) full rehearsal incl. backend voucher + relayer
+- [ ] Testnet (46630) full rehearsal incl. backend voucher + relayer + DEX legs
+- [ ] MDOG token address triple-checked; `setMdogToken` called; MDOG/ETH pool
+      with the chosen fee tier verified on Blockscout with TWAP history
 - [ ] Arweave upload complete; manifest txid in hand
 - [ ] Deploy splitter → deploy NFT (script wires royalties)
 - [ ] Verify source on Blockscout (both contracts)
 - [ ] `setBaseURI` ONCE with the final manifest URL
 - [ ] `teamMint` the 20 (deployer wallet = pre-launch test)
 - [ ] `transferOwnership(multisig)` on BOTH contracts; multisig `acceptOwnership`s
-- [ ] Confirm `owner()`, `voucherSigner`, `feeSplitter`, `royaltyInfo` on-chain
+- [ ] Confirm `owner()`, `voucherSigner`, `feeSplitter`, `royaltyInfo`,
+      `mdogToken`, `feeTier` on-chain
 - [ ] Publish canonical addresses from a verified channel

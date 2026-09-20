@@ -3,8 +3,9 @@ pragma solidity 0.8.30;
 
 import {Test} from "forge-std/Test.sol";
 import {MuseDogs} from "../src/MuseDogs.sol";
-import {MuseDogsFeeSplitter} from "../src/MuseDogsFeeSplitter.sol";
+import {MuseDogsFeeSplitter, PoolKey} from "../src/MuseDogsFeeSplitter.sol";
 import {MuseDogRewards} from "../src/MuseDogRewards.sol";
+import {MockPoolManager, MockPositionManager, MockToken} from "./MuseDogsFeeSplitter.t.sol";
 
 /// @notice Test suite for MuseDogs: voucher mints, caps, team mint, metadata
 ///         freeze, royalties, access control, and reentrancy.
@@ -26,15 +27,53 @@ contract MuseDogsTest is Test {
         keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
 
     function setUp() public {
+        vm.chainId(4663); // fee splitter constructor pins to Robinhood Chain
         signer = vm.addr(signerKey);
         // Deploy the real fee splitter (with the real rewards vault) so the
-        // royalty wiring is integration-tested, not mocked.
+        // royalty wiring is integration-tested, not mocked. The Uniswap v4
+        // wiring is stubbed with mocks (pools unconfigured, so any DEX leg
+        // would skip — the NFT tests never call process() anyway).
         MuseDogRewards vault = new MuseDogRewards(owner);
+        // Etched token addresses: the splitter's pool keys require
+        // currency0 < currency1 (MDOG < musebook < META); see the splitter
+        // test setUp.
+        MockToken tokenTemplate = new MockToken();
+        vm.etch(address(uint160(0xF002)), address(tokenTemplate).code);
+        vm.etch(address(uint160(0xF003)), address(tokenTemplate).code);
+        vm.etch(address(uint160(0xF004)), address(tokenTemplate).code);
+        MockToken mdog = MockToken(address(uint160(0xF002)));
+        MockToken musebook = MockToken(address(uint160(0xF003)));
+        MockToken meta = MockToken(address(uint160(0xF004)));
+        MockPoolManager pm = new MockPoolManager();
+        MockPositionManager posm = new MockPositionManager(mdog, musebook);
+        PoolKey memory metaEthKey =
+            PoolKey({currency0: address(0), currency1: address(meta), fee: 3000, tickSpacing: 60, hooks: address(0)});
+        PoolKey memory metaMdogKey = PoolKey({
+            currency0: address(mdog), currency1: address(meta), fee: 3000, tickSpacing: 60, hooks: address(0)
+        });
+        PoolKey memory mdogEthKey =
+            PoolKey({currency0: address(0), currency1: address(mdog), fee: 3000, tickSpacing: 60, hooks: address(0)});
+        PoolKey memory metaMusebookKey = PoolKey({
+            currency0: address(musebook), currency1: address(meta), fee: 3000, tickSpacing: 60, hooks: address(0)
+        });
+        PoolKey memory mdogMusebookKey = PoolKey({
+            currency0: address(mdog), currency1: address(musebook), fee: 3000, tickSpacing: 60, hooks: address(0)
+        });
         MuseDogsFeeSplitter realSplitter = new MuseDogsFeeSplitter(
             mikey,
             payable(address(vault)),
             owner,
-            0.1 ether
+            0.1 ether,
+            address(pm),
+            address(posm),
+            address(meta),
+            address(mdog),
+            address(musebook),
+            metaEthKey,
+            metaMdogKey,
+            metaMusebookKey,
+            mdogEthKey,
+            mdogMusebookKey
         );
         splitter = address(realSplitter);
         nft = new MuseDogs(owner, signer, splitter);
@@ -46,36 +85,26 @@ contract MuseDogsTest is Test {
     // Voucher signing helper (mirrors the contract's EIP-712 construction)
     // -------------------------------------------------------------------------
 
-    function _signVoucher(
-        uint256 key,
-        address recipient,
-        uint8 mintType,
-        uint256 nonce,
-        uint256 expiry
-    ) internal view returns (bytes memory sig) {
+    function _signVoucher(uint256 key, address recipient, uint8 mintType, uint256 nonce, uint256 expiry)
+        internal
+        view
+        returns (bytes memory sig)
+    {
         bytes32 domainSeparator = keccak256(
             abi.encode(
-                DOMAIN_TYPEHASH,
-                keccak256(bytes("Muse Dogs")),
-                keccak256(bytes("1")),
-                block.chainid,
-                address(nft)
+                DOMAIN_TYPEHASH, keccak256(bytes("Muse Dogs")), keccak256(bytes("1")), block.chainid, address(nft)
             )
         );
-        bytes32 structHash = keccak256(
-            abi.encode(nft.MINT_VOUCHER_TYPEHASH(), recipient, mintType, nonce, expiry)
-        );
+        bytes32 structHash = keccak256(abi.encode(nft.MINT_VOUCHER_TYPEHASH(), recipient, mintType, nonce, expiry));
         bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(key, digest);
         sig = abi.encodePacked(r, s, v);
     }
 
-    function _mint(
-        address recipient,
-        uint8 mintType,
-        uint256 nonce,
-        uint256 expiry
-    ) internal returns (uint256 tokenId) {
+    function _mint(address recipient, uint8 mintType, uint256 nonce, uint256 expiry)
+        internal
+        returns (uint256 tokenId)
+    {
         bytes memory sig = _signVoucher(signerKey, recipient, mintType, nonce, expiry);
         uint256 before = nft.totalMinted();
         vm.prank(relayer); // relayer submits; NFT must still go to recipient
@@ -96,8 +125,7 @@ contract MuseDogsTest is Test {
         assertEq(nft.communityMintsByAddress(alice), 1);
         assertTrue(nft.usedNonces(alice, 1));
         assertEq(
-            nft.tokenURI(tokenId),
-            string.concat("https://arweave.net/test-manifest/", vm.toString(tokenId), ".json")
+            nft.tokenURI(tokenId), string.concat("https://arweave.net/test-manifest/", vm.toString(tokenId), ".json")
         );
     }
 
@@ -124,9 +152,7 @@ contract MuseDogsTest is Test {
         _mint(alice, 0, 9, block.timestamp + 1 days);
         bytes memory sig = _signVoucher(signerKey, alice, 1, 9, block.timestamp + 1 days);
         vm.prank(relayer);
-        vm.expectRevert(
-            abi.encodeWithSelector(MuseDogs.NonceAlreadyUsed.selector, alice, 9)
-        );
+        vm.expectRevert(abi.encodeWithSelector(MuseDogs.NonceAlreadyUsed.selector, alice, 9));
         nft.mintWithVoucher(alice, 1, 9, block.timestamp + 1 days, sig);
     }
 
@@ -163,9 +189,7 @@ contract MuseDogsTest is Test {
         bytes memory sig = _signVoucher(signerKey, alice, 0, 1, expiry);
         vm.warp(expiry + 1); // one second past expiry
         vm.prank(relayer);
-        vm.expectRevert(
-            abi.encodeWithSelector(MuseDogs.VoucherExpired.selector, expiry, expiry + 1)
-        );
+        vm.expectRevert(abi.encodeWithSelector(MuseDogs.VoucherExpired.selector, expiry, expiry + 1));
         nft.mintWithVoucher(alice, 0, 1, expiry, sig);
     }
 
@@ -184,9 +208,7 @@ contract MuseDogsTest is Test {
         _mint(alice, 0, 5, block.timestamp + 1 days);
         bytes memory sig = _signVoucher(signerKey, alice, 0, 5, block.timestamp + 1 days);
         vm.prank(relayer);
-        vm.expectRevert(
-            abi.encodeWithSelector(MuseDogs.NonceAlreadyUsed.selector, alice, 5)
-        );
+        vm.expectRevert(abi.encodeWithSelector(MuseDogs.NonceAlreadyUsed.selector, alice, 5));
         nft.mintWithVoucher(alice, 0, 5, block.timestamp + 1 days, sig);
     }
 
@@ -236,21 +258,19 @@ contract MuseDogsTest is Test {
         _mint(alice, 0, 3, block.timestamp + 1 days);
         bytes memory sig = _signVoucher(signerKey, alice, 0, 4, block.timestamp + 1 days);
         vm.prank(relayer);
-        vm.expectRevert(
-            abi.encodeWithSelector(MuseDogs.CommunityLimitExceeded.selector, alice)
-        );
+        vm.expectRevert(abi.encodeWithSelector(MuseDogs.CommunityLimitExceeded.selector, alice));
         nft.mintWithVoucher(alice, 0, 4, block.timestamp + 1 days, sig);
     }
 
-    function test_HolderLimitOnePerAddress() public {
+    function test_HolderLimitThreePerAddress() public {
         address bob = address(0xB0B);
         _mint(bob, 1, 1, block.timestamp + 1 days);
-        bytes memory sig = _signVoucher(signerKey, bob, 1, 2, block.timestamp + 1 days);
+        _mint(bob, 1, 2, block.timestamp + 1 days);
+        _mint(bob, 1, 3, block.timestamp + 1 days);
+        bytes memory sig = _signVoucher(signerKey, bob, 1, 4, block.timestamp + 1 days);
         vm.prank(relayer);
-        vm.expectRevert(
-            abi.encodeWithSelector(MuseDogs.HolderLimitExceeded.selector, bob)
-        );
-        nft.mintWithVoucher(bob, 1, 2, block.timestamp + 1 days, sig);
+        vm.expectRevert(abi.encodeWithSelector(MuseDogs.HolderLimitExceeded.selector, bob));
+        nft.mintWithVoucher(bob, 1, 4, block.timestamp + 1 days, sig);
     }
 
     function test_CommunityCap380() public {
@@ -297,7 +317,9 @@ contract MuseDogsTest is Test {
             _mint(address(uint160(0x3000 + a)), 1, 1, block.timestamp + 1 days);
         }
         address[] memory team = new address[](20);
-        for (uint256 i = 0; i < 20; i++) team[i] = address(uint160(0x4000 + i));
+        for (uint256 i = 0; i < 20; i++) {
+            team[i] = address(uint160(0x4000 + i));
+        }
         vm.prank(owner);
         nft.teamMint(team);
         assertEq(nft.totalMinted(), 500);
@@ -311,8 +333,12 @@ contract MuseDogsTest is Test {
     function test_TeamMintAcrossCalls() public {
         address[] memory batch1 = new address[](13);
         address[] memory batch2 = new address[](7);
-        for (uint256 i = 0; i < 13; i++) batch1[i] = address(uint160(0x5000 + i));
-        for (uint256 i = 0; i < 7; i++) batch2[i] = address(uint160(0x6000 + i));
+        for (uint256 i = 0; i < 13; i++) {
+            batch1[i] = address(uint160(0x5000 + i));
+        }
+        for (uint256 i = 0; i < 7; i++) {
+            batch2[i] = address(uint160(0x6000 + i));
+        }
         vm.startPrank(owner);
         nft.teamMint(batch1);
         nft.teamMint(batch2);
@@ -324,7 +350,9 @@ contract MuseDogsTest is Test {
 
     function test_TeamMint21stReverts() public {
         address[] memory team = new address[](20);
-        for (uint256 i = 0; i < 20; i++) team[i] = address(uint160(0x7000 + i));
+        for (uint256 i = 0; i < 20; i++) {
+            team[i] = address(uint160(0x7000 + i));
+        }
         vm.prank(owner);
         nft.teamMint(team);
         address[] memory one = new address[](1);
@@ -429,9 +457,7 @@ contract MuseDogsTest is Test {
         // silently swallow the irrevocable royalty stream.
         MuseDogs fresh = new MuseDogs(owner, signer, address(0));
         vm.prank(owner);
-        vm.expectRevert(
-            abi.encodeWithSelector(MuseDogs.NotAContract.selector, address(0xE0A))
-        );
+        vm.expectRevert(abi.encodeWithSelector(MuseDogs.NotAContract.selector, address(0xE0A)));
         fresh.setFeeSplitter(address(0xE0A));
     }
 
@@ -471,9 +497,7 @@ contract MuseDogsTest is Test {
 
     function test_ConstructorZeroChecks() public {
         // Zero owner is rejected by OZ Ownable itself (runs before our body).
-        vm.expectRevert(
-            abi.encodeWithSignature("OwnableInvalidOwner(address)", address(0))
-        );
+        vm.expectRevert(abi.encodeWithSignature("OwnableInvalidOwner(address)", address(0)));
         new MuseDogs(address(0), signer, splitter);
         // Zero voucher signer is rejected by our own check.
         vm.expectRevert(MuseDogs.ZeroAddress.selector);
@@ -524,8 +548,16 @@ contract ReentrantMinter {
     bool public reentered;
     bool public doubleMinted;
 
-    address r1; uint8 t1; uint256 n1; uint256 e1; bytes s1;
-    address r2; uint8 t2; uint256 n2; uint256 e2; bytes s2;
+    address r1;
+    uint8 t1;
+    uint256 n1;
+    uint256 e1;
+    bytes s1;
+    address r2;
+    uint8 t2;
+    uint256 n2;
+    uint256 e2;
+    bytes s2;
 
     constructor(MuseDogs _nft, uint256 _signerKey) {
         nft = _nft;
@@ -540,10 +572,7 @@ contract ReentrantMinter {
         (r2, t2, n2, e2, s2) = (r, t, n, e, s);
     }
 
-    function onERC721Received(address, address, uint256, bytes calldata)
-        external
-        returns (bytes4)
-    {
+    function onERC721Received(address, address, uint256, bytes calldata) external returns (bytes4) {
         reentered = true;
         // Try to mint again with a second, fully-valid voucher.
         try nft.mintWithVoucher(r2, t2, n2, e2, s2) {

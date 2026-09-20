@@ -17,7 +17,7 @@ import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 ///          A backend relayer submits the tx and pays gas; the NFT always goes
 ///          to the voucher's `recipient` (never msg.sender). Max 3 per address.
 ///        - 100 holder-airdrop mints: same voucher system with
-///          mintType = HOLDER. Max 1 per address. The backend checks the $10
+///          mintType = HOLDER. Max 3 per address. The backend checks the $10
 ///          MDOG holdings off-chain before issuing a voucher; the contract
 ///          trusts the voucher signer.
 ///        - 20 team/treasury mints: owner-only batch mint (the pre-launch test
@@ -69,7 +69,7 @@ contract MuseDogs is ERC721, ERC721Royalty, EIP712, Ownable2Step, ReentrancyGuar
     /// @notice Max community mints per recipient address.
     uint256 public constant MAX_COMMUNITY_PER_ADDRESS = 3;
     /// @notice Max holder-airdrop mints per recipient address.
-    uint256 public constant MAX_HOLDER_PER_ADDRESS = 1;
+    uint256 public constant MAX_HOLDER_PER_ADDRESS = 3;
     /// @notice EIP-2981 royalty: 500 bps = 5%, fixed forever. No setter exists.
     uint256 public constant ROYALTY_BPS = 500;
     /// @notice First token ID. Token IDs run 1..500 (1-based avoids token-0
@@ -232,7 +232,7 @@ contract MuseDogs is ERC721, ERC721Royalty, EIP712, Ownable2Step, ReentrancyGuar
     ///      _safeMint (which calls into the recipient). nonReentrant on top.
     /// @param recipient The whitelisted Bankr address receiving the NFT.
     /// @param mintType  0 = COMMUNITY (max 3/address, 380 cap),
-    ///                  1 = HOLDER (max 1/address, 100 cap).
+    ///                  1 = HOLDER (max 3/address, 100 cap).
     /// @param nonce     Server-issued serial, single-use per recipient.
     /// @param expiry    Unix timestamp; the voucher is valid while
     ///                  block.timestamp <= expiry.
