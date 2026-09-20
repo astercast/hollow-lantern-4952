@@ -10,7 +10,6 @@
 const HTML = `<!DOCTYPE html>
 <html lang="en">
 <head>
-<script>if(sessionStorage.getItem("musedog_unlocked")!=="1"){location.replace("/index.html");}</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Why MuseDog? — Muse Dogs</title>
