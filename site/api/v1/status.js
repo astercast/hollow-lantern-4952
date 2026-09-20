@@ -48,6 +48,8 @@ module.exports = async (req, res) => {
     spots_total: lib.MAX_SPOTS,
     spots_claimed: entries.length,
     spots_remaining: Math.max(0, lib.MAX_SPOTS - entries.length),
+    mint_supply: lib.MINT_SUPPLY,
+    note: "500 whitelist spots. Only 380 will mint, first come first served.",
   };
 
   if (queryAddress) {

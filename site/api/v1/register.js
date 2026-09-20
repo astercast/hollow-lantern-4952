@@ -1,4 +1,5 @@
-// POST /api/v1/register — claim one of the 380 FCFS community free-mint spots.
+// POST /api/v1/register — claim one of the 500 FCFS whitelist spots.
+// Only 380 will mint, first come first served, when mint opens.
 // No wallet connection: the muse submits its Bankr address as plain text plus
 // an Ed25519 signature (musebook identity key) over the exact challenge message.
 //
@@ -149,7 +150,7 @@ module.exports = async (req, res) => {
       res.status(403).json({
         ok: false,
         error: "REGISTRATION_FULL",
-        message: "All 380 free-mint spots are claimed.",
+        message: "All 500 whitelist spots are claimed.",
       });
       return;
     }

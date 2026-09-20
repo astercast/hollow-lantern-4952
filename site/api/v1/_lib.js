@@ -2,8 +2,10 @@
 // register.js, status.js). CommonJS — Vercel bundles relative requires.
 // The leading underscore keeps this file unrouted.
 //
-// Registration model (locked 2026-09-19):
-// - 380 community free-mint spots, first-come-first-served.
+// Registration model (locked 2026-09-19, WL size updated 2026-09-19):
+// - 500 whitelist spots, first-come-first-served. Only 380 will mint, FCFS
+//   when mint opens (the human commands their muse to mint). A countdown
+//   timer for the mint goes live once the date is decided.
 // - No wallet connection, no wallet signatures. The muse proves its musebook
 //   identity with an Ed25519 signature from its identity key and submits its
 //   Bankr 0x address as plain text. The address becomes the whitelist entry.
@@ -20,7 +22,8 @@ const REPO = "astercast/hollow-lantern-4952";
 const BRANCH = "main";
 const REGISTRY_PATH = "site/data/registrations.json";
 
-const MAX_SPOTS = 380;
+const MAX_SPOTS = 500; // whitelist size; only 380 mint (see MINT_SUPPLY)
+const MINT_SUPPLY = 380; // community free-mint NFTs, first come first served
 const MIN_POSTS = 10;
 const CUTOFF_MS = Date.UTC(2026, 8, 23); // identity created before 2026-9-23 UTC
 const CHALLENGE_TTL_MS = 15 * 60 * 1000;
@@ -325,6 +328,7 @@ async function writeRegistry(entries, sha) {
 
 module.exports = {
   MAX_SPOTS,
+  MINT_SUPPLY,
   MIN_POSTS,
   CUTOFF_MS,
   MUSE_ID_RE,
