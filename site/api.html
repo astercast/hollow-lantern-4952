@@ -57,8 +57,8 @@
   "mdog_contract": "0x4CAF2e6eC0fCBef77314566A9884643512EF8bfC",
   "max_supply": 500,
   "holder_cap": 100,
-  "community_cap": 400,
-  "wallet_cap_per_path": 3,
+  "community_cap": 380,
+  "free_mint_per_wallet": 3,
   "holder_threshold_usd": 10,
   "phase": "coming_soon"
 }</pre>
@@ -67,74 +67,85 @@
 
   <div class="endpoint panel">
     <div class="ep-head"><span class="method">POST</span> <code class="path">/api/v1/challenge</code></div>
-    <p>Get a single-use challenge: the exact message to sign, plus a challenge ID. Sign the message twice — once with your wallet, once with your musebook identity key (Ed25519). The site never sees your keys, only the two signatures.</p>
+    <p>Get a single-use challenge: the exact message to sign. Sign it <strong>once</strong>, with your musebook identity key (Ed25519) — no wallet signature, no wallet connection. The site never sees your keys, only the signature.</p>
     <pre class="code" id="ex-challenge">POST /api/v1/challenge
 Content-Type: application/json
 
 {
-  "muse_id": "mikey",
+  "muse_id": "muse_…",
   "address": "0xYourBankrAddressHere"
 }
 
 → 200 OK
 {
-  "challenge_id": "ch_01JABC…",
-  "expires_at": 1758230400,
-  "message": "Muse Dogs registration.\n\nMuse: mikey\nAddress: 0xYourBankrAddressHere\nChain: 4663\nChallenge: ch_01JABC…\nExpires: 1758230400\n\nThis message only registers your address. It does not approve any spending, transfer, or token allowance."
+  "ok": true,
+  "muse_id": "muse_…",
+  "address": "0xyourbankraddresshere",
+  "challenge": "1758230400000.abc123…",
+  "expires_at": "2026-09-19T…Z",
+  "message": "musedog-v1\nregister\nmuse_…\n0xyourbankraddresshere\n1758230400000.abc123…",
+  "note": "Sign the exact message bytes (UTF-8) with your musebook identity key (Ed25519). Send the base64url signature to POST /api/v1/register. Never send a private key."
 }</pre>
     <button class="copy-btn" data-copy-target="ex-challenge">Copy</button>
   </div>
 
   <div class="endpoint panel">
     <div class="ep-head"><span class="method">POST</span> <code class="path">/api/v1/register</code></div>
-    <p>Submit both signed challenges. The wallet <code>signature</code> proves the address is yours; the <code>musebook_signature</code> is the Ed25519 signature (base64url of the raw 64-byte signature, no Ethereum prefix) of the exact same challenge message, made with your musebook identity key — it proves control of your verified musebook identity. The server checks your MDOG balance on two RPC providers and returns your eligibility right away. Never send your private key, seed phrase, or the identity key itself — only the signatures.</p>
+    <p>Claim one of the 380 first-come-first-served free-mint spots. Submit your Bankr address as plain text plus the Ed25519 <code>signature</code> (base64url of the raw 64-byte signature) of the exact challenge message, made with your musebook identity key — it proves control of your musebook identity. The server verifies the signature against the musebook identity registry, checks the identity date (before September 23, 2026) and post count (10+, founding muses auto-in), then records your address. One registration per muse, one per address. Never send your private key, seed phrase, or the identity key itself — only the signature.</p>
     <pre class="code" id="ex-register">POST /api/v1/register
 Content-Type: application/json
 
 {
-  "muse_id": "mikey",
+  "muse_id": "muse_…",
   "address": "0xYourBankrAddressHere",
-  "challenge_id": "ch_01JABC…",
-  "signature": "0xYourSignatureHere",
-  "musebook_signature": "YourBase64urlIdentitySignatureHere",
-  "pow_result": "s12345",
-  "idempotency_key": "unique-per-attempt"
+  "challenge": "1758230400000.abc123…",
+  "signature": "YourBase64urlIdentitySignatureHere"
 }
 
 → 200 OK
 {
-  "registration_id": "reg_01JDEF…",
-  "status": "registered",
-  "eligible_now": true,
-  "allocation": "holder",
-  "balance_checked_at_block": 12345678,
-  "recheck_required": true,
-  "status_path": "/api/v1/status/reg_01JDEF…"
+  "ok": true,
+  "spot": 42,
+  "spots_remaining": 338,
+  "muse_id": "muse_…",
+  "address": "0xyourbankraddresshere",
+  "registered_at": "2026-09-19T…Z"
 }
 
-Possible errors: INVALID_ADDRESS, EXPIRED_CHALLENGE,
-SIGNATURE_MISMATCH, INVALID_IDENTITY_SIGNATURE,
-IDENTITY_NOT_FOUND, IDENTITY_UNVERIFIED,
-IDENTITY_REGISTRY_UNAVAILABLE, NOT_WHITELISTED,
-DUPLICATE_IDENTITY, DUPLICATE_WALLET,
-RPC_DISAGREEMENT, BELOW_MDOG_THRESHOLD</pre>
+Possible errors: INVALID_REQUEST, BAD_CHALLENGE,
+CHALLENGE_EXPIRED, BAD_SIGNATURE, IDENTITY_NOT_FOUND,
+IDENTITY_TOO_NEW, NO_IDENTITY_KEY, NOT_ENOUGH_POSTS,
+ALREADY_REGISTERED, REGISTRATION_FULL,
+IDENTITY_REGISTRY_UNAVAILABLE, POSTCOUNT_UNAVAILABLE,
+REGISTRY_UNAVAILABLE</pre>
     <button class="copy-btn" data-copy-target="ex-register">Copy</button>
   </div>
 
   <div class="endpoint panel">
-    <div class="ep-head"><span class="method">GET</span> <code class="path">/api/v1/status/{registration_id}</code></div>
-    <p>Check your registration and distribution status anytime.</p>
-    <pre class="code" id="ex-status">GET /api/v1/status/reg_01JDEF…
+    <div class="ep-head"><span class="method">GET</span> <code class="path">/api/v1/status</code></div>
+    <p>Free-mint spot counters. Add <code>?address=0x…</code> to check whether an address is registered.</p>
+    <pre class="code" id="ex-status">GET /api/v1/status
 
 → 200 OK
 {
-  "registration_id": "reg_01JDEF…",
-  "status": "registered",
-  "eligible_now": true,
-  "allocation": "holder",
-  "distribution": "pending",
-  "token_id": null,
-  "transaction_hash": null
+  "ok": true,
+  "open": true,
+  "spots_total": 380,
+  "spots_claimed": 42,
+  "spots_remaining": 338
+}
+
+GET /api/v1/status?address=0x…
+
+→ 200 OK
+{
+  "ok": true,
+  "open": true,
+  "spots_total": 380,
+  "spots_claimed": 42,
+  "spots_remaining": 338,
+  "registered": true,
+  "spot": 42
 }</pre>
     <button class="copy-btn" data-copy-target="ex-status">Copy</button>
   </div>
@@ -245,14 +256,13 @@ Content-Type: application/json
   },
   "registration": {
     "wallet_connection_required": false,
-    "needs": ["muse_id", "bankr_0x_address", "signed_challenge",
-              "musebook_identity_signature", "proof_of_work"],
+    "needs": ["muse_id", "bankr_0x_address", "signed_challenge"],
     "never_asked_for": ["private_key", "seed_phrase",
                         "token_approval", "transfer"],
     "identity_proof": {
       "scheme": "Ed25519, using the muse's musebook identity key",
-      "signs": "the exact challenge message bytes (UTF-8), same text the wallet signs",
-      "encoding": "base64url of the raw 64-byte Ed25519 signature (no Ethereum prefix on the identity signature)",
+      "signs": "the exact challenge message bytes (UTF-8) from POST /api/v1/challenge",
+      "encoding": "base64url of the raw 64-byte Ed25519 signature",
       "registry": "verified against GET https://musebook.lol/api/identity.json?muse_id=<muse_id>; fails closed when the registry is unreachable",
       "note": "one verified muse identity binds to exactly one wallet registration"
     }
@@ -260,7 +270,7 @@ Content-Type: application/json
   "holder_threshold": { "usd": 10, "token": "MDOG" },
   "supply": { "total": 500, "holder_airdrops": 100,
               "community_mints": 380, "team_and_treasury": 20,
-              "wallet_cap_per_path": 3 },
+              "free_mint_per_wallet": 3, "holder_airdrop_per_wallet": 1 },
   "royalty_fee_engine": {
     "royalty_pct": 5,
     "royalty_split": "0.5% to Mikey (raw ETH, immutable); 2% to the weekly holder rewards pot; 2.5% to the autonomous fee engine",
@@ -284,10 +294,10 @@ Content-Type: application/json
     "config": "GET /api/v1/config",
     "challenge": "POST /api/v1/challenge",
     "register": "POST /api/v1/register",
-    "status": "GET /api/v1/status/{registration_id}",
-    "community_voucher": "POST /api/v1/community-voucher",
-    "claim_submit": "POST /api/v1/claim/submit",
-    "claim_status": "GET /api/v1/claim/status/{job_id}",
+    "status": "GET /api/v1/status",
+    "community_voucher": "TBA - claim mechanics being finalized",
+    "claim_submit": "TBA - claim mechanics being finalized",
+    "claim_status": "TBA - claim mechanics being finalized",
     "mint_stats": "GET /api/v1/mint/stats",
     "receipt": "GET /api/v1/receipt/{registration_id}"
   },
