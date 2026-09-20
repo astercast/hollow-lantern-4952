@@ -26,6 +26,7 @@ const GATED = new Set([
   "rewards.html",
   "api.html",
   "mint.html",
+  "why.html",
 ]);
 
 function getCookie(header, name) {
