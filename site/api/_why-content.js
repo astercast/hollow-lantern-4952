@@ -10,14 +10,14 @@
 const HTML = `<!DOCTYPE html>
 <html lang="en">
 <head>
-<script>if(sessionStorage.getItem("musedog_unlocked")!=="1"){location.replace("index.html");}</script>
+<script>if(sessionStorage.getItem("musedog_unlocked")!=="1"){location.replace("/index.html");}</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Why MuseDog? — Muse Dogs</title>
 <meta name="description" content="Why MuseDog: every town needs a town dog.">
-<link rel="icon" type="image/png" href="favicon.png">
-<link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="stylesheet" href="styles.css">
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="stylesheet" href="/styles.css">
 </head>
 <body>
 
@@ -25,15 +25,15 @@ const HTML = `<!DOCTYPE html>
 
 <header class="site-header">
   <div class="wrap">
-    <a class="logo" href="home.html"><img class="logo-mark" src="musedog.jpg" alt="Muse Dog logo"><span>Muse Dogs</span></a>
+    <a class="logo" href="/home.html"><img class="logo-mark" src="/musedog.jpg" alt="Muse Dog logo"><span>Muse Dogs</span></a>
     <nav class="main-nav">
-      <a href="home.html"><span class="hash">#</span>home</a>
+      <a href="/home.html"><span class="hash">#</span>home</a>
       <a href="/api/why" class="active"><span class="hash">#</span>why</a>
-      <a href="register.html"><span class="hash">#</span>register</a>
-      <a href="verify.html"><span class="hash">#</span>verify</a>
-      <a href="rewards.html"><span class="hash">#</span>rewards</a>
-      <a href="api.html"><span class="hash">#</span>api</a>
-      <a href="mint.html"><span class="hash">#</span>mint</a>
+      <a href="/register.html"><span class="hash">#</span>register</a>
+      <a href="/verify.html"><span class="hash">#</span>verify</a>
+      <a href="/rewards.html"><span class="hash">#</span>rewards</a>
+      <a href="/api.html"><span class="hash">#</span>api</a>
+      <a href="/mint.html"><span class="hash">#</span>mint</a>
     </nav>
   </div>
 </header>
@@ -51,7 +51,7 @@ const HTML = `<!DOCTYPE html>
       <p class="lede">Because every town needs a town dog. And because the next great memecoin won't come from a marketing deck — it'll come from a community that was already alive before the coin existed.</p>
     </div>
     <div class="hero-art">
-      <img class="banner" src="musedog-banner.jpg" alt="Muse Dogs banner">
+      <img class="banner" src="/musedog-banner.jpg" alt="Muse Dogs banner">
     </div>
   </div>
 
@@ -98,7 +98,7 @@ const HTML = `<!DOCTYPE html>
     <p>Come meet him where he lives.</p>
     <div class="hero-ctas">
       <a class="btn" href="https://musebook.lol" target="_blank" rel="noopener">Meet him on musebook</a>
-      <a class="btn secondary" href="mint.html">See the dogs</a>
+      <a class="btn secondary" href="/mint.html">See the dogs</a>
     </div>
   </div>
 
@@ -115,15 +115,15 @@ const HTML = `<!DOCTYPE html>
         <h4>Project</h4>
         <ul>
           <li><a href="/api/why">Why MuseDog?</a></li>
-          <li><a href="verify.html">Verify the contract</a></li>
-          <li><a href="api.html">Machine docs (API)</a></li>
+          <li><a href="/verify.html">Verify the contract</a></li>
+          <li><a href="/api.html">Machine docs (API)</a></li>
         </ul>
       </div>
       <div>
         <h4>Resources</h4>
         <ul>
-          <li><a href="api.html">Machine docs (API)</a></li>
-          <li><a href="verify.html">MDOG token: 0x4CAF…8bfC</a></li>
+          <li><a href="/api.html">Machine docs (API)</a></li>
+          <li><a href="/verify.html">MDOG token: 0x4CAF…8bfC</a></li>
         </ul>
       </div>
     </div>
@@ -133,7 +133,7 @@ const HTML = `<!DOCTYPE html>
   </div>
 </footer>
 
-<script src="app.js"></script>
+<script src="/app.js"></script>
 <!-- Vercel Web Analytics + Speed Insights -->
 <script>
   window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
