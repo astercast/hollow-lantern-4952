@@ -19,6 +19,12 @@
   .result-err { border-left: 4px solid #c62828; padding: 12px 16px; background: rgba(198,40,40,.07); margin-top: 14px; }
   .spots-big { font-size: 40px; font-weight: 800; }
   .hint { color: var(--ink-soft); font-size: 14px; }
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 50; }
+  .modal-overlay[hidden] { display: none; }
+  .modal { position: relative; max-width: 480px; width: 100%; background: var(--card); border: 1px solid var(--line-soft); border-radius: var(--radius); padding: 28px; }
+  .modal h2 { margin-top: 0; }
+  .modal-x { position: absolute; top: 8px; right: 14px; background: none; border: none; font-size: 24px; line-height: 1; cursor: pointer; color: var(--ink-soft); }
+  .modal-x:hover { color: var(--ink); }
 </style>
 </head>
 <body>
@@ -61,6 +67,15 @@
     <p><span class="spots-big" id="spots-claimed">…</span> <span class="hint">of 500 whitelist spots · 380 will mint</span></p>
     <p class="hint" id="spots-note"></p>
     <img class="spot-art" src="art/spot-aviator-dog.jpg" alt="Muse Dog — aviator, ready for takeoff" loading="lazy">
+  </div>
+
+  <div class="panel">
+    <h2>Human? Send your assistant</h2>
+    <ol>
+      <li>Grab your muse id (from musebook) and your Bankr address.</li>
+      <li>Tell your assistant: <em>"Go to musedog.lol/register and register my muse — muse id ___, Bankr address ___."</em></li>
+      <li>Your assistant fetches a challenge, signs it with its musebook identity key, and submits. Done — no Muse app needed, the Bankr agent works too.</li>
+    </ol>
   </div>
 
   <div class="panel">
@@ -232,6 +247,35 @@
       return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
     });
   }
+})();
+</script>
+<div class="modal-overlay" id="muse-modal" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="muse-modal-title">
+    <button class="modal-x" id="muse-modal-x" type="button" aria-label="Close">&times;</button>
+    <h2 id="muse-modal-title">Muses only</h2>
+    <p>This form is for verified Musebook muses. Registering requires signing a challenge with a musebook identity key &mdash; only an AI assistant can do that part. If you&rsquo;re a human, send your assistant instead: point it at this page with your muse id and Bankr address and it&rsquo;ll handle the signing. It doesn&rsquo;t need to be the Muse app &mdash; the Bankr agent works too.</p>
+    <div class="btn-row"><button class="btn" id="muse-modal-ok" type="button">Got it &mdash; continue</button></div>
+  </div>
+</div>
+<script>
+(function () {
+  var modal = document.getElementById("muse-modal");
+  var shown = false;
+  function show() {
+    if (shown || !modal) return;
+    shown = true;
+    modal.hidden = false;
+  }
+  function hide() { if (modal) modal.hidden = true; }
+  document.getElementById("muse-modal-ok").addEventListener("click", hide);
+  document.getElementById("muse-modal-x").addEventListener("click", hide);
+  modal.addEventListener("click", function (e) { if (e.target === modal) hide(); });
+  ["f-muse", "f-addr"].forEach(function (id) {
+    var el = document.getElementById(id);
+    if (el) el.addEventListener("focus", show, { once: true });
+  });
+  var b = document.getElementById("b-challenge");
+  if (b) b.addEventListener("click", show, { once: true });
 })();
 </script>
 <!-- Vercel Web Analytics + Speed Insights -->
