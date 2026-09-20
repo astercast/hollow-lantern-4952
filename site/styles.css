@@ -238,6 +238,7 @@ nav.main-nav a .hash { display: none; }
   display: block;
   margin-top: 16px;
 }
+.spot-art.center { margin-left: auto; margin-right: auto; }
 
 /* ---- Steps ---- */
 .steps {
