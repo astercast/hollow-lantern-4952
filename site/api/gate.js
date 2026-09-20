@@ -61,12 +61,11 @@ function isValidCookie(value, secret) {
 }
 
 // Disk location of each gated page, relative to the project root (site/).
-// Most pages live as static files too (served only via the rewrites in
-// vercel.json); why.html lives under api/_gated so it is never statically
-// served — it is only reachable through this gate.
-const FILE_PATHS = {
-  "why.html": "api/_gated/why.html",
-};
+// why.html is special: its content is inlined in _why-content.js (required
+// below) because files under api/ are not reliably bundled via includeFiles,
+// and the page must never exist as a static file — the www project's edge
+// routing would serve it ungated.
+const whyContent = require("./_why-content.js").content;
 
 module.exports = async (req, res) => {
   const file = req.query && req.query.file;
@@ -86,13 +85,16 @@ module.exports = async (req, res) => {
   }
 
   let html;
-  try {
-    // includeFiles in vercel.json bundles these pages with the function.
-    const diskFile = FILE_PATHS[file] || file;
-    html = fs.readFileSync(path.join(process.cwd(), diskFile), "utf8");
-  } catch (e) {
-    res.status(500).end();
-    return;
+  if (file === "why.html") {
+    html = whyContent;
+  } else {
+    try {
+      // includeFiles in vercel.json bundles these pages with the function.
+      html = fs.readFileSync(path.join(process.cwd(), file), "utf8");
+    } catch (e) {
+      res.status(500).end();
+      return;
+    }
   }
 
   res.setHeader("Content-Type", "text/html; charset=utf-8");
