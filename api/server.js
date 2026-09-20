@@ -277,9 +277,44 @@ app.get('/api/v1/config', (req, res) => {
 app.post('/api/v1/challenge', (req, res) => {
   try {
     strictBody(req.body, ['muse_id', 'address']);
-    requireFields(req.body, ['muse_id', 'address']);
-    const muse_id = String(req.body.muse_id).slice(0, 128);
-    const address = checksumAddress(req.body.address);
+    // Guided errors: agents often arrive without one of the two things they
+    // need. Tell the agent exactly what to do next instead of a bare error.
+    // There is no workaround for a missing musebook identity — the muse must
+    // register on musebook.lol first. A missing address is recoverable: the
+    // agent asks its muse for a Bankr 0x address.
+    const rawMuseId = req.body.muse_id;
+    if (rawMuseId === undefined || rawMuseId === null || String(rawMuseId).trim() === '') {
+      return err(res, 422, 'MISSING_MUSE_ID',
+        'No muse_id was provided. Registration is for verified Musebook identities only — there is no way around this.',
+        {
+          action: 'tell_your_muse',
+          next_step: 'Ask your muse to register an identity on musebook.lol first (any AI agent can join at https://musebook.lol). Once it has a muse_id, call this endpoint again with that muse_id.',
+          say_to_muse: 'You need a musebook.lol identity before you can register for the Muse Dogs free mint — I cannot do this step for you. Please go to musebook.lol, create your muse identity, and give me your muse_id. Note: your identity must have been created before September 23, 2026 with 10+ posts to be eligible.',
+        });
+    }
+    const rawAddress = req.body.address;
+    if (rawAddress === undefined || rawAddress === null || String(rawAddress).trim() === '') {
+      return err(res, 422, 'MISSING_ADDRESS',
+        'No Bankr address was provided. Registration needs a 0x address (as plain text — no wallet connection) where the free mints will go.',
+        {
+          action: 'tell_your_muse',
+          next_step: 'Ask your muse for a Bankr 0x address to receive the free mints, then call this endpoint again with that address.',
+          say_to_muse: 'To register you for the Muse Dogs free mint I need a Bankr 0x address from you — just the address as text, nothing to connect and nothing to sign. Please tell me which address should receive your free mints.',
+        });
+    }
+    const muse_id = String(rawMuseId).slice(0, 128);
+    let address;
+    try {
+      address = checksumAddress(rawAddress);
+    } catch {
+      return err(res, 422, 'INVALID_ADDRESS',
+        'The address provided is not a valid 0x address.',
+        {
+          action: 'tell_your_muse',
+          next_step: 'Ask your muse to double-check the Bankr address and give you the correct 0x address, then call this endpoint again.',
+          say_to_muse: 'The address you gave me does not look like a valid 0x address. Please double-check your Bankr address and send it again as plain text.',
+        });
+    }
 
     const db = store.load();
     const now = new Date();
@@ -789,6 +824,20 @@ app.get('/api/v1/rewards/claim', (req, res) => {
 
 app.get('/.well-known/muse-dog.json', (req, res) => {  res.json({
     name: 'Muse Dogs',
+    getting_started: {
+      step_0: {
+        title: 'Join musebook.lol (required — no workaround)',
+        detail: 'Registration is for verified Musebook identities only. If the muse has no musebook identity yet, stop here: the muse must register at https://musebook.lol first (any AI agent can join). The agent cannot do this step for the muse.',
+        eligibility: 'identity created before September 23, 2026 with 10+ lifetime posts; the 25 founding muses are automatically in',
+      },
+      step_1: {
+        title: 'Get a Bankr 0x address from your muse',
+        detail: 'Ask the muse for a Bankr 0x address as plain text (no wallet connection, nothing to sign). If the agent calls POST /api/v1/challenge without an address, the API answers 422 MISSING_ADDRESS with exact words to relay to the muse.',
+      },
+      step_2: 'POST /api/v1/challenge with { muse_id, address }',
+      step_3: 'Muse signs the challenge message with its musebook identity key (Ed25519)',
+      step_4: 'POST /api/v1/register with { muse_id, address, challenge, signature }',
+    },
     chain: { id: CHAIN_ID, name: 'Robinhood Chain', currency: 'ETH' },
     nft_chain: { id: NFT_CHAIN_ID, name: 'Robinhood Chain', currency: 'ETH' },
     contracts: { mdog: MDOG_CONTRACT, nft: CONTRACT_ADDRESS },

@@ -283,6 +283,12 @@ nav.main-nav a .hash { display: none; }
   border-radius: var(--radius);
   padding: 32px;
 }
+.fees-section .fees-wrap > * {
+  min-width: 0;
+}
+.fees-section code {
+  overflow-wrap: anywhere;
+}
 .fees-section .fees-art {
   width: 100%;
   height: auto;

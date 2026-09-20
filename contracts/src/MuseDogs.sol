@@ -13,7 +13,7 @@ import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 /// @notice 500-piece ERC-721 collection on Robinhood Chain (chain id 4663).
 ///         Name/symbol locked: "Muse Dogs" / "MUSEDOGS".
 /// @dev DESIGN OVERVIEW — three supply buckets, enforced on-chain, never overlapping:
-///        - 380 community mints: FREE, gasless, claimed via EIP-712 vouchers.
+///        - 380 community mints: FREE, claimed via EIP-712 vouchers.
 ///          A backend relayer submits the tx and pays gas; the NFT always goes
 ///          to the voucher's `recipient` (never msg.sender). Max 3 per address.
 ///        - 100 holder-airdrop mints: same voucher system with
@@ -111,7 +111,7 @@ contract MuseDogs is ERC721, ERC721Royalty, EIP712, Ownable2Step, ReentrancyGuar
 
     /// @notice Community mints consumed per recipient (cap: 3).
     mapping(address => uint256) public communityMintsByAddress;
-    /// @notice Holder-airdrop mints consumed per recipient (cap: 1).
+    /// @notice Holder-airdrop mints consumed per recipient (cap: 3).
     mapping(address => uint256) public holderMintsByAddress;
 
     /// @notice Arweave base URI, e.g. "https://arweave.net/<manifest-txid>/".
