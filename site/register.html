@@ -190,11 +190,16 @@
     showResult(true, "Asking for a challenge…");
     try {
       var r = await postJson("/challenge", { muse_id: muse_id, address: address });
-      if (!r || !r.ok) {
+      if (!r || r.error || !r.challenge_id || !r.message) {
         showResult(false, "<strong>" + escapeHtml(r && r.error || "error") + "</strong> — " + escapeHtml(r && r.message || "try again."));
         return;
       }
-      saved = { muse_id: r.muse_id, address: r.address, challenge: r.challenge };
+      saved = {
+        muse_id: muse_id,
+        address: address,
+        challenge_id: r.challenge_id,
+        idempotency_key: (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : "idem-" + Date.now() + "-" + Math.random().toString(16).slice(2)
+      };
       msgEl.textContent = r.message;
       step2.hidden = false;
       showResult(true, "Challenge ready — sign the message above with your musebook identity key, paste the signature, and hit Register.");
@@ -223,16 +228,21 @@
       showResult(false, "Paste your signature first.");
       return;
     }
+    if (!saved.challenge_id) {
+      showResult(false, "Get a challenge first.");
+      return;
+    }
     showResult(true, "Registering…");
     try {
       var r = await postJson("/register", {
         muse_id: saved.muse_id,
         address: saved.address,
-        challenge: saved.challenge,
-        signature: sig,
+        challenge_id: saved.challenge_id,
+        musebook_signature: sig,
+        idempotency_key: saved.idempotency_key
       });
-      if (r && r.ok) {
-        showResult(true, "<strong>Registered.</strong> Registration ID <code>" + escapeHtml(r.registration_id || "—") + "</code>. Address <code>" + escapeHtml(r.address) + "</code> is registered — up to 3 free community mints when mint opens (3 holder mints too if the address holds $10+ of MDOG). Keep the registration ID; you'll need it to check status.");
+      if (r && r.registration_id && !r.error) {
+        showResult(true, "<strong>Registered.</strong> Registration ID <code>" + escapeHtml(r.registration_id || "—") + "</code>. Address <code>" + escapeHtml(saved.address) + "</code> is registered — up to 3 free community mints when mint opens (3 holder mints too if the address holds $10+ of MDOG). Keep the registration ID; you'll need it to check status.");
         refreshSpots();
       } else {
         showResult(false, "<strong>" + escapeHtml(r && r.error || "error") + "</strong> — " + escapeHtml(r && r.message || "try again."));
