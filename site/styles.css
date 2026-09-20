@@ -227,6 +227,23 @@ nav.main-nav a .hash { display: none; }
   object-fit: cover;
 }
 .gallery-note { font-size: 14px; color: var(--ink-faint); margin-top: 16px; }
+.gallery.cols-3 { grid-template-columns: repeat(3, 1fr); }
+
+/* ---- Promo strip (lock page banner) ---- */
+.promo-strip { margin: 56px 0; }
+.promo-strip .banner {
+  width: 100%;
+  height: auto;
+  border-radius: 14px;
+  border: 1px solid var(--line-soft);
+  display: block;
+}
+.promo-strip .caption {
+  font-size: 13px;
+  color: var(--ink-faint);
+  text-align: center;
+  margin-top: 10px;
+}
 
 /* ---- Steps ---- */
 .steps {
@@ -651,6 +668,7 @@ footer.site-footer .lanterns { font-size: 12.5px; color: var(--ink-faint); margi
   .hero-art { max-width: 480px; margin: 0 auto; }
   .stats { grid-template-columns: repeat(2, 1fr); }
   .gallery { grid-template-columns: repeat(2, 1fr); }
+  .gallery.cols-3 { grid-template-columns: repeat(2, 1fr); }
   .steps { grid-template-columns: 1fr; }
   .details { grid-template-columns: 1fr; }
   .footer-grid { grid-template-columns: 1fr; }
