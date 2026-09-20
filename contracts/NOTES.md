@@ -12,8 +12,8 @@ Files:
 | Path | What it is |
 |---|---|
 | `src/MuseDogs.sol` | The collection: ERC-721 "Muse Dogs" / "MUSEDOGS", 500 hard cap |
-| `src/MuseDogsFeeSplitter.sol` | Royalty splitter: 10/40/25/25 of every 5% resale royalty |
-| `src/MuseDogRewards.sol` | Pre-existing holder-rewards vault (40% leg recipient) — unchanged |
+| `src/MuseDogsFeeSplitter.sol` | Royalty splitter: 10/50/20/20 of every 7% resale royalty |
+| `src/MuseDogRewards.sol` | Pre-existing holder-rewards vault (50% leg recipient) — unchanged |
 | `test/MuseDogs.t.sol` | 44 tests: vouchers, caps, metadata freeze, royalties, reentrancy |
 | `test/MuseDogsFeeSplitter.t.sol` | 19 tests: split math, accounting invariant, fail-open, forwarding |
 | `test/MuseDogRewards.t.sol` | Pre-existing vault tests (14, still passing) |
@@ -46,7 +46,7 @@ Files:
   in one call — there is no separate freeze step to forget, and no way to
   change metadata after. `tokenURI` reverts until it is set, so broken
   metadata can never be served. `tokenURI = baseURI + tokenId + ".json"`.
-- **Royalty: fixed 5% (500 bps), no setter exists for the rate.** The
+- **Royalty: fixed 7% (700 bps), no setter exists for the rate.** The
   receiver (fee splitter) is settable exactly once — constructor or
   `setFeeSplitter` — then immutable. Until it is set, `royaltyInfo` returns a
   zero receiver, so wire it promptly (the deploy script wires it at
@@ -64,7 +64,7 @@ Files:
 
 ## 2. The fee-splitter decision (read before changing)
 
-The task allowed two designs for the two 25% DEX legs (MDOG/musebook LP and
+The task allowed two designs for the two 20% DEX legs (MDOG/musebook LP and
 MDOG/ETH LP, both to the dead address): (a) fully-autonomous on-chain swaps,
 or (b) escrow + multisig forwarding. **We first shipped (b), deliberately —
 then Andrew reversed the decision on 2026-09-19: "uniswap is very trustworthy
@@ -94,19 +94,19 @@ which is preserved in git history):
 - `process()` (permissionless keeper, runs when new funds ≥ threshold) splits
   ONLY newly arrived funds into the four buckets exactly as before
   (**escrowed funds are never re-split** — invariant unchanged), pushes the
-  10%/40% legs failing-open as before, then settles the two DEX legs
+  10%/50% legs failing-open as before, then settles the two DEX legs
   **fail-SAFE**: each leg runs inside `try/catch`; a leg that cannot complete
   (no pool, unconfigured key, slippage guard tripped, pool revert) is SKIPPED
   with a `DexLegSkipped` event, its ETH stays escrowed, and `process()` still
   succeeds. Any keeper can retry a leg via `executeMusebookLiquidity()` /
   `executeLiquidity()`.
-- **MDOG/musebook leg (25%):** half the bucket's ETH is routed
+- **MDOG/musebook leg (20%):** half the bucket's ETH is routed
   ETH → META → MDOG and half ETH → META → musebook across Uniswap v4 pools on
   Robinhood Chain (the splitter is its own router via `unlock()`), then a
   FULL-RANGE MDOG/musebook v4 position is minted **directly to the dead
   address** — locked forever on mint, no withdrawal possible, no exit to
   front-run.
-- **MDOG/ETH leg (25%):** half the bucket's ETH is routed ETH → META → MDOG,
+- **MDOG/ETH leg (20%):** half the bucket's ETH is routed ETH → META → MDOG,
   half stays native ETH, then a FULL-RANGE MDOG/ETH v4 position is minted
   **directly to the dead address** — locked forever. The exact native amount
   the mint will consume is computed up front; the remainder stays escrowed
@@ -208,7 +208,7 @@ removed the superseded old-design files (`MuseDog.sol`,
 `MuseDogFeeEngine.sol`, `V4Math.sol`, `MuseDogRoyaltySplitter.sol` and their
 tests — recoverable from git history). `MuseDogRewards.sol` (holder vault)
 and its tests were kept as-is; its NatSpec numbers were already consistent
-with the final economics (40% of the 5% royalty = 2% of sale price).
+with the final economics (50% of the 7% royalty = 3.5% of sale price).
 
 ### Pass 2 — adversarial audit (2026-09-19/20). Findings:
 
@@ -288,7 +288,7 @@ double-dip. Lesson recorded: assert the invariant, not the mechanism.
 
 > "uniswap is very trustworthy we can do it automated"
 
-Rewrote `MuseDogsFeeSplitter` to execute the 25%/25% legs itself against
+Rewrote `MuseDogsFeeSplitter` to execute the 20%/20% legs itself against
 pinned Uniswap v3 on Robinhood Chain (4663). Verification trail (§2):
 official Uniswap docs page + on-chain code + cross-contract linkage for the
 NPM. `Deploy.s.sol` wires the pinned addresses (overridable via env at

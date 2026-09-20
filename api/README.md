@@ -108,7 +108,7 @@ served `/rewards/claim` shape — then deletes the fixtures. It wipes
 - `GET /api/v1/mint/stats` — live `{claims_remaining, paused}` read from the contract.
 - `GET /api/v1/receipt/{registration_id}` — tx hash + token id (stub: pending until distribution).
 - `GET /api/v1/rewards/config` — holder-rewards mechanics: 7-day epochs, daily 00:00 UTC snapshots,
-  weekly payouts from 2% of resale royalties, the publisher and rewards contract (honestly `TBD`
+  weekly payouts from 3.5% of resale royalties, the publisher and rewards contract (honestly `TBD`
   until set), and the merkle leaf scheme.
 - `GET /api/v1/rewards/claim?epoch={epochId}&holder={address}` — the holder's `{amount, proof}`
   plus `{root, totalAmount}` for `claim(epochId, amount, proof)`; 404 when the epoch is

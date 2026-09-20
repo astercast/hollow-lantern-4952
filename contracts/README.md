@@ -5,7 +5,7 @@ Robinhood Chain (chain id 4663). Toolchain: Foundry (forge, solc 0.8.30
 pinned), OpenZeppelin Contracts v5.4.0 (pinned).
 
 **Name: `Muse Dogs`, symbol: `MUSEDOGS`** (locked 2026-09-18).
-Royalty: **5%** (500 bps, fixed forever) to the fee-splitter contract.
+Royalty: **7%** (700 bps, fixed forever) to the fee-splitter contract.
 Full design notes, trust assumptions, and the audit log: [`NOTES.md`](NOTES.md).
 
 ## Files
@@ -13,8 +13,8 @@ Full design notes, trust assumptions, and the audit log: [`NOTES.md`](NOTES.md).
 | Path | What it is |
 |---|---|
 | `src/MuseDogs.sol` | The collection (ERC-721, vouchers, team mint, metadata freeze, royalties) |
-| `src/MuseDogsFeeSplitter.sol` | Royalty splitter: 10/40/25/25 of every royalty payment |
-| `src/MuseDogRewards.sol` | Holder-rewards vault: weekly Merkle-distributed ETH (40% leg recipient) |
+| `src/MuseDogsFeeSplitter.sol` | Royalty splitter: 10/50/20/20 of every royalty payment |
+| `src/MuseDogRewards.sol` | Holder-rewards vault: weekly Merkle-distributed ETH (50% leg recipient) |
 | `test/MuseDogs.t.sol` | 44 tests — vouchers, caps, freeze, royalties, reentrancy |
 | `test/MuseDogsFeeSplitter.t.sol` | 19 tests — split math, accounting, fail-open, forwarding |
 | `test/MuseDogRewards.t.sol` | 14 pre-existing vault tests |
@@ -42,11 +42,11 @@ There are 500 NFTs, split into three buckets the contract enforces on-chain —
 
 Token IDs are sequential: 1, 2, 3, … 500.
 
-Every 5% resale royalty flows to the fee splitter, which divides it —
-10% to Mikey's Bankr address in raw ETH, 40% to the holder-rewards vault,
-25% buys MDOG + musebook via Uniswap v4 (routed through META) and mints a
+Every 7% resale royalty flows to the fee splitter, which divides it —
+10% to Mikey's Bankr address in raw ETH, 50% to the holder-rewards vault,
+20% buys MDOG + musebook via Uniswap v4 (routed through META) and mints a
 full-range MDOG/musebook position **directly to the dead address**,
-25% buys MDOG the same way and mints a full-range MDOG/ETH position
+20% buys MDOG the same way and mints a full-range MDOG/ETH position
 **directly to the dead address**. Both LP positions are locked forever on
 mint. No MDOG is ever burned. `process()` is permissionless: anyone can call
 it once new funds cross the threshold; the DEX legs run autonomously and
@@ -72,7 +72,7 @@ change, ever.
   `NOTES.md`.)
 - **One-shot metadata freeze.** `setBaseURI` freezes atomically; `tokenURI`
   reverts until it's set, so broken metadata can never be served.
-- **Royalty pinned at 5%.** No setter for the rate; the receiver is settable
+- **Royalty pinned at 7%.** No setter for the rate; the receiver is settable
   exactly once (and must be a contract, not an EOA typo).
 - **Reentrancy guards + checks-effects-interactions** on every payable and
   external state-changing function. Failed ETH pushes fail *open* into

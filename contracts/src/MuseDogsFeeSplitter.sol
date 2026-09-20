@@ -109,8 +109,8 @@ interface IPermit2 {
 ///         through Uniswap v4 on Robinhood Chain (chain id 4663).
 ///
 /// @dev Royalty split: every wei that arrives is divided 10% Mikey's Bankr
-///      address (raw ETH) / 40% holder-rewards vault (raw ETH) /
-///      25% MDOG/musebook liquidity / 25% MDOG/ETH liquidity. The Mikey/vault
+///      address (raw ETH) / 50% holder-rewards vault (raw ETH) /
+///      20% MDOG/musebook liquidity / 20% MDOG/ETH liquidity. The Mikey/vault
 ///      legs are pushed immediately and FAIL OPEN into claimable pending
 ///      buckets if the recipient reverts; the DEX legs FAIL SAFE (skip, funds
 ///      stay escrowed).
@@ -119,11 +119,11 @@ interface IPermit2 {
 ///      for MDOG, because the MDOG/ETH pool is too thin to absorb royalty
 ///      flow safely. The deep META pools carry the volume:
 ///
-///        MUSEBOOK-LP (25%): half the leg goes native ETH -> META -> MDOG,
+///        MUSEBOOK-LP (20%): half the leg goes native ETH -> META -> MDOG,
 ///                        the other half goes native ETH -> META -> musebook;
 ///                        then a full-range MDOG/musebook v4 position is
 ///                        minted directly to the dead address (locked forever).
-///        ETH-LP (25%):     half stays native ETH; the other half goes
+///        ETH-LP (20%):     half stays native ETH; the other half goes
 ///                        ETH -> META -> MDOG; then a full-range MDOG/native-ETH
 ///                        v4 position is minted directly to the dead address.
 ///
@@ -232,9 +232,9 @@ contract MuseDogsFeeSplitter is Ownable2Step, ReentrancyGuard, IUnlockCallback {
 
     /// @notice Royalty split, in basis points.
     uint256 public constant MIKEY_BPS = 1000; // 10% raw ETH to Mikey's Bankr address
-    uint256 public constant REWARDS_BPS = 4000; // 40% raw ETH to the holder-rewards vault
-    uint256 public constant MUSEBOOK_LP_BPS = 2500; // 25% MDOG/musebook LP to the dead address (via META)
-    uint256 public constant LIQUIDITY_BPS = 2500; // 25% MDOG/ETH LP to the dead address (via META)
+    uint256 public constant REWARDS_BPS = 5000; // 50% raw ETH to the holder-rewards vault
+    uint256 public constant MUSEBOOK_LP_BPS = 2000; // 20% MDOG/musebook LP to the dead address (via META)
+    uint256 public constant LIQUIDITY_BPS = 2000; // 20% MDOG/ETH LP to the dead address (via META)
     uint256 public constant TOTAL_BPS = 10000;
 
     uint256 internal constant SLIPPAGE_BPS = 10000;
@@ -364,7 +364,7 @@ contract MuseDogsFeeSplitter is Ownable2Step, ReentrancyGuard, IUnlockCallback {
     // -----------------------------------------------------------------------
 
     /// @param _mikeyBankr Mikey's Bankr address (10% leg, raw ETH).
-    /// @param _rewardsVault Holder-rewards vault (40% leg, raw ETH). Must be a contract.
+    /// @param _rewardsVault Holder-rewards vault (50% leg, raw ETH). Must be a contract.
     /// @param _initialOwner Initial owner (the Safe multisig after launch).
     /// @param _initialThreshold Minimum new wei per process() call.
     /// @param _poolManager Uniswap v4 PoolManager (must be a contract).

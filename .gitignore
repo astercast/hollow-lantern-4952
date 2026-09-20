@@ -1,3 +1,9 @@
 node_modules/
 .DS_Store
 *.key
+
+# Collection build artifacts live in ~/workspace/muse-dogs-collection, not the site repo
+metadata-final/
+ipfs/
+irys-upload/
+_staging/

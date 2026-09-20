@@ -6,9 +6,9 @@
 > - **Supply split:** 500 = **380 community (free voucher mints) + 100 holder
 >   (voucher mints) + 20 team/treasury**. The sections describing "380 holder
 >   airdrops via batch mint" (§2, Phase 5) are superseded.
-> - **Royalty:** **5%** (fixed, to the fee-splitter contract), split
->   10% Mikey's Bankr address (raw ETH) / 40% weekly holder-rewards vault /
->   25% MDOG-musebook LP / 25% MDOG-ETH LP. Both LP positions are minted
+> - **Royalty:** **7%** (fixed, to the fee-splitter contract), split
+>   10% Mikey's Bankr address (raw ETH) / 50% weekly holder-rewards vault /
+>   20% MDOG-musebook LP / 20% MDOG-ETH LP. Both LP positions are minted
 >   **directly to the dead address, locked forever. No MDOG tokens are ever
 >   burned.** Statements about "10% to the project multisig" (§2) and
 >   "buyback-and-burn" are superseded.
@@ -23,7 +23,7 @@
 > - **Contract facts:** the current contract is `src/MuseDogs.sol` — no pause
 >   mechanism (deliberate), EIP-712 voucher type
 >   `MintVoucher(address recipient,uint8 mintType,uint256 nonce,uint256 expiry)`,
->   royalty fixed at 500 bps, metadata freeze one-shot. `contracts/NOTES.md`
+>   royalty fixed at 700 bps, metadata freeze one-shot. `contracts/NOTES.md`
 >   is the audit log.
 > The contract's NatSpec is the source of truth for on-chain behavior.
 

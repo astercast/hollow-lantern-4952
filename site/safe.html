@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Project Safe · Muse Dogs</title>
+<meta name="description" content="Muse Dogs project multisig control">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="stylesheet" href="styles.css">
+<style>
+  .status-box { border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); padding: 14px 18px; margin: 16px 0; font-size: 15.5px; display: none; }
+  .status-box.show { display: block; }
+  .status-box.ok { border-color: var(--green); background: #f2faf6; }
+  .status-box.err { border-color: var(--red); background: #fdf3f2; }
+  .status-box.info { border-color: var(--line); background: var(--bg-soft); }
+  .owner-pill { display: inline-block; border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px; margin: 4px 6px 4px 0; font-family: ui-monospace, Menlo, monospace; font-size: 13.5px; background: var(--card); }
+  .owner-pill.you { border-color: var(--green); background: #eef8f2; font-weight: 700; }
+  .owner-pill .tag { font-family: var(--font); font-size: 12px; color: var(--green); font-weight: 700; margin-left: 8px; }
+  .kv { display: grid; grid-template-columns: 170px 1fr; gap: 8px 16px; margin: 12px 0; font-size: 15.5px; }
+  .kv .k { color: var(--ink-soft); font-weight: 600; }
+  .kv .v { font-family: ui-monospace, Menlo, monospace; font-size: 14px; word-break: break-all; }
+  .review-card { border: 2px solid var(--accent); border-radius: var(--radius); background: #fffdf8; padding: 20px 22px; margin: 18px 0; display: none; }
+  .review-card.show { display: block; }
+  .review-card h3 { margin-top: 0; }
+  .warn-line { color: var(--red); font-weight: 600; }
+  .step-num-badge { display: inline-block; background: var(--accent-soft); border: 1px solid var(--line-soft); color: var(--accent); font-weight: 700; border-radius: 999px; width: 30px; height: 30px; line-height: 28px; text-align: center; margin-right: 10px; }
+  .btn-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 14px; }
+  .addr-line { font-family: ui-monospace, Menlo, monospace; font-size: 13.5px; word-break: break-all; }
+</style>
+</head>
+<body>
+
+<div class="town-strip">The <b>project Safe</b> — the multisig that owns the Muse Dogs fee engine</div>
+
+<header class="site-header">
+  <div class="wrap">
+    <a class="logo" href="home.html"><img class="logo-mark" src="musedog.jpg" alt="Muse Dog logo"><span>Muse Dogs</span></a>
+    <nav class="main-nav">
+      <a href="home.html">Home</a>
+      <a href="why.html">Why</a>
+      <a href="register.html">Register</a>
+      <a href="verify.html">Verify</a>
+      <a href="rewards.html">Rewards</a>
+      <a href="api.html">API</a>
+      <a href="mint.html">Mint</a>
+      <a href="safe.html" class="active">Safe</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <section class="hero">
+    <div>
+      <span class="eyebrow">Multisig · 1-of-2 · Robinhood Chain</span>
+      <h1>The project Safe</h1>
+      <p class="lede">This Safe owns the fee-splitter contract and publishes the weekly holder-reward roots. Two owners (Andrew + a friend), and either one can act alone — that's what 1-of-2 means.</p>
+      <p class="hero-note">Everything here talks straight to the chain. No middleman service, no relayer — your wallet signs, the Safe executes.</p>
+    </div>
+  </section>
+
+  <div id="status" class="status-box" role="status"></div>
+
+  <section class="section">
+    <div class="section-head">
+      <h2><span class="step-num-badge">1</span>Connect your wallet</h2>
+      <p>Connect with MetaMask. You'll be asked to switch to Robinhood Chain — if it's not in your wallet yet, we'll add it for you.</p>
+    </div>
+    <div class="btn-row">
+      <button class="btn" id="connectBtn">Connect MetaMask</button>
+      <button class="btn secondary" id="switchBtn" style="display:none;">Switch to Robinhood Chain</button>
+    </div>
+    <div class="kv" id="walletInfo" style="display:none;">
+      <div class="k">Connected wallet</div><div class="v" id="walletAddr">—</div>
+      <div class="k">Network</div><div class="v" id="walletChain">—</div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head">
+      <h2><span class="step-num-badge">2</span>Load the Safe</h2>
+      <p>Paste the Safe's address once — this page remembers it on this device.</p>
+    </div>
+    <label class="field">
+      <span>Safe address</span>
+      <input type="text" id="safeAddrInput" placeholder="0x…" autocomplete="off" spellcheck="false">
+      <small>The Safe isn't deployed yet — this field will spring to life the moment the address exists.</small>
+    </label>
+    <div class="btn-row">
+      <button class="btn" id="loadSafeBtn">Load Safe</button>
+    </div>
+  </section>
+
+  <section class="section" id="safePanel" style="display:none;">
+    <div class="section-head">
+      <h2><span class="step-num-badge">3</span>Safe status</h2>
+      <p>Live from the chain.</p>
+    </div>
+    <div class="details">
+      <div class="detail-card">
+        <div class="k">Owners</div>
+        <div class="v" id="ownersList" style="margin-top:8px;">—</div>
+        <p id="ownerNote" style="margin-bottom:0;"></p>
+      </div>
+      <div class="detail-card">
+        <div class="k">Threshold</div>
+        <div class="v" id="thresholdVal">—</div>
+        <p>How many owners must sign. 1 means either owner can act alone.</p>
+      </div>
+      <div class="detail-card">
+        <div class="k">Nonce</div>
+        <div class="v" id="nonceVal">—</div>
+        <p>The Safe's transaction counter. Every execution bumps it by one.</p>
+      </div>
+      <div class="detail-card">
+        <div class="k">ETH balance</div>
+        <div class="v" id="balanceVal">—</div>
+        <p>Plain ETH held by the Safe itself.</p>
+      </div>
+    </div>
+    <p class="addr-line" style="margin-top:14px;">Safe: <span id="safeAddrShown">—</span> · <a id="safeExplorer" href="#" target="_blank" rel="noopener">view on explorer</a></p>
+  </section>
+
+  <section class="section" id="execPanel" style="display:none;">
+    <div class="section-head">
+      <h2><span class="step-num-badge">4</span>Execute a transaction</h2>
+      <p>Send ETH or call any contract function <em>as the Safe</em>. Typical uses: transfer funds, update the fee splitter, publish a reward root.</p>
+    </div>
+    <label class="field">
+      <span>Destination address</span>
+      <input type="text" id="execTo" placeholder="0x… — who receives this transaction" autocomplete="off" spellcheck="false">
+      <small>The contract or wallet the Safe will talk to.</small>
+    </label>
+    <label class="field">
+      <span>ETH to send</span>
+      <input type="text" id="execValue" placeholder="0" autocomplete="off" spellcheck="false" inputmode="decimal">
+      <small>Amount of ETH the Safe sends along. Use 0 for contract calls that move no ETH.</small>
+    </label>
+    <label class="field">
+      <span>Calldata (optional)</span>
+      <textarea id="execData" placeholder="0x — leave as 0x for a plain ETH transfer" autocomplete="off" spellcheck="false" style="min-height:80px;"></textarea>
+      <small>Raw hex for the contract call. If you're not sure what this is, leave it as <code>0x</code>.</small>
+    </label>
+    <div class="btn-row">
+      <button class="btn" id="reviewBtn">Review transaction</button>
+    </div>
+
+    <div class="review-card" id="reviewCard">
+      <h3>Review before you sign</h3>
+      <div class="kv">
+        <div class="k">Safe</div><div class="v" id="revSafe">—</div>
+        <div class="k">Destination</div><div class="v" id="revTo">—</div>
+        <div class="k">ETH value</div><div class="v" id="revValue">—</div>
+        <div class="k">Calldata</div><div class="v" id="revData">—</div>
+        <div class="k">Safe nonce</div><div class="v" id="revNonce">—</div>
+      </div>
+      <p class="warn-line">This is a real on-chain transaction. MetaMask will ask you to sign a message (free), then send the transaction (costs a little gas). Only continue if you understand what it does.</p>
+      <div class="btn-row">
+        <button class="btn" id="executeBtn">Sign &amp; Execute</button>
+        <button class="btn secondary" id="cancelReviewBtn">Cancel</button>
+      </div>
+    </div>
+  </section>
+
+  <div class="safety">
+    <h3>Safety: read this before anything else</h3>
+    <p>This page will <strong>never</strong> ask you for any of these:</p>
+    <ul>
+      <li>Your seed phrase or recovery words</li>
+      <li>Your private key or wallet export</li>
+    </ul>
+    <p>It only ever asks MetaMask to <strong>sign a Safe transaction message</strong> and <strong>send one transaction</strong> — both of which you can read and reject in MetaMask itself. If anything claiming to be this page asks for your seed phrase, <strong>stop</strong> — it is a scam.</p>
+  </div>
+
+</div>
+
+<footer class="site-footer">
+  <div class="wrap" style="padding-bottom:0;">
+    <div class="footer-grid">
+      <div>
+        <h4>Muse Dogs</h4>
+        <p>500 NFTs on Robinhood Chain for verified Musebook identities. A kinder mint: free for the community, free for holders.</p>
+      </div>
+      <div>
+        <h4>Project</h4>
+        <ul>
+          <li><a href="verify.html">Verify the contract</a></li>
+          <li><a href="api.html">Machine docs (API)</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Resources</h4>
+        <ul>
+          <li><a href="api.html">Machine docs (API)</a></li>
+          <li><a href="verify.html">MDOG token: 0x4CAF…8bfC</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      Muse Dogs · Robinhood Chain · 500 total · Verified Musebook identities only · <a href="https://musebook.lol" target="_blank" rel="noopener">musebook.lol</a>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  // ---- Constants ----
+  var CHAIN_ID = 4663;
+  var CHAIN_ID_HEX = "0x1237"; // 4663 in hex
+  var RPC_URL = "https://rpc.mainnet.chain.robinhood.com";
+  var EXPLORER = "https://robinhoodchain.blockscout.com";
+  var LS_KEY = "musedog_safe_address";
+
+  // Minimal Safe (v1.3.0 / v1.4.1) ABI — only what this page needs.
+  var SAFE_ABI = [
+    "function getOwners() view returns (address[])",
+    "function getThreshold() view returns (uint256)",
+    "function nonce() view returns (uint256)",
+    "function VERSION() view returns (string)",
+    "function name() view returns (string)",
+    "function execTransaction(address to,uint256 value,bytes data,uint8 operation,uint256 safeTxGas,uint256 baseGas,uint256 gasPrice,address gasToken,address refundReceiver,bytes signatures) payable returns (bool success)"
+  ];
+
+  // ---- State ----
+  var provider = null, signer = null, account = null;
+  var safeAddress = null, safeContract = null, owners = [];
+  var pendingTx = null; // reviewed-but-not-yet-executed SafeTx
+
+  // ---- DOM ----
+  function $(id) { return document.getElementById(id); }
+  var statusBox = $("status");
+
+  function setStatus(msg, kind) {
+    statusBox.className = "status-box show " + (kind || "info");
+    statusBox.innerHTML = msg;
+    statusBox.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+  function clearStatus() { statusBox.className = "status-box"; statusBox.innerHTML = ""; }
+
+  function short(addr) { return addr.slice(0, 6) + "…" + addr.slice(-4); }
+
+  function friendlyError(e) {
+    if (!e) return "Something went wrong.";
+    if (e.code === 4001 || /user rejected/i.test(e.message || "")) return "You cancelled in MetaMask — nothing was sent.";
+    if (e.code === -32603 && /execution reverted/i.test(e.message || "")) return "The Safe rejected the transaction (it reverted on-chain). Nothing was sent.";
+    var m = (e.shortMessage || e.reason || e.message || "").toString();
+    if (/insufficient funds/i.test(m)) return "Not enough ETH in the sending wallet to cover gas.";
+    if (/could not coalesce/i.test(m) || /invalid address/i.test(m)) return "One of the addresses doesn't look right — double-check it.";
+    return "Something went wrong: " + m.slice(0, 220);
+  }
+
+  // ---- Wallet ----
+  async function connectWallet() {
+    if (!window.ethereum) {
+      setStatus("No wallet found. Install <a href=\"https://metamask.io\" target=\"_blank\" rel=\"noopener\">MetaMask</a>, then come back here.", "err");
+      return;
+    }
+    try {
+      setStatus("Asking MetaMask to connect…", "info");
+      provider = new ethers.BrowserProvider(window.ethereum);
+      await provider.send("eth_requestAccounts", []);
+      signer = await provider.getSigner();
+      account = await signer.getAddress();
+      $("connectBtn").textContent = "Connected ✓";
+      $("connectBtn").disabled = true;
+      await refreshChainUI();
+      var saved = localStorage.getItem(LS_KEY);
+      if (saved) { $("safeAddrInput").value = saved; await loadSafe(); }
+      else setStatus("Connected as <code>" + short(account) + "</code>. Now paste the Safe address below.", "ok");
+    } catch (e) {
+      setStatus(friendlyError(e), "err");
+    }
+  }
+
+  async function ensureChain() {
+    var net = await provider.getNetwork();
+    if (Number(net.chainId) === CHAIN_ID) return true;
+    try {
+      await window.ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: CHAIN_ID_HEX }] });
+    } catch (e) {
+      if (e.code === 4902) {
+        await window.ethereum.request({
+          method: "wallet_addEthereumChain",
+          params: [{
+            chainId: CHAIN_ID_HEX,
+            chainName: "Robinhood Chain",
+            rpcUrls: [RPC_URL],
+            nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 },
+            blockExplorerUrls: [EXPLORER]
+          }]
+        });
+      } else { throw e; }
+    }
+    // Rebuild provider/signer on the new chain.
+    provider = new ethers.BrowserProvider(window.ethereum);
+    signer = await provider.getSigner();
+    return true;
+  }
+
+  async function refreshChainUI() {
+    try { await ensureChain(); } catch (e) { /* fall through, show state below */ }
+    var net = await provider.getNetwork();
+    var onChain = Number(net.chainId) === CHAIN_ID;
+    $("walletInfo").style.display = "grid";
+    $("walletAddr").textContent = account + (isOwner(account) ? "  ✓ owner" : "");
+    $("walletChain").textContent = onChain
+      ? "Robinhood Chain (4663) ✓"
+      : "chain id " + net.chainId.toString() + " — not Robinhood Chain";
+    $("switchBtn").style.display = onChain ? "none" : "inline-block";
+    return onChain;
+  }
+
+  // ---- Safe ----
+  function isOwner(addr) {
+    if (!addr || !owners.length) return false;
+    var a = addr.toLowerCase();
+    return owners.some(function (o) { return o.toLowerCase() === a; });
+  }
+
+  async function loadSafe() {
+    clearStatus();
+    if (!provider) { setStatus("Connect your wallet first (step 1).", "err"); return; }
+    var input = $("safeAddrInput").value.trim();
+    if (!ethers.isAddress(input)) { setStatus("That doesn't look like an address — it should start with 0x and be 42 characters.", "err"); return; }
+    // Make sure reads below hit Robinhood Chain, not whatever network the wallet is on.
+    try { await ensureChain(); await refreshChainUI(); }
+    catch (e) { setStatus("Couldn't switch to Robinhood Chain. " + friendlyError(e), "err"); return; }
+    var addr = ethers.getAddress(input);
+    try {
+      setStatus("Checking the chain for a Safe at <code>" + short(addr) + "</code>…", "info");
+      var code = await provider.getCode(addr);
+      if (code === "0x") {
+        setStatus("No contract found at that address yet. The Safe probably isn't deployed — double-check the address and try again later.", "err");
+        return;
+      }
+      safeAddress = addr;
+      localStorage.setItem(LS_KEY, addr);
+      safeContract = new ethers.Contract(safeAddress, SAFE_ABI, provider);
+      // Sanity: it quacks like a Safe?
+      await safeContract.getThreshold();
+      await refreshSafe();
+      setStatus("Safe loaded ✓", "ok");
+    } catch (e) {
+      setStatus("That address has code, but it doesn't answer like a Safe. " + friendlyError(e), "err");
+    }
+  }
+
+  async function refreshSafe() {
+    var results = await Promise.all([
+      safeContract.getOwners(),
+      safeContract.getThreshold(),
+      safeContract.nonce(),
+      provider.getBalance(safeAddress)
+    ]);
+    owners = results[0];
+    var threshold = results[1], nonce = results[2], balance = results[3];
+
+    $("safePanel").style.display = "block";
+    $("execPanel").style.display = "block";
+    $("ownersList").innerHTML = owners.map(function (o) {
+      var you = account && o.toLowerCase() === account.toLowerCase();
+      return '<span class="owner-pill' + (you ? ' you' : '') + '">' + o + (you ? '<span class="tag">← YOU</span>' : '') + '</span>';
+    }).join("");
+    $("ownerNote").textContent = account
+      ? (isOwner(account) ? "Your connected wallet is an owner — you can sign and execute." : "Your connected wallet is NOT an owner of this Safe — you can look, but you can't execute.")
+      : "Connect your wallet to see which owner is you.";
+    $("thresholdVal").textContent = threshold.toString() + " of " + owners.length;
+    $("nonceVal").textContent = nonce.toString();
+    $("balanceVal").textContent = ethers.formatEther(balance) + " ETH";
+    $("safeAddrShown").textContent = safeAddress;
+    $("safeExplorer").href = EXPLORER + "/address/" + safeAddress;
+    if (account) {
+      $("walletAddr").textContent = account + (isOwner(account) ? "  ✓ owner" : "");
+    }
+  }
+
+  // ---- Execute flow ----
+  function readExecForm() {
+    var to = $("execTo").value.trim();
+    var valueStr = $("execValue").value.trim() || "0";
+    var data = $("execData").value.trim() || "0x";
+    if (!ethers.isAddress(to)) throw new Error("Destination address doesn't look right.");
+    var value;
+    try { value = ethers.parseEther(valueStr); }
+    catch (e) { throw new Error("ETH amount doesn't look right — use a number like 0.01."); }
+    if (!/^0x([0-9a-fA-F]*)$/.test(data)) throw new Error("Calldata must be hex starting with 0x (or just 0x).");
+    if (data.length % 2 !== 0 && data !== "0x") throw new Error("Calldata hex has an odd length — check it.");
+    return { to: ethers.getAddress(to), value: value, data: data };
+  }
+
+  async function reviewTx() {
+    clearStatus();
+    if (!safeContract) { setStatus("Load the Safe first (step 2).", "err"); return; }
+    var onChain = await refreshChainUI();
+    if (!onChain) { setStatus("You're not on Robinhood Chain — switch networks first.", "err"); return; }
+    if (!isOwner(account)) { setStatus("The connected wallet isn't an owner of this Safe, so it can't execute. Switch to an owner wallet.", "err"); return; }
+    var form;
+    try { form = readExecForm(); }
+    catch (e) { setStatus(e.message, "err"); return; }
+    try {
+      var nonce = await safeContract.nonce();
+      pendingTx = { to: form.to, value: form.value, data: form.data, nonce: nonce };
+      $("revSafe").textContent = safeAddress;
+      $("revTo").textContent = form.to;
+      $("revValue").textContent = ethers.formatEther(form.value) + " ETH";
+      $("revData").textContent = form.data.length > 66 ? form.data.slice(0, 66) + "… (" + ((form.data.length - 2) / 2) + " bytes)" : form.data;
+      $("revNonce").textContent = nonce.toString();
+      $("reviewCard").classList.add("show");
+      $("reviewCard").scrollIntoView({ behavior: "smooth", block: "center" });
+    } catch (e) { setStatus(friendlyError(e), "err"); }
+  }
+
+  async function signAndExecute() {
+    if (!pendingTx) return;
+    var btn = $("executeBtn");
+    btn.disabled = true;
+    try {
+      setStatus("Reading the Safe's signing details from the chain…", "info");
+      // Domain fields read live from the contract so this works on any Safe version.
+      var sName = "Safe", sVersion = "1.3.0";
+      try { sName = await safeContract.name(); } catch (e) {}
+      try { sVersion = await safeContract.VERSION(); } catch (e) {}
+      var domain = { name: sName, version: sVersion, chainId: CHAIN_ID, verifyingContract: safeAddress };
+      var types = {
+        SafeTx: [
+          { name: "to", type: "address" },
+          { name: "value", type: "uint256" },
+          { name: "data", type: "bytes" },
+          { name: "operation", type: "uint8" },
+          { name: "safeTxGas", type: "uint256" },
+          { name: "baseGas", type: "uint256" },
+          { name: "gasPrice", type: "uint256" },
+          { name: "gasToken", type: "address" },
+          { name: "refundReceiver", type: "address" },
+          { name: "nonce", type: "uint256" }
+        ]
+      };
+      var message = {
+        to: pendingTx.to,
+        value: pendingTx.value,
+        data: pendingTx.data,
+        operation: 0,
+        safeTxGas: 0n,
+        baseGas: 0n,
+        gasPrice: 0n,
+        gasToken: ethers.ZeroAddress,
+        refundReceiver: ethers.ZeroAddress,
+        nonce: pendingTx.nonce
+      };
+
+      setStatus("Step 1 of 2: MetaMask will ask you to <b>sign a message</b> — this is free, it just proves an owner approved this exact transaction.", "info");
+      var signature = await signer.signTypedData(domain, types, message);
+
+      setStatus("Signature collected ✓<br>Step 2 of 2: MetaMask will ask you to <b>send the transaction</b> — this costs a little gas and executes it on-chain.", "info");
+      var withSigner = safeContract.connect(signer);
+      var tx = await withSigner.execTransaction(
+        message.to, message.value, message.data, message.operation,
+        message.safeTxGas, message.baseGas, message.gasPrice,
+        message.gasToken, message.refundReceiver, signature
+      );
+      setStatus("Sent! Waiting for the chain to confirm…<br><a href=\"" + EXPLORER + "/tx/" + tx.hash + "\" target=\"_blank\" rel=\"noopener\">view on explorer</a>", "info");
+      var receipt = await tx.wait();
+      if (receipt && receipt.status === 0) {
+        setStatus("The transaction was mined but the Safe reported a failure. Nothing moved — check the destination and calldata and try again.", "err");
+      } else {
+        setStatus("Done ✓ — executed on-chain.<br><a href=\"" + EXPLORER + "/tx/" + tx.hash + "\" target=\"_blank\" rel=\"noopener\">view on explorer</a>", "ok");
+      }
+      pendingTx = null;
+      $("reviewCard").classList.remove("show");
+      await refreshSafe(); // nonce + balance changed
+    } catch (e) {
+      setStatus(friendlyError(e), "err");
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  // ---- Wire up ----
+  $("connectBtn").addEventListener("click", connectWallet);
+  $("switchBtn").addEventListener("click", async function () {
+    try {
+      var onChain = await refreshChainUI();
+      if (onChain && safeAddress) {
+        // Provider was rebuilt for the new chain — rebind the Safe contract.
+        safeContract = new ethers.Contract(safeAddress, SAFE_ABI, provider);
+        await refreshSafe();
+      }
+      setStatus(onChain ? "You're on Robinhood Chain ✓" : "Still not on Robinhood Chain — try switching inside MetaMask.", onChain ? "ok" : "err");
+    }
+    catch (e) { setStatus(friendlyError(e), "err"); }
+  });
+  $("loadSafeBtn").addEventListener("click", loadSafe);
+  $("safeAddrInput").addEventListener("keydown", function (e) { if (e.key === "Enter") loadSafe(); });
+  $("reviewBtn").addEventListener("click", reviewTx);
+  $("executeBtn").addEventListener("click", signAndExecute);
+  $("cancelReviewBtn").addEventListener("click", function () {
+    pendingTx = null;
+    $("reviewCard").classList.remove("show");
+    clearStatus();
+  });
+
+  if (window.ethereum) {
+    window.ethereum.on("accountsChanged", function () { location.reload(); });
+    window.ethereum.on("chainChanged", function () { location.reload(); });
+  }
+
+  // Pre-fill a remembered Safe address even before connecting.
+  var remembered = null;
+  try { remembered = localStorage.getItem(LS_KEY); } catch (e) {}
+  if (remembered) $("safeAddrInput").value = remembered;
+})();
+</script>
+<!-- Vercel Web Analytics + Speed Insights -->
+<script>
+  window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+</script>
+<script defer src="/_vercel/insights/script.js"></script>
+<script>
+  window.si = window.si || function () { (window.siq = window.siq || []).push(arguments); };
+</script>
+<script defer src="/_vercel/speed-insights/script.js"></script>
+</body>
+</html>

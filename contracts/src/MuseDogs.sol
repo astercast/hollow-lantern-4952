@@ -40,7 +40,7 @@ import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 ///          replayed, redirected, or reused across mint types.
 ///        - Front-running the relayer is harmless: the NFT can only ever go to
 ///          the voucher's bound recipient.
-///        - Royalty is a fixed 5% (500 bps) to the fee-splitter contract.
+///        - Royalty is a fixed 7% (700 bps) to the fee-splitter contract.
 ///          There is no setter for the bps and no way to raise it.
 ///        - baseURI can be set by the owner EXACTLY ONCE, then it is frozen
 ///          forever. No silent metadata changes are possible after that.
@@ -76,8 +76,8 @@ contract MuseDogs is ERC721, ERC721Royalty, EIP712, Ownable2Step, ReentrancyGuar
     uint256 public constant MAX_COMMUNITY_PER_ADDRESS = 3;
     /// @notice Max holder-airdrop mints per recipient address.
     uint256 public constant MAX_HOLDER_PER_ADDRESS = 3;
-    /// @notice EIP-2981 royalty: 500 bps = 5%, fixed forever. No setter exists.
-    uint256 public constant ROYALTY_BPS = 500;
+    /// @notice EIP-2981 royalty: 700 bps = 7%, fixed forever. No setter exists.
+    uint256 public constant ROYALTY_BPS = 700;
     /// @notice First token ID. Token IDs run 1..500 (1-based avoids token-0
     ///         edge cases in third-party tooling).
     uint256 public constant FIRST_TOKEN_ID = 1;
@@ -126,7 +126,7 @@ contract MuseDogs is ERC721, ERC721Royalty, EIP712, Ownable2Step, ReentrancyGuar
     /// @notice True once setBaseURI has been called; it can never be called again.
     bool public baseURIFrozen;
 
-    /// @notice The fee-splitter contract receiving the 5% royalty.
+    /// @notice The fee-splitter contract receiving the 7% royalty.
     ///         Settable exactly once (constructor or setFeeSplitter).
     address public feeSplitter;
     /// @notice True once the fee splitter has been set; it can never change.
@@ -413,12 +413,12 @@ contract MuseDogs is ERC721, ERC721Royalty, EIP712, Ownable2Step, ReentrancyGuar
     }
 
     // -------------------------------------------------------------------------
-    // Royalties: fixed 5% to the fee splitter, settable exactly once
+    // Royalties: fixed 7% to the fee splitter, settable exactly once
     // -------------------------------------------------------------------------
 
     /// @notice Wire the fee-splitter contract (if not set in the constructor).
     ///         One-shot: after this call the receiver can never change, and
-    ///         the 5% rate itself has no setter anywhere — it is immutable.
+    ///         the 7% rate itself has no setter anywhere — it is immutable.
     function setFeeSplitter(address newFeeSplitter) external onlyOwner {
         if (feeSplitterLocked) revert FeeSplitterAlreadySet();
         if (newFeeSplitter == address(0)) revert ZeroAddress();

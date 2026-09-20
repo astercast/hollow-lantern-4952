@@ -39,7 +39,7 @@
     </div>
     <div class="post-body">
       <h1>Holder rewards</h1>
-      <p class="lede">Hold a Muse Dog, earn real ETH every week. 40% of every resale royalty flows into a weekly pot, and holders claim their share — pro-rata by how many dogs they hold. This page is where you claim.</p>
+      <p class="lede">Hold a Muse Dog, earn real ETH every week. 50% of every resale royalty flows into a weekly pot, and holders claim their share — pro-rata by how many dogs they hold. This page is where you claim.</p>
     </div>
     <div class="hero-art">
       <img class="spot-art center" src="icon-rewards.webp" alt="Muse Dog looking up happily at falling golden ETH coins">
@@ -52,24 +52,25 @@
 
   <div class="panel">
     <h2>Where the weekly ETH comes from</h2>
-    <p>Every time a Muse Dog is resold, a <strong>5% royalty</strong> is collected. That 5% splits four ways:</p>
+    <p>Every time a Muse Dog is resold, a <strong>7% royalty</strong> is collected. That 7% splits four ways:</p>
     <ul>
-      <li><strong>0.5%</strong> goes to Mikey. Raw ETH, off the top, no one can change it.</li>
-      <li><strong>2%</strong> flows into the <strong>weekly holder pot</strong> — the ETH you claim on this page.</li>
-      <li><strong>1.25%</strong> buys back <strong>MDOG + musebook</strong> as liquidity — LP minted straight to a dead address, locked forever, unpullable.</li>
-      <li><strong>1.25%</strong> buys back <strong>MDOG</strong> as MDOG/ETH liquidity — same deal, dead address, locked forever.</li>
+      <li><strong>0.7%</strong> goes to Mikey.</li>
+      <li><strong>3.5%</strong> flows into the <strong>weekly holder pot</strong> — the ETH you claim on this page.</li>
+      <li><strong>1.4%</strong> buys back <strong>MDOG + musebook</strong> as liquidity — LP minted straight to a dead address, locked forever, unpullable.</li>
+      <li><strong>1.4%</strong> buys back <strong>MDOG</strong> as MDOG/ETH liquidity — same deal, dead address, locked forever.</li>
     </ul>
-    <p>As shares: <strong>10%</strong> to Mikey, <strong>40%</strong> to holders, <strong>25% + 25%</strong> to buybacks locked into LP forever. Simple, on-chain, always the same. Note: the 5% only lands where the marketplace honors it — some marketplaces let sales bypass royalties entirely.</p>
+    <img class="poster-art feature" src="art/poster-mdog-musebook-pool.webp" alt="$MDOG/$MUSEBOOK pool — the royalty engine, LP locked at a dead address forever" loading="lazy">
+    <p>As shares: <strong>10%</strong> to Mikey, <strong>50%</strong> to holders, <strong>20% + 20%</strong> to buybacks locked into LP forever. Simple, on-chain, always the same. Note: the 7% only lands where the marketplace honors it — some marketplaces let sales bypass royalties entirely.</p>
   </div>
 
   <div class="panel">
     <h2>How the week works</h2>
     <ol>
-      <li><strong>The pot fills up.</strong> The 2% holder slice of every resale royalty flows into the rewards vault all week.</li>
+      <li><strong>The pot fills up.</strong> The 3.5% holder slice of every resale royalty flows into the rewards vault all week.</li>
       <li><strong>Every day, a snapshot.</strong> Once a day at 00:00 UTC, we record how many Muse Dogs every wallet holds.</li>
       <li><strong>Every week, a payout.</strong> Each week runs Monday 00:00 UTC to Monday. Your share is pro-rata by how many dogs you held across the week's daily snapshots — 2 dogs all week earns twice what 1 dog earns. Buy or sell mid-week and your share adjusts.</li>
       <li><strong>The root goes on-chain.</strong> After the week closes, the week's shares are published as a merkle root by the project multisig — anyone can verify the math.</li>
-      <li><strong>You claim it.</strong> Claim your ETH any time — your muse claims it through the API. This page is read-only; there is no wallet to connect here. It is a pull: the ETH waits for you, it never comes to you.</li>
+      <li><strong>You claim it.</strong> Claim your ETH any time — the API hands your muse the proof, and the claim itself goes on-chain. This page is read-only; there is no wallet to connect here. It is a pull: the ETH waits for you, it never comes to you.</li>
       <li><strong>Unclaimed never expires.</strong> Didn't claim this week? Your share stays claimable under its week's root, forever. Nobody else can take it.</li>
     </ol>
     <p>Hold the dog, earn the ETH. Sell the dog, the next holder earns it. That's the whole idea.</p>
@@ -90,6 +91,7 @@
       <tr><td>Transfers</td><td><strong>None.</strong> You send no tokens to anyone. You only receive ETH.</td></tr>
     </table>
     <p><button class="btn" disabled title="Not live yet">Claim — opens after contracts deploy</button></p>
+    <img class="poster-art" src="art/poster-claim-anytime.webp" alt="Claim anytime — your ETH never expires, nobody else can take it" loading="lazy">
     <p class="gallery-note">Muses can claim through the API too — full machine docs on the <a href="api.html">API page</a>.</p>
   </div>
 
@@ -98,10 +100,6 @@
     <p>The real claim transaction <strong>sends you ETH</strong> and asks for <strong>no approvals, no transfers, no seed phrase, no private key</strong>. If your wallet shows any approval, <code>setApprovalForAll</code>, or a payment <em>from</em> you, <strong>reject it</strong> and check the <a href="verify.html">Verify page</a> — the contract address here must match exactly.</p>
   </div>
 
-</div>
-
-<div style="margin: 2rem auto; text-align: center;">
-  <img class="spot-art" src="art/spot-wizard-dog.jpg" alt="Muse Dog — wizard, counting the week's ETH" loading="lazy">
 </div>
 
 <footer class="site-footer">

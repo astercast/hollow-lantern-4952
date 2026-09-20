@@ -1095,9 +1095,9 @@ contract MuseDogsFeeSplitterTest is Test {
         splitter.process();
 
         assertEq(mikey.balance - mikeyBefore, 0.1 ether, "mikey 10%");
-        assertEq(vault.balance - vaultBefore, 0.4 ether, "vault 40%");
-        // Musebook-liquidity leg: 0.25 ETH -> 0.125 ETH routed to MDOG and
-        // 0.125 ETH routed to musebook, then an MDOG/musebook LP NFT minted
+        assertEq(vault.balance - vaultBefore, 0.5 ether, "vault 50%");
+        // Musebook-liquidity leg: 0.2 ETH -> 0.1 ETH routed to MDOG and
+        // 0.1 ETH routed to musebook, then an MDOG/musebook LP NFT minted
         // directly to DEAD. The mint math rounds, so token leftovers are
         // asserted approximately.
         assertEq(splitter.musebookLiquidityPending(), 0, "musebook-liquidity bucket drained");
@@ -1124,7 +1124,7 @@ contract MuseDogsFeeSplitterTest is Test {
     function test_ProcessEmitsProcessed() public {
         vm.deal(address(splitter), 1 ether);
         vm.expectEmit(false, false, false, true);
-        emit MuseDogsFeeSplitter.Processed(1 ether, 0.1 ether, 0.4 ether, 0.25 ether, 0.25 ether, true, true);
+        emit MuseDogsFeeSplitter.Processed(1 ether, 0.1 ether, 0.5 ether, 0.2 ether, 0.2 ether, true, true);
         splitter.process();
     }
 
@@ -1136,8 +1136,8 @@ contract MuseDogsFeeSplitterTest is Test {
         splitter.process();
 
         assertEq(mikey.balance, 0.01 ether, "mikey floor");
-        assertEq(splitter.musebookLiquidityPending(), 0.025 ether, "musebook-liquidity floor");
-        assertEq(splitter.liquidityPending(), 0.025 ether + 1, "liquidity gets the remainder wei");
+        assertEq(splitter.musebookLiquidityPending(), 0.02 ether, "musebook-liquidity floor");
+        assertEq(splitter.liquidityPending(), 0.02 ether + 1, "liquidity gets the remainder wei");
         assertEq(address(splitter).balance, splitter.totalPending(), "balance == pending");
     }
 
@@ -1158,8 +1158,8 @@ contract MuseDogsFeeSplitterTest is Test {
         vm.deal(address(splitter), 1 ether);
         splitter.process();
 
-        assertEq(splitter.musebookLiquidityPending(), 0.25 ether);
-        assertEq(splitter.liquidityPending(), 0.25 ether);
+        assertEq(splitter.musebookLiquidityPending(), 0.2 ether);
+        assertEq(splitter.liquidityPending(), 0.2 ether);
         assertEq(address(splitter).balance, splitter.totalPending(), "no unaccounted ETH");
 
         // A second process() over the SAME escrowed balance must revert:
@@ -1170,8 +1170,8 @@ contract MuseDogsFeeSplitterTest is Test {
         // New funds are split on their own; old buckets are untouched.
         vm.deal(address(splitter), address(splitter).balance + 0.1 ether);
         splitter.process();
-        assertEq(splitter.musebookLiquidityPending(), 0.275 ether, "old + new musebook-liquidity");
-        assertEq(splitter.liquidityPending(), 0.275 ether, "old + new liquidity");
+        assertEq(splitter.musebookLiquidityPending(), 0.22 ether, "old + new musebook-liquidity");
+        assertEq(splitter.liquidityPending(), 0.22 ether, "old + new liquidity");
         assertEq(splitter.mikeyPending(), 0, "mikey pushed");
         assertEq(address(splitter).balance, splitter.totalPending(), "invariant holds");
     }
@@ -1202,7 +1202,7 @@ contract MuseDogsFeeSplitterTest is Test {
 
         s.process(); // must NOT revert; mikey leg fails open
         assertEq(s.mikeyPending(), 0.1 ether, "mikey share escrowed");
-        assertEq(vault.balance, 0.4 ether, "vault leg unaffected");
+        assertEq(vault.balance, 0.5 ether, "vault leg unaffected");
         assertEq(address(rr).balance, 0, "reverting receiver got nothing");
 
         // Permissionless retry once the receiver is fixed.
@@ -1234,13 +1234,13 @@ contract MuseDogsFeeSplitterTest is Test {
         vm.deal(address(s), 1 ether);
 
         s.process();
-        assertEq(s.rewardsPending(), 0.4 ether, "vault share escrowed");
+        assertEq(s.rewardsPending(), 0.5 ether, "vault share escrowed");
         assertEq(mikey.balance, 0.1 ether, "mikey leg unaffected");
 
         rr.setReverting(false);
         vm.prank(address(0xEE3));
         s.claimRewards();
-        assertEq(address(rr).balance, 0.4 ether, "retry delivered");
+        assertEq(address(rr).balance, 0.5 ether, "retry delivered");
         assertEq(s.rewardsPending(), 0, "bucket cleared");
     }
 
@@ -1267,7 +1267,7 @@ contract MuseDogsFeeSplitterTest is Test {
         splitter.forwardMusebookLiquidity(dest, 0.1 ether);
 
         assertEq(dest.balance, 0.1 ether, "partial forward delivered");
-        assertEq(splitter.musebookLiquidityPending(), 0.15 ether, "rest stays escrowed");
+        assertEq(splitter.musebookLiquidityPending(), 0.1 ether, "rest stays escrowed");
         assertEq(address(splitter).balance, splitter.totalPending(), "invariant holds");
     }
 
@@ -1285,7 +1285,7 @@ contract MuseDogsFeeSplitterTest is Test {
         splitter.forwardMusebookLiquidity(payable(address(0xF01)), 0);
 
         vm.prank(owner);
-        vm.expectRevert(abi.encodeWithSelector(MuseDogsFeeSplitter.InsufficientPending.selector, 1 ether, 0.25 ether));
+        vm.expectRevert(abi.encodeWithSelector(MuseDogsFeeSplitter.InsufficientPending.selector, 1 ether, 0.2 ether));
         splitter.forwardMusebookLiquidity(payable(address(0xF01)), 1 ether);
 
         vm.prank(address(0xBAD));
@@ -1297,7 +1297,7 @@ contract MuseDogsFeeSplitterTest is Test {
         vm.prank(owner);
         vm.expectRevert(MuseDogsFeeSplitter.TransferFailed.selector);
         splitter.forwardMusebookLiquidity(payable(address(rr)), 0.1 ether);
-        assertEq(splitter.musebookLiquidityPending(), 0.25 ether, "bucket restored");
+        assertEq(splitter.musebookLiquidityPending(), 0.2 ether, "bucket restored");
     }
 
     function test_ForwardLiquidityPartial() public {
@@ -1307,9 +1307,9 @@ contract MuseDogsFeeSplitterTest is Test {
 
         address payable dest = payable(address(0xF02));
         vm.prank(owner);
-        splitter.forwardLiquidity(dest, 0.2 ether);
+        splitter.forwardLiquidity(dest, 0.15 ether);
 
-        assertEq(dest.balance, 0.2 ether);
+        assertEq(dest.balance, 0.15 ether);
         assertEq(splitter.liquidityPending(), 0.05 ether, "rest stays escrowed");
 
         vm.prank(owner);
@@ -1336,12 +1336,12 @@ contract MuseDogsFeeSplitterTest is Test {
 
         splitter.process();
 
-        // 0.125 ETH -> 0.25 META -> 0.5 MDOG and 0.125 ETH -> 0.25 META ->
-        // 0.5 musebook, all deposited as an LP NFT owned by DEAD. The mint
+        // 0.1 ETH -> 0.2 META -> 0.4 MDOG and 0.1 ETH -> 0.2 META ->
+        // 0.4 musebook, all deposited as an LP NFT owned by DEAD. The mint
         // math rounds, so the deposited amounts are exact only to the wei.
         assertEq(posm.ownerOf(1), DEAD, "musebook LP NFT owned by dead");
-        assertApproxEqAbs(posm.lastAmount0(), 0.5 ether, 1_000, "MDOG side deposited");
-        assertApproxEqAbs(posm.lastAmount1(), 0.5 ether, 1_000, "musebook side deposited");
+        assertApproxEqAbs(posm.lastAmount0(), 0.4 ether, 1_000, "MDOG side deposited");
+        assertApproxEqAbs(posm.lastAmount1(), 0.4 ether, 1_000, "musebook side deposited");
         assertEq(posm.lastTickLower(), -887220, "full range lower");
         assertEq(posm.lastTickUpper(), 887220, "full range upper");
         assertEq(posm.lastLiquidity() > 0, true, "liquidity minted");
@@ -1362,11 +1362,11 @@ contract MuseDogsFeeSplitterTest is Test {
         vm.deal(address(splitter), 1 ether);
         splitter.process();
 
-        // The leg's routed 0.125 + pre-existing 0.1 of each side: the mint
-        // sees the full 0.225 balances (rounded in the math).
+        // The leg's routed 0.1 + pre-existing 0.1 of each side: the mint
+        // sees the full 0.2 balances (rounded in the math).
         assertEq(posm.ownerOf(1), DEAD, "musebook LP NFT owned by dead");
-        assertApproxEqAbs(posm.lastAmount0(), 0.225 ether, 1_000, "MDOG dust swept in");
-        assertApproxEqAbs(posm.lastAmount1(), 0.225 ether, 1_000, "musebook dust swept in");
+        assertApproxEqAbs(posm.lastAmount0(), 0.2 ether, 1_000, "MDOG dust swept in");
+        assertApproxEqAbs(posm.lastAmount1(), 0.2 ether, 1_000, "musebook dust swept in");
         assertApproxEqAbs(mdog.balanceOf(address(splitter)), 0, 1_000, "no MDOG dust left");
         assertApproxEqAbs(musebook.balanceOf(address(splitter)), 0, 1_000, "no musebook dust left");
     }
@@ -1403,9 +1403,9 @@ contract MuseDogsFeeSplitterTest is Test {
     function _assertMusebookLiquidityLog(Vm.Log memory log) internal {
         (uint256 ethIn, uint256 mdogUsed, uint256 mbUsed, int24 tl, int24 tu) =
             abi.decode(log.data, (uint256, uint256, uint256, int24, int24));
-        assertEq(ethIn, 0.25 ether, "event ethIn");
-        assertApproxEqAbs(mdogUsed, 0.125 ether, 1_000, "event mdogUsed");
-        assertApproxEqAbs(mbUsed, 0.125 ether, 1_000, "event musebookUsed");
+        assertEq(ethIn, 0.2 ether, "event ethIn");
+        assertApproxEqAbs(mdogUsed, 0.1 ether, 1_000, "event mdogUsed");
+        assertApproxEqAbs(mbUsed, 0.1 ether, 1_000, "event musebookUsed");
         assertEq(tl, -887220, "event tickLower");
         assertEq(tu, 887220, "event tickUpper");
     }
@@ -1450,14 +1450,14 @@ contract MuseDogsFeeSplitterTest is Test {
         vm.deal(address(splitter), 1 ether);
         splitter.process(); // must NOT revert: the leg is skipped
 
-        assertEq(splitter.musebookLiquidityPending(), 0.25 ether, "musebook-liquidity stays escrowed");
-        assertEq(splitter.liquidityPending(), 0.25 ether, "MDOG/ETH leg unaffected");
+        assertEq(splitter.musebookLiquidityPending(), 0.2 ether, "musebook-liquidity stays escrowed");
+        assertEq(splitter.liquidityPending(), 0.2 ether, "MDOG/ETH leg unaffected");
         assertEq(address(splitter).balance, splitter.totalPending(), "invariant holds");
 
         // Standalone retry surfaces the revert and restores the bucket...
         vm.expectRevert("mock: mint exploded");
         splitter.executeMusebookLiquidity();
-        assertEq(splitter.musebookLiquidityPending(), 0.25 ether, "bucket restored by revert");
+        assertEq(splitter.musebookLiquidityPending(), 0.2 ether, "bucket restored by revert");
 
         // ...and a later keeper call succeeds once the periphery is healthy.
         posm.setRevertMint(false);
@@ -1474,11 +1474,11 @@ contract MuseDogsFeeSplitterTest is Test {
         vm.deal(address(splitter), 1 ether);
         splitter.process();
 
-        // Half the leg (0.125 ETH) was routed to MDOG; half stayed native.
+        // Half the leg (0.1 ETH) was routed to MDOG; half stayed native.
         // The mint math rounds, so amounts are exact only to the wei.
-        assertApproxEqAbs(posm.lastAmount1(), 0.125 ether, 1_000, "mdog side came from the routed half");
-        assertEq(posm.lastMsgValue() <= 0.125 ether, true, "native side never exceeds the retained half");
-        assertApproxEqAbs(posm.lastAmount0() + posm.lastAmount1(), 0.25 ether, 1_000, "whole leg deposited");
+        assertApproxEqAbs(posm.lastAmount1(), 0.1 ether, 1_000, "mdog side came from the routed half");
+        assertEq(posm.lastMsgValue() <= 0.1 ether, true, "native side never exceeds the retained half");
+        assertApproxEqAbs(posm.lastAmount0() + posm.lastAmount1(), 0.2 ether, 1_000, "whole leg deposited");
         // Full-range position minted DIRECTLY to the dead address. The
         // musebook leg minted id 1 first; this leg minted id 2.
         assertEq(posm.lastRecipient(), DEAD, "LP minted to dead");
@@ -1543,14 +1543,14 @@ contract MuseDogsFeeSplitterTest is Test {
         splitter.process(); // must NOT revert: the legs are skipped
 
         // The mock's revert flag hits every mint, so BOTH legs stay escrowed.
-        assertEq(splitter.liquidityPending(), 0.25 ether, "liquidity stays escrowed");
-        assertEq(splitter.musebookLiquidityPending(), 0.25 ether, "musebook-liquidity stays escrowed");
+        assertEq(splitter.liquidityPending(), 0.2 ether, "liquidity stays escrowed");
+        assertEq(splitter.musebookLiquidityPending(), 0.2 ether, "musebook-liquidity stays escrowed");
         assertEq(address(splitter).balance, splitter.totalPending(), "invariant holds");
 
         // Standalone retry surfaces the revert and restores the bucket...
         vm.expectRevert("mock: mint exploded");
         splitter.executeLiquidity();
-        assertEq(splitter.liquidityPending(), 0.25 ether, "bucket restored by revert");
+        assertEq(splitter.liquidityPending(), 0.2 ether, "bucket restored by revert");
 
         // ...and a later keeper call succeeds once the periphery is healthy.
         posm.setRevertMint(false);
@@ -1564,10 +1564,10 @@ contract MuseDogsFeeSplitterTest is Test {
         vm.deal(address(splitter), 1 ether);
         splitter.process(); // skipped, not reverted
 
-        assertEq(splitter.liquidityPending(), 0.25 ether, "liquidity stays escrowed");
+        assertEq(splitter.liquidityPending(), 0.2 ether, "liquidity stays escrowed");
         vm.expectRevert(abi.encodeWithSelector(MuseDogsFeeSplitter.PoolNotInitialized.selector, mdogEthId));
         splitter.executeLiquidity();
-        assertEq(splitter.liquidityPending(), 0.25 ether, "bucket restored");
+        assertEq(splitter.liquidityPending(), 0.2 ether, "bucket restored");
     }
 
     function test_ExecuteNothingPendingReverts() public {
@@ -1586,14 +1586,14 @@ contract MuseDogsFeeSplitterTest is Test {
         vm.deal(address(splitter), 1 ether);
         splitter.process(); // must NOT revert
 
-        assertEq(splitter.musebookLiquidityPending(), 0.25 ether, "musebook-liquidity stays escrowed");
-        assertEq(splitter.liquidityPending(), 0.25 ether, "liquidity stays escrowed");
+        assertEq(splitter.musebookLiquidityPending(), 0.2 ether, "musebook-liquidity stays escrowed");
+        assertEq(splitter.liquidityPending(), 0.2 ether, "liquidity stays escrowed");
         assertEq(mikey.balance, 0.1 ether, "mikey leg unaffected");
         assertEq(address(splitter).balance, splitter.totalPending(), "nothing leaked");
 
         vm.expectRevert(abi.encodeWithSelector(MuseDogsFeeSplitter.PoolNotInitialized.selector, metaMdogId));
         splitter.executeMusebookLiquidity();
-        assertEq(splitter.musebookLiquidityPending(), 0.25 ether, "bucket restored by revert");
+        assertEq(splitter.musebookLiquidityPending(), 0.2 ether, "bucket restored by revert");
     }
 
     function test_FirstHopSlippageSkipsLeg() public {
@@ -1601,18 +1601,18 @@ contract MuseDogsFeeSplitterTest is Test {
         vm.deal(address(splitter), 1 ether);
         splitter.process(); // must NOT revert: both legs skip
 
-        assertEq(splitter.musebookLiquidityPending(), 0.25 ether, "musebook-liquidity stays escrowed");
-        assertEq(splitter.liquidityPending(), 0.25 ether, "liquidity stays escrowed");
+        assertEq(splitter.musebookLiquidityPending(), 0.2 ether, "musebook-liquidity stays escrowed");
+        assertEq(splitter.liquidityPending(), 0.2 ether, "liquidity stays escrowed");
         assertEq(meta.balanceOf(address(splitter)), 0, "no META stranded");
         assertEq(address(splitter).balance, splitter.totalPending(), "nothing leaked");
 
         // Standalone retry surfaces the exact slippage error:
-        // received 0.0625 META vs minOut 0.125 * 0.97 = 0.12125.
+        // received 0.05 META vs minOut 0.1 * 0.97 = 0.097.
         vm.expectRevert(
-            abi.encodeWithSelector(MuseDogsFeeSplitter.SlippageExceeded.selector, 0.0625 ether, 0.12125 ether)
+            abi.encodeWithSelector(MuseDogsFeeSplitter.SlippageExceeded.selector, 0.05 ether, 0.097 ether)
         );
         splitter.executeMusebookLiquidity();
-        assertEq(splitter.musebookLiquidityPending(), 0.25 ether, "bucket restored by revert");
+        assertEq(splitter.musebookLiquidityPending(), 0.2 ether, "bucket restored by revert");
     }
 
     function test_SecondHopSlippageSkipsLeg() public {
@@ -1620,19 +1620,19 @@ contract MuseDogsFeeSplitterTest is Test {
         vm.deal(address(splitter), 1 ether);
         splitter.process(); // must NOT revert
 
-        assertEq(splitter.musebookLiquidityPending(), 0.25 ether, "musebook-liquidity stays escrowed");
-        assertEq(splitter.liquidityPending(), 0.25 ether, "liquidity stays escrowed");
+        assertEq(splitter.musebookLiquidityPending(), 0.2 ether, "musebook-liquidity stays escrowed");
+        assertEq(splitter.liquidityPending(), 0.2 ether, "liquidity stays escrowed");
         // The failed multihop leaves NO intermediate token behind: hop 1's
         // META never escapes the reverted callback.
         assertEq(meta.balanceOf(address(splitter)), 0, "no META stranded");
         assertEq(mdog.balanceOf(address(splitter)), 0, "no MDOG stranded");
 
-        // received 0.0625 MDOG vs minOut2 0.12125 * 0.97 = 0.1176125.
+        // received 0.05 MDOG vs minOut2 0.097 * 0.97 = 0.09409.
         vm.expectRevert(
-            abi.encodeWithSelector(MuseDogsFeeSplitter.SlippageExceeded.selector, 0.0625 ether, 0.1176125 ether)
+            abi.encodeWithSelector(MuseDogsFeeSplitter.SlippageExceeded.selector, 0.05 ether, 0.09409 ether)
         );
         splitter.executeMusebookLiquidity();
-        assertEq(splitter.musebookLiquidityPending(), 0.25 ether, "bucket restored by revert");
+        assertEq(splitter.musebookLiquidityPending(), 0.2 ether, "bucket restored by revert");
     }
 
     function test_PartialFillRevertsLeg() public {
@@ -1645,9 +1645,9 @@ contract MuseDogsFeeSplitterTest is Test {
         // Now the price limit binds mid-swap: only half the input is consumed.
         pm.setPartialBps(metaEthId, 5_000);
 
-        vm.expectRevert(abi.encodeWithSelector(MuseDogsFeeSplitter.SwapPartialFill.selector, 0.0625 ether, 0.125 ether));
+        vm.expectRevert(abi.encodeWithSelector(MuseDogsFeeSplitter.SwapPartialFill.selector, 0.05 ether, 0.1 ether));
         splitter.executeMusebookLiquidity();
-        assertEq(splitter.musebookLiquidityPending(), 0.25 ether, "whole bucket restored, no half-spent funds");
+        assertEq(splitter.musebookLiquidityPending(), 0.2 ether, "whole bucket restored, no half-spent funds");
         assertEq(meta.balanceOf(address(splitter)), 0, "no META stranded");
     }
 
@@ -1656,9 +1656,9 @@ contract MuseDogsFeeSplitterTest is Test {
         vm.deal(address(splitter), 1 ether);
         splitter.process(); // must NOT revert
 
-        assertEq(splitter.musebookLiquidityPending(), 0.25 ether, "musebook-liquidity stays escrowed");
-        assertEq(splitter.liquidityPending(), 0.25 ether, "liquidity stays escrowed");
-        assertEq(address(splitter).balance, 0.5 ether, "only push legs left");
+        assertEq(splitter.musebookLiquidityPending(), 0.2 ether, "musebook-liquidity stays escrowed");
+        assertEq(splitter.liquidityPending(), 0.2 ether, "liquidity stays escrowed");
+        assertEq(address(splitter).balance, 0.4 ether, "only DEX legs left");
 
         // A later keeper retry works once the pool is healthy again.
         pm.setRevertSwap(metaEthId, false);
@@ -1672,7 +1672,7 @@ contract MuseDogsFeeSplitterTest is Test {
         vm.deal(address(splitter), 1 ether);
         splitter.process(); // must NOT revert
 
-        assertEq(splitter.musebookLiquidityPending(), 0.25 ether, "musebook-liquidity stays escrowed");
+        assertEq(splitter.musebookLiquidityPending(), 0.2 ether, "musebook-liquidity stays escrowed");
         assertEq(address(splitter).balance, splitter.totalPending(), "nothing leaked");
 
         pm.setRevertSettle(false);
@@ -1685,8 +1685,8 @@ contract MuseDogsFeeSplitterTest is Test {
         vm.deal(address(splitter), 1 ether);
         splitter.process(); // must NOT revert
 
-        assertEq(splitter.musebookLiquidityPending(), 0.25 ether);
-        assertEq(splitter.liquidityPending(), 0.25 ether);
+        assertEq(splitter.musebookLiquidityPending(), 0.2 ether);
+        assertEq(splitter.liquidityPending(), 0.2 ether);
         pm.setUnlockReverts(false);
         splitter.executeMusebookLiquidity();
         assertEq(splitter.musebookLiquidityPending(), 0);
@@ -1726,8 +1726,8 @@ contract MuseDogsFeeSplitterTest is Test {
         attacker.attack();
 
         assertEq(splitter.totalPending(), pendingBefore, "splitter untouched");
-        assertEq(splitter.musebookLiquidityPending(), 0.25 ether);
-        assertEq(splitter.liquidityPending(), 0.25 ether);
+        assertEq(splitter.musebookLiquidityPending(), 0.2 ether);
+        assertEq(splitter.liquidityPending(), 0.2 ether);
     }
 
     // -------------------------------------------------------------------------
@@ -1762,7 +1762,7 @@ contract MuseDogsFeeSplitterTest is Test {
         // the attacker got EXACTLY its legitimate 10% share, once — no more.
         assertEq(address(evil).balance, 0.1 ether, "attacker paid exactly once");
         assertEq(s.mikeyPending(), 0, "mikey leg settled");
-        assertEq(vault.balance, 0.4 ether, "vault leg unaffected");
+        assertEq(vault.balance, 0.5 ether, "vault leg unaffected");
         assertEq(s.musebookLiquidityPending(), 0, "musebook-liquidity leg ran");
         assertEq(s.liquidityPending(), 0, "liquidity leg ran");
         assertEq(posm.ownerOf(1), DEAD, "musebook LP minted to dead once");
@@ -1800,7 +1800,7 @@ contract MuseDogsFeeSplitterTest is Test {
         pm.setRevertSwap(metaEthId, true);
         vm.deal(address(s), 1 ether);
         s.process();
-        assertEq(s.musebookLiquidityPending(), 0.25 ether);
+        assertEq(s.musebookLiquidityPending(), 0.2 ether);
         pm.setRevertSwap(metaEthId, false);
 
         // Standalone leg: the Permit2-pull hook tries process() and the leg

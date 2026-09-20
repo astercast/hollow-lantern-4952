@@ -525,10 +525,10 @@ contract MuseDogsTest is Test {
     // Royalties + fee splitter wiring
     // -------------------------------------------------------------------------
 
-    function test_RoyaltyIsFivePercentToSplitter() public {
+    function test_RoyaltyIsSevenPercentToSplitter() public {
         (address receiver, uint256 amount) = nft.royaltyInfo(1, 10 ether);
         assertEq(receiver, splitter);
-        assertEq(amount, 0.5 ether);
+        assertEq(amount, 0.7 ether);
     }
 
     function test_FeeSplitterSetOnce() public {

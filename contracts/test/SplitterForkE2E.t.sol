@@ -81,8 +81,8 @@ contract SplitterForkE2E is Test {
         // Fund the splitter with 0.1 ETH of "royalties".
         vm.deal(address(splitter), 0.1 ether);
 
-        // process(): 10% to mikey, 40% to vault, 25% MDOG/musebook LP,
-        // 25% MDOG/ETH LP. Either DEX leg may fail on the fork (e.g. Permit2
+        // process(): 10% to mikey, 50% to vault, 20% MDOG/musebook LP,
+        // 20% MDOG/ETH LP. Either DEX leg may fail on the fork (e.g. Permit2
         // setup, or the UNVERIFIED musebook/META routing key); the fail-safe
         // skips it and leaves the bucket escrowed. This test checks process()
         // never reverts and the direct legs pay out.
@@ -91,7 +91,7 @@ contract SplitterForkE2E is Test {
         splitter.process();
 
         assertEq(address(0xBEEF).balance - mikeyBefore, 0.01 ether, "mikey 10%");
-        assertEq(address(vault).balance - vaultBefore, 0.04 ether, "vault 40%");
+        assertEq(address(vault).balance - vaultBefore, 0.05 ether, "vault 50%");
         assertEq(IERC20(META).balanceOf(address(splitter)), 0, "META dust left");
         assertEq(IERC20(MDOG).balanceOf(address(splitter)), 0, "MDOG dust left");
         assertEq(IERC20(MUSEBOOK).balanceOf(address(splitter)), 0, "musebook dust left");

@@ -5,8 +5,8 @@ import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProo
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /// @title MuseDogRewards — weekly merkle-distributed holder rewards vault
-/// @notice Holds ETH from the 2% royalty slice of the Muse Dogs collection
-///         (5% total royalty: 0.5% Mikey, 2% holder rewards, 2.5% fee engine).
+/// @notice Holds ETH from the 3.5% royalty slice of the Muse Dogs collection
+///         (7% total royalty: 0.7% Mikey, 3.5% holder rewards, 2.8% fee engine).
 ///         An off-chain backend takes a daily holder-balance snapshot at
 ///         00:00 UTC, builds a weekly epoch (Monday 00:00 UTC -> next Monday
 ///         00:00 UTC) with time-weighted pro-rata shares, and computes a

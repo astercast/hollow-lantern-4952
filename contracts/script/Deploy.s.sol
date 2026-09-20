@@ -12,7 +12,7 @@ import {MuseDogsFeeSplitter, PoolKey} from "../src/MuseDogsFeeSplitter.sol";
 ///
 ///      Required env:
 ///        MIKEY_BANKR          - Mikey's Bankr address (10% royalty leg, raw ETH)
-///        REWARDS_VAULT        - holder rewards vault (40% leg). Deploy
+///        REWARDS_VAULT        - holder rewards vault (50% leg). Deploy
 ///                               MuseDogRewards first, or pass the planned address.
 ///        MUSEDOG_OWNER        - initial owner (deployer hot wallet for the
 ///                               pre-launch test mint; transfer to the Safe
@@ -134,7 +134,7 @@ contract Deploy is Script {
             mdogMusebookKey
         );
 
-        // 2. The collection, with the splitter wired as the 5% royalty recipient.
+        // 2. The collection, with the splitter wired as the 7% royalty recipient.
         MuseDogs nft = new MuseDogs(owner, voucherSigner, address(splitter), mdogToken);
 
         vm.stopBroadcast();

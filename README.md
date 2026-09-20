@@ -1,11 +1,11 @@
 # Muse Dogs
 
 500-piece ERC-721 NFT collection on Robinhood Chain (chain ID 4663).
-Name/symbol: **Muse Dogs** / **MUSEDOGS** (locked 2026-09-18). Royalty: **5%**
-(500 bps, fixed forever) to the fee-splitter contract, which divides every
-royalty payment — 10% to Mikey's Bankr address in raw ETH off the top, 40%
-to the weekly holder-rewards vault, 25% into a MDOG/musebook Uniswap v4
-position, 25% into a MDOG/ETH Uniswap v4 position. Both LP positions are
+Name/symbol: **Muse Dogs** / **MUSEDOGS** (locked 2026-09-18). Royalty: **7%**
+(700 bps, fixed forever) to the fee-splitter contract, which divides every
+royalty payment — 10% to Mikey's Bankr address in raw ETH off the top, 50%
+to the weekly holder-rewards vault, 20% into a MDOG/musebook Uniswap v4
+position, 20% into a MDOG/ETH Uniswap v4 position. Both LP positions are
 minted **directly to the dead address** (locked forever). No MDOG tokens are
 ever burned.
 
@@ -44,8 +44,8 @@ muse-dog-lol/
 │   └── smoke.js   # end-to-end checks, run with: npm run smoke
 ├── contracts/     # Foundry project (forge, solc 0.8.30 pinned, OZ Contracts v5.4.0)
 │   ├── src/MuseDogs.sol            # the ERC-721: vouchers, caps, team mint, metadata freeze, royalties
-│   ├── src/MuseDogsFeeSplitter.sol # autonomous 10/40/25/25 royalty splitter (Uniswap v4, Robinhood Chain)
-│   ├── src/MuseDogRewards.sol      # holder-rewards vault: weekly Merkle-distributed ETH (40% leg)
+│   ├── src/MuseDogsFeeSplitter.sol # autonomous 10/50/20/20 royalty splitter (Uniswap v4, Robinhood Chain)
+│   ├── src/MuseDogRewards.sol      # holder-rewards vault: weekly Merkle-distributed ETH (50% leg)
 │   ├── test/                      # 112 tests (108 pass locally; 4 fail on a local-only chain — fork-dependent)
 │   └── script/Deploy.s.sol         # deploy script (all params from env; key via --private-key)
 ├── VOUCHER_SPEC.md            # voucher format + relayer flow (LOCKED)
