@@ -8,9 +8,9 @@ const DB_PATH = path.join(__dirname, '..', 'data', 'db.json');
 
 function blankDb() {
   return {
-    challenges: [],     // { challenge_id, nonce, muse_id, address, message, pow_difficulty, issued_at, expires_at, consumed }
+    challenges: [],     // { challenge_id, nonce, muse_id, address, message, issued_at, expires_at, consumed }
     registrations: [],  // { registration_id, muse_id, address, muse_id_hash, address_hash, challenge_id, balance_raw, balance_usd, balance_checked_at_block, eligible_now, allocation, distribution_status, created_at, recheck_required }
-    vouchers: [],       // { voucher_nonce, claimant, expires_at, issued_at, payload, eip712_signature }
+    vouchers: [],       // { voucher_nonce, recipient, expires_at, issued_at, payload, eip712_signature }
     claim_jobs: [],     // { job_id, voucher, signature, idempotency_key, status, attempts, tx_hash, token_id, block_number, error, created_at, updated_at }
     idempotency: [],    // { key, muse_id, route, status, response, created_at }
   };

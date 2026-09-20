@@ -2,11 +2,14 @@
 //
 // Why this exists: most muses hold their wallet in Bankr, and Bankr's API
 // has no documented arbitrary contract-call endpoint. A muse with a voucher
-// but no way to send claim() would be stuck. The relayer closes that gap.
+// but no way to send mintWithVoucher() would be stuck. The relayer closes
+// that gap: it submits the transaction and pays the gas, so the muse needs
+// no wallet connection and no ETH.
 //
 // Trust design (this is why a relayer is safe here):
-//   - claim() is permissionless and the NFT ALWAYS goes to the voucher's
-//     claimant. The relayer cannot redirect, split, or steal anything.
+//   - mintWithVoucher() is permissionless and the NFT ALWAYS goes to the
+//     voucher's recipient. The relayer cannot redirect, split, or steal
+//     anything — the signature binds the recipient on-chain.
 //   - The worst the relayer can do is censor (not submit) — which is
 //     visible on-chain and has a documented fallback (self-submit calldata).
 //   - The relayer key holds only gas money. If it is drained, top it up;
@@ -19,10 +22,16 @@
 // Operational design:
 //   - Serial queue: one transaction at a time, explicit pending-nonce
 //     management, so nonces can never gap or collide.
-//   - Idempotent by voucher nonce: re-submitting the same voucher returns
-//     the existing job, never a second transaction.
-//   - Preflight before every submission: expiry, signature, on-chain nonce/
-//     claim state, pause state, remaining claims. Doomed txs never get sent.
+//   - Idempotent by (recipient, voucher nonce): re-submitting the same
+//     voucher returns the existing job, never a second transaction.
+//     Deduping must include the recipient because on-chain nonces are
+//     per-recipient: two different muses can legitimately hold vouchers
+//     with the same nonce value (different recipients), and those are
+//     two separate mints, not duplicates.
+//   - Preflight before every submission: expiry, signature, on-chain nonce
+//     state, remaining mints in the voucher's bucket. Doomed txs never get
+//     sent. (The contract has no pause mechanism, so there is no pause
+//     check — minting cannot be paused.)
 //   - Crash recovery: jobs stuck in queued/validating/submitted are picked
 //     back up on restart; submitted ones get their receipt re-checked.
 const { ethers } = require('ethers');
@@ -32,15 +41,17 @@ const {
   isExpired,
 } = require('./voucher');
 
+// Exact on-chain interface of contracts/src/MuseDogs.sol (the parts the
+// relayer touches). Voucher struct:
+//   MintVoucher(address recipient,uint8 mintType,uint256 nonce,uint256 expiry)
 const CLAIM_ABI = [
-  'function claim(address claimant, uint256 nonce, uint256 expiresAt, bytes signature)',
+  'function mintWithVoucher(address recipient, uint8 mintType, uint256 nonce, uint256 expiry, bytes signature)',
   'function voucherSigner() view returns (address)',
-  'function consumedNonce(uint256) view returns (bool)',
-  'function hasClaimed(address) view returns (bool)',
-  'function communityClaimsRemaining() view returns (uint256)',
-  'function paused() view returns (bool)',
-  'function ownerOf(uint256 tokenId) view returns (address)',
-  'event CommunityClaimed(address indexed claimant, uint256 indexed tokenId, uint256 nonce)',
+  'function usedNonces(address,uint256) view returns (bool)',
+  'function communityRemaining() view returns (uint256)',
+  'function holderRemaining() view returns (uint256)',
+  'event CommunityMinted(address indexed recipient, uint256 indexed tokenId, uint256 nonce, uint256 expiry)',
+  'event HolderMinted(address indexed recipient, uint256 indexed tokenId, uint256 nonce, uint256 expiry)',
 ];
 
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
@@ -56,21 +67,22 @@ function verr(code, message) {
 // Pure: build the exact transaction the relayer will send.
 function buildClaimCalldata(voucher, signature) {
   const iface = new ethers.Interface(CLAIM_ABI);
-  return iface.encodeFunctionData('claim', [
-    ethers.getAddress(voucher.claimant),
+  return iface.encodeFunctionData('mintWithVoucher', [
+    ethers.getAddress(voucher.recipient),
+    Number(voucher.mintType),
     BigInt(voucher.nonce),
-    BigInt(voucher.expiresAt),
+    BigInt(voucher.expiry),
     signature,
   ]);
 }
 
-// Pure: decode a receipt's CommunityClaimed event -> tokenId (or null).
+// Pure: decode a receipt's CommunityMinted/HolderMinted event -> tokenId (or null).
 function tokenIdFromReceipt(receipt) {
   const iface = new ethers.Interface(CLAIM_ABI);
   for (const log of receipt.logs || []) {
     try {
       const parsed = iface.parseLog(log);
-      if (parsed && parsed.name === 'CommunityClaimed') {
+      if (parsed && (parsed.name === 'CommunityMinted' || parsed.name === 'HolderMinted')) {
         return parsed.args.tokenId.toString();
       }
     } catch {
@@ -124,9 +136,9 @@ class Relayer {
   // would make the transaction revert or be invalid. Cheap checks first.
   async preflight(voucher, signature) {
     this._needReady();
-    validateVoucherShape(voucher, { chainId: this.chainId, contractAddress: this.contractAddress });
-    if (isExpired(voucher.expiresAt)) {
-      throw verr('VOUCHER_EXPIRED', 'Voucher expired at ' + voucher.expiresAt + '.');
+    const v = validateVoucherShape(voucher, { chainId: this.chainId, contractAddress: this.contractAddress });
+    if (isExpired(v.expiry)) {
+      throw verr('VOUCHER_EXPIRED', 'Voucher expired at ' + v.expiry + '.');
     }
     let recovered;
     try {
@@ -134,9 +146,10 @@ class Relayer {
         {
           chainId: this.chainId,
           contractAddress: this.contractAddress,
-          claimant: voucher.claimant,
-          nonce: voucher.nonce,
-          expiresAt: voucher.expiresAt,
+          recipient: v.recipient,
+          mintType: v.mintType,
+          nonce: v.nonce,
+          expiry: v.expiry,
         },
         signature
       );
@@ -146,16 +159,16 @@ class Relayer {
     if (recovered.toLowerCase() !== this.onChainVoucherSigner.toLowerCase()) {
       throw verr('BAD_VOUCHER_SIGNATURE', "Voucher was not signed by the contract's voucher signer.");
     }
-    const [consumed, claimed, paused, remaining] = await Promise.all([
-      this.contract.consumedNonce(BigInt(voucher.nonce)),
-      this.contract.hasClaimed(ethers.getAddress(voucher.claimant)),
-      this.contract.paused(),
-      this.contract.communityClaimsRemaining(),
+    // On-chain state: nonce unused, and the voucher's bucket still has room.
+    // Nonces are per-recipient on-chain: usedNonces(recipient, nonce).
+    const [used, remaining] = await Promise.all([
+      this.contract.usedNonces(v.recipient, BigInt(v.nonce)),
+      v.mintType === 0 ? this.contract.communityRemaining() : this.contract.holderRemaining(),
     ]);
-    if (paused) throw verr('MINT_PAUSED', 'Minting is paused on-chain.');
-    if (consumed) throw verr('NONCE_CONSUMED', 'This voucher was already used.');
-    if (claimed) throw verr('ALREADY_CLAIMED', 'This address already claimed.');
-    if (remaining === 0n) throw verr('CLAIMS_EXHAUSTED', 'All community claims are taken.');
+    if (used) throw verr('NONCE_CONSUMED', 'This voucher was already used.');
+    if (remaining === 0n) {
+      throw verr('CLAIMS_EXHAUSTED', v.mintType === 0 ? 'All community mints are taken.' : 'All holder mints are taken.');
+    }
     return { recovered, remaining: remaining.toString() };
   }
 
@@ -164,10 +177,11 @@ class Relayer {
     await this.preflight(voucher, signature);
     const data = buildClaimCalldata(voucher, signature);
     const signerContract = new ethers.Contract(this.contractAddress, CLAIM_ABI, this.wallet);
-    const gasEstimate = await signerContract.claim.estimateGas(
-      ethers.getAddress(voucher.claimant),
+    const gasEstimate = await signerContract.mintWithVoucher.estimateGas(
+      ethers.getAddress(voucher.recipient),
+      Number(voucher.mintType),
       BigInt(voucher.nonce),
-      BigInt(voucher.expiresAt),
+      BigInt(voucher.expiry),
       signature
     );
     const gasLimit = (gasEstimate * 120n) / 100n; // 20% buffer
@@ -209,7 +223,7 @@ class Relayer {
 // One job per voucher nonce. Jobs move:
 //   queued -> validating -> submitted -> confirmed | failed
 // Only network-level failures retry (3 attempts, backoff); validation
-// failures (bad sig, expired, already claimed) fail immediately.
+// failures (bad sig, expired, already used) fail immediately.
 
 const MAX_ATTEMPTS = 3;
 
@@ -229,16 +243,23 @@ class ClaimQueue {
     return this.store.list().find((j) => j.job_id === jobId) || null;
   }
 
-  byNonce(nonce) {
+  // Dedupe key: (recipient, nonce). On-chain nonces are per-recipient
+  // (usedNonces(recipient, nonce)), so two vouchers with the same nonce
+  // value for DIFFERENT recipients are two separate jobs, not duplicates.
+  byRecipientNonce(recipient, nonce) {
+    const r = ethers.getAddress(recipient).toLowerCase();
     const n = BigInt(nonce).toString(10);
-    return this.store.list().find((j) => BigInt(j.voucher.nonce).toString(10) === n) || null;
+    return this.store.list().find(
+      (j) => ethers.getAddress(j.voucher.recipient).toLowerCase() === r &&
+             BigInt(j.voucher.nonce).toString(10) === n
+    ) || null;
   }
 
   enqueue({ voucher, signature, idempotencyKey }) {
     if (!this.relayer) {
       throw verr('RELAYER_DISABLED', 'The claim relayer is not enabled.');
     }
-    const existing = this.byNonce(voucher.nonce);
+    const existing = this.byRecipientNonce(voucher.recipient, voucher.nonce);
     if (existing) return { job: existing, duplicate: true };
     const now = new Date().toISOString();
     const job = {
@@ -246,9 +267,10 @@ class ClaimQueue {
       voucher: {
         chainId: Number(voucher.chainId),
         contract: ethers.getAddress(voucher.contract),
-        claimant: ethers.getAddress(voucher.claimant),
+        recipient: ethers.getAddress(voucher.recipient),
+        mintType: Number(voucher.mintType),
         nonce: BigInt(voucher.nonce).toString(10),
-        expiresAt: BigInt(voucher.expiresAt).toString(10),
+        expiry: BigInt(voucher.expiry).toString(10),
       },
       signature,
       idempotency_key: idempotencyKey || null,
@@ -344,7 +366,7 @@ class ClaimQueue {
       const terminal = [
         'BAD_VOUCHER', 'WRONG_CHAIN', 'WRONG_CONTRACT', 'BAD_SIGNATURE',
         'BAD_VOUCHER_SIGNATURE', 'VOUCHER_EXPIRED', 'NONCE_CONSUMED',
-        'ALREADY_CLAIMED', 'MINT_PAUSED', 'CLAIMS_EXHAUSTED',
+        'CLAIMS_EXHAUSTED',
       ].includes(code);
       if (!terminal && job.attempts < MAX_ATTEMPTS) {
         const backoffMs = 2000 * job.attempts;
@@ -352,7 +374,7 @@ class ClaimQueue {
         await new Promise((r) => setTimeout(r, backoffMs));
         this._schedule();
       } else {
-        this._fail(job, code, message);
+        this._fail(job, code, e.message || 'Receipt check failed.');
       }
     }
   }

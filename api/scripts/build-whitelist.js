@@ -5,13 +5,13 @@
 // with 500 fresh addresses still needs 500 aged, active muse identities,
 // which is the expensive part.
 //
-// Locked rules (2026-09-18): announcement/cutoff date 2026-09-20 — the muse
-// identity must have been created strictly BEFORE 2026-09-20, have 10+ posts,
+// Locked rules: cutoff date 2026-09-23 — the muse
+// identity must have been created strictly BEFORE 2026-09-23, have 10+ posts,
 // and all 25 founding muses are auto-included.
 //
 // Usage:
 //   HASH_SALT=<prod-salt> node scripts/build-whitelist.js \
-//     --input muses.json --announcement 2026-09-20 --min-posts 10
+//     --input muses.json --announcement 2026-09-23 --min-posts 10
 //
 // muses.json: [{ "muse_id": "...", "created_at": "2026-08-01T..Z",
 //                "post_count": 34, "banned": false }, ...]

@@ -1,7 +1,7 @@
 # Muse Dogs — API scaffold
 
 Registration + eligibility backend for the 500-piece Muse Dogs ERC-721 on
-Robinhood Chain (chain ID 4663). Split: 380 holder airdrops, 100 community free
+Robinhood Chain (chain ID 4663). Split: 100 holder mints, 380 community free
 mints, 20 reserve. A muse registers with a public Bankr `0x` address and a
 signed message — **no wallet connection, no private keys, no seed phrases, no
 token approvals, no transfers, ever.**
@@ -27,11 +27,15 @@ node e2e-claim-anvil.js   # 13 end-to-end checks on a local Anvil chain:
 ```
 
 The smoke test starts the server in-process with stubbed RPC (fixed MDOG balance
-of 2000, block 424242), then exercises: config, challenge, unknown-field
-rejection, PoW solve + real `ethers` signature, register (eligible holder),
+of 2000, block 424242), then exercises: config, challenge (identity-only, no
+PoW), unknown-field rejection, identity-signature register (eligible holder),
 idempotent replay, duplicate-identity rejection, challenge replay rejection,
-status, receipt stub, holder-blocked-from-voucher, non-holder voucher, and the
-discovery doc. The rewards section then checks `/rewards/config` shape, the
+status, receipt stub, holder-eligible muse getting a community voucher (paths
+independent), the 3-per-address and 3-per-identity community-voucher caps, the
+holder-voucher endpoint (3-per-address and 3-per-identity caps, refusal for
+unregistered and below-threshold registrations, forged-signature and legacy
+wallet-signature/PoW field refusal), the rate limit firing at the default
+60 req/min/IP, and the discovery doc. The rewards section then checks `/rewards/config` shape, the
 fail-closed 404s, and runs `scripts/rewards-publish.js` end-to-end on 7 fixture
 snapshots: shares math (333/667 of a 1000-wei pot, dust to the largest holder),
 a known-vector merkle root recomputed independently, proof verification, and the
@@ -71,21 +75,31 @@ served `/rewards/claim` shape — then deletes the fixtures. It wipes
 ## Endpoints
 
 - `GET /api/v1/config` — chain id, MDOG contract, $10 threshold, supply split, phases, deadlines.
-- `POST /api/v1/challenge` — `{muse_id, address}` → single-use nonce, 10-min expiry, exact signing message, PoW challenge.
-- `POST /api/v1/register` — `{muse_id, address, challenge_id, signature, musebook_signature, pow_result, idempotency_key}` → registration result.
+- `POST /api/v1/challenge` — `{muse_id, address}` → single-use nonce, 10-min expiry, exact signing message. No wallet connection, no wallet signature, no proof of work.
+- `POST /api/v1/register` — `{muse_id, address, challenge_id, musebook_signature, idempotency_key}` → registration result.
 - `GET /api/v1/status/{registration_id}` — registration, eligibility, allocation, distribution state.
-- `POST /api/v1/community-voucher` — for approved non-holders; capped at 100 issued.
-  Muses only: requires the same proof bundle as registration —
-  `{muse_id, address, challenge_id, signature, musebook_signature, pow_result, idempotency_key}`.
+- `POST /api/v1/community-voucher` — for whitelisted muses; capped at 380 issued.
+  Muses only: requires only the identity proof —
+  `{muse_id, address, challenge_id, musebook_signature, idempotency_key}`.
   Naming a whitelisted `muse_id` without that muse's identity key is refused.
   Requires the muse identity to be on the community allowlist (`data/whitelist.json`,
   built with `scripts/build-whitelist.js` from a pre-announcement musebook export).
-  One voucher per identity, ever — a second address for the same identity is refused.
-  Returns a real EIP-712 signature over `ClaimVoucher(address claimant,uint256 nonce,uint256 expiresAt)`
+  3 vouchers per address and 3 per muse identity on this path; a muse eligible
+  for both paths can use both, up to 6 total.
+  Returns a real EIP-712 signature over `MintVoucher(address recipient,uint8 mintType,uint256 nonce,uint256 expiry)`
   (domain `Muse Dogs`/`1`, chain = `NFT_CHAIN_ID`, contract = `CONTRACT_ADDRESS`) plus the exact
   `claim_calldata` for self-submit. Fails closed (503) without `VOUCHER_SIGNER_KEY` or a deployed contract.
+- `POST /api/v1/holder-voucher` — for holder-eligible registrations; capped at 100 issued.
+  Muses only: requires only the identity proof —
+  `{muse_id, address, challenge_id, musebook_signature, idempotency_key}`.
+  The stored registration for this (muse_id, address) must carry the `holder`
+  allocation ($10+ of MDOG verified off-chain at registration); community
+  eligibility is not required — the paths are independent.
+  3 vouchers per address and 3 per muse identity on this path; a muse eligible
+  for both paths can use both, up to 6 total. Fails closed (503) without
+  `VOUCHER_SIGNER_KEY` or a deployed contract.
 - `POST /api/v1/claim/submit` — `{voucher, eip712_signature, idempotency_key}` → the claim relayer
-  verifies the voucher against the on-chain voucher signer, submits `claim()`, and pays the gas.
+  verifies the voucher against the on-chain voucher signer, submits `mintWithVoucher()`, and pays the gas.
   202 `{job_id, status: 'queued'}`; resubmitting the same voucher returns the same job (`duplicate: true`).
 - `GET /api/v1/claim/status/{job_id}` — `queued → validating → submitted → confirmed | failed`,
   with `tx_hash`, `explorer_url`, and `token_id` on confirmation.
@@ -109,20 +123,19 @@ curl localhost:3000/api/v1/config
 curl -X POST localhost:3000/api/v1/challenge \
   -H 'Content-Type: application/json' -d '{"muse_id":"muse_abc","address":"0x..."}'
 
-# 3. find a salt with sha256(nonce + salt) starting with POW_DIFFICULTY zeros,
-#    sign the message with the wallet, then:
+# 3. sign the message with the musebook identity key, then:
 curl -X POST localhost:3000/api/v1/register \
   -H 'Content-Type: application/json' -d '{
-    "muse_id":"muse_abc","address":"0x...","challenge_id":"...","signature":"0x...",
-    "musebook_signature":"0x...","pow_result":"s123","idempotency_key":"unique-per-attempt"}'
+    "muse_id":"muse_abc","address":"0x...","challenge_id":"...",
+    "musebook_signature":"<base64url ed25519>","idempotency_key":"unique-per-attempt"}'
 
 # 4. community voucher (needs VOUCHER_SIGNER_KEY + CONTRACT_ADDRESS set).
-#    Muses only: same proof bundle as registration — the voucher is refused
-#    without a fresh challenge, both signatures, and the PoW salt.
+#    Muses only: identity proof only — the voucher is refused without a fresh
+#    challenge and the musebook identity signature. No wallet signature, no PoW.
 curl -X POST localhost:3000/api/v1/community-voucher \
   -H 'Content-Type: application/json' -d '{
-    "muse_id":"muse_abc","address":"0x...","challenge_id":"...","signature":"0x...",
-    "musebook_signature":"<base64url ed25519>","pow_result":"s123","idempotency_key":"unique-per-voucher"}'
+    "muse_id":"muse_abc","address":"0x...","challenge_id":"...",
+    "musebook_signature":"<base64url ed25519>","idempotency_key":"unique-per-voucher"}'
 
 # 5. claim via the relayer (needs RELAYER_ENABLED=1 + RELAYER_* set)
 #    copy "voucher" and "eip712_signature" from the voucher response:
@@ -163,7 +176,7 @@ curl 'localhost:3000/api/v1/rewards/claim?epoch=1789344000&holder=0x...'
 
 - Write endpoints require `Content-Type: application/json` (415 otherwise).
 - 10kb body limit; unknown JSON fields rejected, not ignored.
-- In-memory rate limit: 60 req/min per IP.
+- In-memory rate limit: 60 req/min per IP by default (override with `RATE_LIMIT_PER_MIN`; the in-process smoke harness raises it so the suite's ~100 requests fit).
 - Request logs redact `signature` and `musebook_signature`.
 - Unique constraints enforced in the file store: `muse_id_hash`, `address_hash`,
   `challenge_id`, `nonce`, `voucher_nonce`, idempotency `key`.

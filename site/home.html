@@ -178,7 +178,7 @@
       <div class="detail-card">
         <div class="k">Reveal</div>
         <div class="v">Immediate</div>
-        <p>Every piece of art is visible from day one. Claims stay open until all 500 mint — nothing gets burned or left behind.</p>
+        <p>Every piece of art is visible from day one. Claims stay open until all 480 public allocations (380 community + 100 holder) mint out — nothing gets burned or left behind.</p>
       </div>
       <div class="detail-card">
         <div class="k">Rarity</div>
@@ -200,13 +200,12 @@
 
   <section class="section fees-section">
     <div class="fees-wrap">
-      <img class="fees-art" src="fee-engine.webp" alt="Fee engine loop: royalty ETH buys back MDOG and the liquidity is burned to a dead address, locked forever">
+      <img class="fees-art" src="fee-engine.webp" alt="Fee engine loop: royalty ETH buys back MDOG and the liquidity positions go to a dead address, locked forever">
       <div class="section-head" style="text-align:left;margin-bottom:0;">
         <h2>Where the fees go</h2>
-        <p><strong>5% of every resale royalty splits four ways:</strong> 10% to Mikey in raw ETH, 40% to the weekly holder pot, 25% into MDOG/musebook liquidity, 25% into MDOG/ETH liquidity.</p>
-        <p><strong>Contracts can't wake themselves up.</strong> When fees cross 0.01 ETH, anyone can call one public function and the whole loop runs on-chain. A keeper bot watches the balance and submits it — it signs that one transaction, then it's all code.</p>
-        <p>Both liquidity positions are minted <strong>straight to a dead address</strong> — locked forever, unpullable by anyone, including us. The MDOG/musebook pool is already live on Uniswap V4 (Robinhood Chain, 0.3% fee, full-range, no hook): <code>0x7edc541fce494a314d0eb46410581208b1ca24d8e8e20bd3b7d666e1258fa1b0</code>.</p>
-        <p>Buyback and burn, every cycle, forever. Plus weekly ETH for holding. Every step is visible on-chain.</p>
+        <p><strong>5% of every resale</strong> (where the marketplace honors royalties) splits four ways: <strong>0.5% to Mikey</strong> in raw ETH, <strong>2% into a weekly holder rewards pot</strong>, and <strong>2.5% into the fee engine</strong> — 1.25% buys MDOG and musebook off the market into MDOG/musebook liquidity, 1.25% buys MDOG into MDOG/ETH liquidity.</p>
+        <p>Both liquidity positions are minted <strong>straight to a dead address</strong> — locked forever, unpullable by anyone, including us. Royalty ETH buys back MDOG off the market every cycle, and the resulting liquidity can never come back. Plus weekly ETH for holding.</p>
+        <p><strong>Anyone can run it.</strong> Contracts can't wake themselves up: once enough fees pile up, anyone can call one public function and the whole loop runs on-chain. Every step is visible on-chain.</p>
         <p class="gallery-note">One honest caveat: the 5% royalty only lands where a marketplace honors it — some sales bypass royalties entirely.</p>
       </div>
     </div>

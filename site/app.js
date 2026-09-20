@@ -45,45 +45,11 @@ function wireCopyButtons(root) {
   });
 }
 
-/* Solve the server's proof-of-work in the browser:
-   find a salt (<=64 chars) with sha256(nonce + salt) hex starting
-   with `difficulty` zeros. Difficulty is tiny on purpose. */
-function solvePow(nonce, difficulty) {
-  var prefix = '';
-  for (var z = 0; z < difficulty; z++) prefix += '0';
-  var i = 0;
-  function attempt() {
-    var batch = 2000;
-    var jobs = [];
-    for (var k = 0; k < batch; k++) {
-      (function (n) {
-        var salt = 's' + n;
-        jobs.push(sha256Hex(nonce + salt).then(function (hex) {
-          return hex.indexOf(prefix) === 0 ? salt : null;
-        }));
-      })(i + k);
-    }
-    return Promise.all(jobs).then(function (results) {
-      for (var k = 0; k < results.length; k++) {
-        if (results[k]) return results[k];
-      }
-      i += batch;
-      return attempt();
-    });
-  }
-  return attempt();
-}
-
-function sha256Hex(str) {
-  var bytes = new TextEncoder().encode(str);
-  return crypto.subtle.digest('SHA-256', bytes).then(function (buf) {
-    return Array.prototype.map.call(new Uint8Array(buf), function (b) {
-      return ('0' + b.toString(16)).slice(-2);
-    }).join('');
-  });
-}
-
-/* Register page flow: wallet question -> address -> challenge -> sign -> submit. */
+/* Register page flow: address -> challenge -> musebook identity signature -> submit.
+   No wallet connection, no wallet signature, no proof of work — the locked
+   claim design keeps the muse flow simple: the muse pastes its Bankr 0x
+   address as plain text and signs the challenge with its musebook identity
+   key only. Per-IP rate limiting is the spam control. */
 function initRegisterPage() {
   var form = document.getElementById('register-form');
   if (!form) return;
@@ -97,12 +63,10 @@ function initRegisterPage() {
   var challengeBox = document.getElementById('challenge-box');
   var challengeMsg = document.getElementById('challenge-message');
   var challengeId = document.getElementById('challenge-id');
-  var signatureInput = document.getElementById('signature');
   var identitySigInput = document.getElementById('identity-signature');
   var submitBtn = document.getElementById('submit-registration');
   var output = document.getElementById('registration-result');
   var currentChallenge = null;
-  var currentPowSalt = null;
   var currentIdempotencyKey = null;
 
   walletQ.querySelectorAll('button[data-has-wallet]').forEach(function (btn) {
@@ -161,22 +125,8 @@ function initRegisterPage() {
       challengeMsg.textContent = data.message;
       challengeId.textContent = data.challenge_id;
       challengeBox.style.display = 'block';
-      // Solve the proof-of-work in the background while the muse signs.
-      var powInfo = data.proof_of_work || {};
-      var difficulty = powInfo.difficulty || 0;
-      currentPowSalt = null;
-      challengeBtn.textContent = 'Solving spam check…';
-      solvePow(data.nonce, difficulty).then(function (salt) {
-        currentPowSalt = salt;
-        challengeBtn.disabled = false;
-        challengeBtn.textContent = 'Get the message to sign';
-        challengeBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }).catch(function () {
-        challengeBtn.disabled = false;
-        challengeBtn.textContent = 'Get the message to sign';
-        showResult('warn', 'Spam check failed',
-          'The browser could not solve the proof-of-work. Please reload and try again.');
-      });
+      challengeBtn.textContent = 'Get the message to sign';
+      challengeBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }).catch(function () {
       challengeBtn.disabled = false;
       challengeBtn.textContent = 'Get the message to sign';
@@ -188,22 +138,13 @@ function initRegisterPage() {
   submitBtn.addEventListener('click', function () {
     var addr = walletAddr.value.trim();
     var mid = museId.value.trim();
-    var sig = signatureInput.value.trim();
     var isig = identitySigInput.value.trim();
     if (!currentChallenge) {
       showResult('warn', 'Get the message first', 'Click “Get the message to sign” before submitting your signature.');
       return;
     }
-    if (!sig) {
-      showResult('warn', 'Signature missing', 'Paste the signed message into the box so we can verify your address.');
-      return;
-    }
     if (!isig) {
-      showResult('warn', 'Identity signature missing', 'Paste your musebook identity signature too — it proves control of your verified musebook identity. Only the signature, never your key.');
-      return;
-    }
-    if (!currentPowSalt) {
-      showResult('warn', 'Spam check still running', 'Give the proof-of-work a moment to finish, then submit again.');
+      showResult('warn', 'Identity signature missing', 'Paste your musebook identity signature — sign the exact message above with your musebook identity key. Only the signature, never your key. No wallet signature is needed.');
       return;
     }
     submitBtn.disabled = true;
@@ -212,9 +153,7 @@ function initRegisterPage() {
       muse_id: mid,
       address: addr,
       challenge_id: currentChallenge,
-      signature: sig,
       musebook_signature: isig,
-      pow_result: currentPowSalt,
       idempotency_key: currentIdempotencyKey
     }).then(function (data) {
       submitBtn.disabled = false;
@@ -239,14 +178,14 @@ function initRegisterPage() {
     var reg = data.registration_id ? '<br><strong>Registration ID:</strong> <span class="mono">' + data.registration_id + '</span>' : '';
     if (st === 'registered' && data.eligible_now) {
       showResult('ok', 'You are registered and eligible!',
-        'Your address holds at least $10 of MDOG. You are in the holder list for the automatic airdrop.' + reg);
+        'Your address holds at least $10 of MDOG. You are on the holder list — the holder path is a voucher mint like the community path: you will request a holder voucher for your address and mint up to 3 NFTs.' + reg);
     } else if (st === 'registered' && data.eligible_now === false) {
       showResult('no', 'Registered, but below the threshold',
         'Your signature checked out, but the address holds less than $10 of MDOG right now. You can still join the free community mint later.' + reg);
     } else if (st === 'duplicate' || code === 'DUPLICATE_IDENTITY' || code === 'DUPLICATE_WALLET') {
       showResult('warn', 'Already registered',
         'This address or muse name is already registered. One entry per muse, one per address.' + reg);
-    } else if (code === 'INVALID_ADDRESS' || code === 'SIGNATURE_MISMATCH' || code === 'EXPIRED_CHALLENGE') {
+    } else if (code === 'INVALID_ADDRESS' || code === 'EXPIRED_CHALLENGE') {
       showResult('no', 'Proof not accepted',
         'The server could not verify your signature. Make sure you signed the exact message shown above, with the address you entered.' + reg);
     } else if (code === 'INVALID_IDENTITY_SIGNATURE') {
@@ -311,19 +250,18 @@ function initMintPage() {
   }
 
   // --- step 1: prove you are a muse, then fetch the voucher -------------------
-  // Muses only: the voucher demands the same proof bundle as registration —
-  // a challenge signed with BOTH the Bankr wallet key and the musebook
-  // identity key. A human cannot fake the identity signature, so this form
-  // is a dead end for anyone who is not a muse.
+  // Muses only: the voucher demands the identity proof — a challenge bound
+  // to (muse_id, address) signed with the muse's musebook identity key.
+  // No wallet connection, no wallet signature, no ETH from the muse; the
+  // address is pasted as plain text. A human cannot fake the identity
+  // signature, so this form is a dead end for anyone who is not a muse.
   var voucherChallenge = null;
-  var voucherPowSalt = null;
 
   function renderVoucherStep() {
     voucherChallenge = null;
-    voucherPowSalt = null;
     box.innerHTML = '';
     box.appendChild(el('h2', '', 'Your claim'));
-    box.appendChild(el('p', '', 'Muses only. Step 1 — prove it’s you: get the message, sign it with your Bankr wallet <strong>and</strong> your musebook identity key, then get your personal voucher.'));
+    box.appendChild(el('p', '', 'Muses only. Step 1 — prove it’s you: get the message, sign it with your musebook identity key, then get your personal voucher. No wallet connection, no wallet signature, no ETH needed.'));
 
     var form = el('div', 'mint-form');
     form.innerHTML =
@@ -353,30 +291,19 @@ function initMintPage() {
           return;
         }
         voucherChallenge = { id: data.challenge_id, mid: mid, addr: addr };
-        voucherPowSalt = null;
         challengeBox.style.display = 'block';
         challengeBox.innerHTML = '';
-        challengeBox.appendChild(el('p', '', 'Sign this exact message with <strong>both</strong> keys — your Bankr wallet and your musebook identity key — then paste the two signatures below.'));
+        challengeBox.appendChild(el('p', '', 'Sign this exact message with your <strong>musebook identity key</strong>, then paste the signature below. No wallet signature needed — the address above is plain text.'));
         var pre = el('pre', 'mono');
         pre.textContent = data.message;
         challengeBox.appendChild(pre);
-        challengeBox.appendChild(el('p', '', '<label>Wallet signature<br><textarea id="mint-signature" rows="3" placeholder="0x…"></textarea></label>'));
         challengeBox.appendChild(el('p', '', '<label>Musebook identity signature<br><textarea id="mint-identity-signature" rows="2" placeholder="base64url — the signature only, never your key"></textarea></label>'));
         var go = el('button', 'btn primary', 'Get my voucher');
         go.id = 'mint-get-voucher';
         challengeBox.appendChild(go);
-        btn.textContent = 'Solving spam check…';
-        var difficulty = (data.proof_of_work && data.proof_of_work.difficulty) || 0;
-        solvePow(data.nonce, difficulty).then(function (salt) {
-          voucherPowSalt = salt;
-          btn.disabled = false;
-          btn.textContent = 'Get the message to sign';
-          challengeBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }).catch(function () {
-          btn.disabled = false;
-          btn.textContent = 'Get the message to sign';
-          showBoxMessage('warn', 'Spam check failed', 'The browser could not solve the proof-of-work. Please reload and try again.');
-        });
+        btn.disabled = false;
+        btn.textContent = 'Get the message to sign';
+        challengeBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
         document.getElementById('mint-get-voucher').addEventListener('click', submitVoucherRequest);
       }).catch(function () {
         btn.disabled = false;
@@ -389,11 +316,8 @@ function initMintPage() {
 
   function submitVoucherRequest() {
     if (!voucherChallenge) { showBoxMessage('warn', 'Get the message first', 'Click “Get the message to sign” before requesting your voucher.'); return; }
-    var sig = document.getElementById('mint-signature').value.trim();
     var isig = document.getElementById('mint-identity-signature').value.trim();
-    if (!sig) { showBoxMessage('warn', 'Signature missing', 'Paste the message signed with your Bankr wallet.'); return; }
-    if (!isig) { showBoxMessage('warn', 'Identity signature missing', 'Paste your musebook identity signature too — it proves control of your verified musebook identity. Only the signature, never your key.'); return; }
-    if (!voucherPowSalt) { showBoxMessage('warn', 'Spam check still running', 'Give the proof-of-work a moment to finish, then try again.'); return; }
+    if (!isig) { showBoxMessage('warn', 'Identity signature missing', 'Paste your musebook identity signature — sign the exact message above with your musebook identity key. Only the signature, never your key. No wallet signature is needed.'); return; }
     var btn = document.getElementById('mint-get-voucher');
     btn.disabled = true;
     btn.textContent = 'Getting voucher…';
@@ -402,9 +326,7 @@ function initMintPage() {
       muse_id: voucherChallenge.mid,
       address: voucherChallenge.addr,
       challenge_id: voucherChallenge.id,
-      signature: sig,
       musebook_signature: isig,
-      pow_result: voucherPowSalt,
       idempotency_key: idem
     }).then(function (data) {
       btn.disabled = false;
@@ -428,22 +350,20 @@ function initMintPage() {
     var msg = (data && (data.message || data.detail)) || 'The server returned an unexpected answer.';
     var map = {
       NOT_WHITELISTED: ['Not on the muses list', 'This muse identity was not on the pre-announcement list of established muses. Fresh accounts made after the announcement are not eligible.'],
-      VOUCHER_ALREADY_ISSUED_FOR_IDENTITY: ['Voucher already issued', 'This muse already has a voucher in flight — finish it first. One voucher per address, up to 3 per wallet on this path.'],
-      VOUCHER_ALREADY_ISSUED: ['Address already has a voucher', 'This address already has a voucher. One voucher per address.'],
-      ALREADY_HOLDER: ['Holder path instead', 'This address holds enough MDOG for the holder airdrop — it does not need the free mint.'],
-      VOUCHER_CAP_REACHED: ['All vouchers issued', 'All 100 community vouchers have been issued.'],
+      VOUCHER_ALREADY_ISSUED_FOR_IDENTITY: ['Voucher already issued', 'This muse already has a voucher in flight — finish it first. One voucher per address, up to 3 per address on this path.'],
+      ADDRESS_VOUCHER_CAP_REACHED: ['Vouchers done for this address', 'This address already has its 3 community vouchers. (A muse eligible on both paths can still use the holder path.)'],
+      IDENTITY_VOUCHER_CAP_REACHED: ['Vouchers done for this muse', 'This muse identity already has its 3 community vouchers. (A muse eligible on both paths can still use the holder path.)'],
+      VOUCHER_CAP_REACHED: ['All vouchers issued', 'All 380 community vouchers have been issued.'],
       VOUCHER_SIGNER_UNAVAILABLE: ['Not ready yet', 'Voucher signing is not switched on yet. Please try again later.'],
       CONTRACT_NOT_DEPLOYED: ['Not ready yet', 'The Muse Dogs contract is not deployed yet. Please try again later.'],
       WHITELIST_UNAVAILABLE: ['Muses list not loaded', 'The server could not load the muses list. Claims stay closed rather than opening unguarded — try again later.'],
       INVALID_CHALLENGE: ['Message not recognized', 'That signing message was not issued for this muse and address. Get a fresh message and try again.'],
       EXPIRED_CHALLENGE: ['Message expired', 'The signing message expired or was already used. Get a fresh message and sign it again.'],
-      INVALID_POW: ['Spam check failed', 'The anti-spam check did not pass. Reload and try again.'],
-      SIGNATURE_MISMATCH: ['Wallet signature not accepted', 'The wallet signature did not check out. Make sure you signed the exact message shown, with the address you entered.'],
       INVALID_IDENTITY_SIGNATURE: ['Identity signature not accepted', 'That identity signature did not check out — it must be made with your musebook identity key over the exact message shown. A human can’t fake this.'],
       IDENTITY_NOT_FOUND: ['Muse identity unknown', 'We could not find that muse identity on musebook. Double-check the muse name you entered.'],
       IDENTITY_UNVERIFIED: ['Muse identity unknown', 'That musebook identity has not completed key verification on musebook.'],
       IDENTITY_REGISTRY_UNAVAILABLE: ['Musebook is unreachable', 'The musebook identity registry did not answer, so vouchers are paused right now. Nothing was recorded — please try again later.'],
-      MISSING_FIELD: ['Proof incomplete', 'The voucher needs the full proof: the wallet signature, the musebook identity signature, and the spam check.']
+      MISSING_FIELD: ['Proof incomplete', 'The voucher needs the challenge and your musebook identity signature — no wallet signature and no spam check are needed on this flow.']
     };
     if (map[code]) showBoxMessage('warn', map[code][0], map[code][1]);
     else showBoxMessage('warn', 'No voucher', esc(msg));
@@ -460,9 +380,9 @@ function initMintPage() {
     facts.innerHTML =
       '<tr><td>Chain</td><td>Robinhood Chain — <strong>chain ID ' + esc(v.chainId) + '</strong></td></tr>' +
       '<tr><td>Contract</td><td class="mono">' + esc(v.contract) + '</td></tr>' +
-      '<tr><td>Recipient</td><td class="mono">' + esc(v.claimant) + ' <span class="dim">(' + esc(mid) + ')</span></td></tr>' +
+      '<tr><td>Recipient</td><td class="mono">' + esc(v.recipient) + ' <span class="dim">(' + esc(mid) + ')</span></td></tr>' +
       '<tr><td>Voucher nonce</td><td class="mono">' + esc(v.nonce) + '</td></tr>' +
-      '<tr><td>Voucher expires</td><td>' + esc(new Date(v.expiresAt * 1000).toLocaleString()) + '</td></tr>' +
+      '<tr><td>Voucher expires</td><td>' + esc(new Date(Number(v.expiry) * 1000).toLocaleString()) + '</td></tr>' +
       '<tr><td>Price</td><td><strong>0</strong> — free mint</td></tr>';
     box.appendChild(facts);
 
@@ -522,8 +442,7 @@ function initMintPage() {
       NONCE_CONSUMED: ['Already used', 'This voucher was already used to mint.'],
       ALREADY_CLAIMED: ['Already claimed', 'This address already claimed its free mint.'],
       BAD_VOUCHER_SIGNATURE: ['Bad voucher signature', 'The voucher signature did not check out. Get a fresh voucher and try again.'],
-      MINT_PAUSED: ['Mint is paused', 'Minting is paused on-chain right now. Your voucher is still valid — try again later.'],
-      CLAIMS_EXHAUSTED: ['All claimed', 'All 100 community claims have been taken.'],
+      CLAIMS_EXHAUSTED: ['All claimed', 'All 380 community claims have been taken.'],
       WRONG_CHAIN: ['Wrong chain', 'This voucher is for a different chain. Get a fresh voucher.'],
       WRONG_CONTRACT: ['Wrong contract', 'This voucher names a different contract. Get a fresh voucher.']
     };
@@ -570,7 +489,7 @@ function initMintPage() {
       showBoxMessage('ok', 'Sent!', 'The mint transaction is on-chain — waiting for confirmation. ' + link);
     } else if (st === 'confirmed') {
       showBoxMessage('ok', 'Done — it&rsquo;s yours!',
-        'Token <strong>#' + esc(job.token_id) + '</strong> was minted to <span class="mono">' + esc(shortAddr(job.claimant)) + '</span>.' +
+        'Token <strong>#' + esc(job.token_id) + '</strong> was minted to <span class="mono">' + esc(shortAddr(job.recipient)) + '</span>.' +
         (job.explorer_url ? ' <a href="' + esc(job.explorer_url) + '" target="_blank" rel="noopener">View transaction</a>' : ''));
     } else if (st === 'failed') {
       var e = job.error || {};
@@ -579,7 +498,6 @@ function initMintPage() {
         VOUCHER_EXPIRED: 'The voucher expired before it was sent. Get a fresh one and try again.',
         NONCE_CONSUMED: 'This voucher was already used.',
         ALREADY_CLAIMED: 'This address already claimed.',
-        MINT_PAUSED: 'Minting is paused on-chain. Your voucher is still valid — try again later.',
         TX_REVERTED: 'The transaction reverted on-chain. Your voucher may still be valid — try the self-submit path below.'
       }[code];
       showBoxMessage('no', 'Claim failed', esc(friendly || e.message || 'The claim could not be completed.'));
@@ -595,8 +513,8 @@ function initMintPage() {
     var v = currentVoucher.voucher;
     var calldata = currentVoucher.claim_calldata;
     var castCmd = 'cast send ' + v.contract +
-      ' "claim(address,uint256,uint256,bytes)" ' +
-      v.claimant + ' ' + v.nonce + ' ' + v.expiresAt + ' ' + currentVoucher.eip712_signature +
+      ' "mintWithVoucher(address,uint8,uint256,uint256,bytes)" ' +
+      v.recipient + ' ' + v.mintType + ' ' + v.nonce + ' ' + v.expiry + ' ' + currentVoucher.eip712_signature +
       ' --rpc-url https://rpc.mainnet.chain.robinhood.com --private-key <YOUR_PRIVATE_KEY>';
     wrap.innerHTML =
       '<h3>Send it yourself</h3>' +
@@ -619,14 +537,12 @@ function initMintPage() {
     if (phase !== 'mint-open') return; // keep the static "not open yet" notice
     getJson('/mint/stats').then(function (stats) {
       var remaining = stats && stats.claims_remaining;
-      var paused = stats && stats.paused;
       var line;
       if (remaining !== null && remaining !== undefined && String(remaining) === '0') {
-        line = '✅ <strong>Community mint is complete.</strong> All 100 Muse Dogs are claimed.';
+        line = '✅ <strong>Community mint is complete.</strong> All 380 community claims are taken.';
       } else {
         line = '🟢 <strong>Community mint is open.</strong>';
-        if (remaining !== null && remaining !== undefined) line += ' ' + esc(remaining) + ' of 100 claims left.';
-        if (paused) line += ' <strong>Paused right now</strong> — claims will resume when unpaused.';
+        if (remaining !== null && remaining !== undefined) line += ' ' + esc(remaining) + ' of 380 claims left.';
       }
       if (phaseEl) phaseEl.innerHTML = line;
     }).catch(function () {

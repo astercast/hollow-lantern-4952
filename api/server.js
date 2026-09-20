@@ -7,7 +7,6 @@ const { randomUUID, randomBytes } = require('crypto');
 const { ethers } = require('ethers');
 
 const store = require('./lib/store');
-const pow = require('./lib/pow');
 const { hash } = require('./lib/hash');
 const { loadWhitelist } = require('./lib/whitelist');
 const { checkBalance, CHAIN_ID } = require('./lib/rpc');
@@ -27,9 +26,13 @@ const MDOG_CONTRACT = process.env.MDOG_CONTRACT || '0x4CAF2e6eC0fCBef77314566A98
 const CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS || '0x0000000000000000000000000000000000000000';
 const THRESHOLD_USD = Number(process.env.THRESHOLD_USD || 10);
 const MDOG_DECIMALS = Number(process.env.MDOG_DECIMALS || 18);
-const POW_DIFFICULTY = Number(process.env.POW_DIFFICULTY || 2);
 const CHALLENGE_TTL_MS = 10 * 60 * 1000;
 const VOUCHER_CAP = 380;
+const COMMUNITY_VOUCHERS_PER_ADDRESS = 3; // per-address cap (matches contract MAX_COMMUNITY_PER_ADDRESS)
+const COMMUNITY_VOUCHERS_PER_IDENTITY = 3; // per-identity cap on the community path
+const HOLDER_VOUCHER_CAP = 100;
+const HOLDER_VOUCHERS_PER_ADDRESS = 3; // per-address cap (matches contract MAX_HOLDER_PER_ADDRESS)
+const HOLDER_VOUCHERS_PER_IDENTITY = 3; // per-identity cap on the holder path
 const CURRENT_PHASE = process.env.CURRENT_PHASE || 'rules-locked';
 // Chain the Muse Dogs NFT contract lives on. 4663 = Robinhood Chain mainnet.
 // Overridable for local rehearsal (e.g. 31337 on anvil) — the voucher
@@ -99,7 +102,14 @@ app.use((req, res, next) => {
   next();
 });
 
-// Simple in-memory rate limit: 60 requests per IP per minute.
+// Simple in-memory rate limit: 60 requests per IP per minute by default.
+// This is the spam control on the claim path, by design. There is NO
+// proof-of-work anywhere in the flow: the locked claim design keeps the muse
+// flow simple (address as plain text + one identity signature), and rate
+// limiting is the anti-spam layer instead.
+// RATE_LIMIT_PER_MIN overrides the default (used by the in-process test
+// harness, which issues many requests from one IP in seconds).
+const RATE_LIMIT_PER_MIN = Number(process.env.RATE_LIMIT_PER_MIN || 60);
 const hits = new Map();
 app.use((req, res, next) => {
   const now = Date.now();
@@ -108,18 +118,27 @@ app.use((req, res, next) => {
   const fresh = window.filter((t) => now - t < 60000);
   fresh.push(now);
   hits.set(key, fresh);
-  if (fresh.length > 60) {
+  if (fresh.length > RATE_LIMIT_PER_MIN) {
     return err(res, 429, 'RATE_LIMITED', 'Too many requests. Slow down.');
   }
   next();
 });
 
+// The challenge message a muse signs with its musebook Ed25519 identity key.
+// The message binds (muse_id, address): it proves control of the musebook
+// identity and claims the address the NFT will go to. It proves NOTHING about
+// the wallet itself — the address is supplied as plain text, no wallet
+// connection, no wallet signature, no ETH from the muse. The message says so
+// explicitly so nobody mistakes it for a wallet authorization.
 function signingMessage({ muse_id, address, nonce, issued_at, expires_at }) {
   return [
-    'Muse Dogs — registration proof',
+    'Muse Dogs — muse identity proof',
     '',
-    'I control this wallet and authorize registration only.',
-    'This does NOT approve any spending, transfer, or token approval.',
+    'I am the muse with this musebook identity, and I claim this address',
+    'for my Muse Dogs mint. The address is where the NFT will go.',
+    'This proves my musebook identity ONLY. It does NOT prove control of',
+    'the wallet, and it does NOT approve any spending, transfer, or token',
+    'approval.',
     '',
     'muse_id: ' + muse_id,
     'address: ' + address,
@@ -140,16 +159,18 @@ function httpErr(status, code, message, extra = {}) {
 }
 
 // Verify the muse proof bundle shared by /register and /community-voucher:
-// a single-use challenge bound to (muse_id, address), the musebook Ed25519
-// identity signature over the exact challenge message (verified against the
-// public identity registry, fail closed), the anti-spam proof of work, and
-// the wallet signature recovering exactly the submitted address.
+// a single-use challenge bound to (muse_id, address), and the musebook
+// Ed25519 identity signature over the exact challenge message (verified
+// against the public identity registry, fail closed).
 //
 // This is the wall a human cannot cross: naming a whitelisted muse_id is not
-// enough — the caller must hold that muse's musebook identity private key
-// AND the wallet private key. Returns the challenge record WITHOUT consuming
-// it; the caller marks ch.consumed = true at its own commit point.
-async function verifyMuseProof(db, { muse_id, address, challenge_id, signature, musebook_signature, pow_result }) {
+// enough — the caller must hold that muse's musebook identity private key.
+// There is deliberately NO wallet signature and NO proof of work here: the
+// locked claim design keeps the muse flow simple (plain-text Bankr address +
+// one identity signature), and per-IP rate limiting is the spam control.
+// Returns the challenge record WITHOUT consuming it; the caller marks
+// ch.consumed = true at its own commit point.
+async function verifyMuseProof(db, { muse_id, address, challenge_id, musebook_signature }) {
   const ch = store.find(db, 'challenges', 'challenge_id', challenge_id);
   if (!ch || ch.muse_id !== String(muse_id) || ch.address !== address) {
     throw httpErr(400, 'INVALID_CHALLENGE', 'Challenge not found for this muse and address.');
@@ -177,20 +198,6 @@ async function verifyMuseProof(db, { muse_id, address, challenge_id, signature, 
       throw httpErr(403, e.code, e.message || 'This muse identity cannot register.');
     }
     throw httpErr(400, e.code || 'INVALID_IDENTITY_SIGNATURE', e.message || 'Musebook identity signature does not verify.');
-  }
-  // Proof of work.
-  if (!pow.verify(ch.nonce, pow_result, ch.pow_difficulty)) {
-    throw httpErr(400, 'INVALID_POW', 'Proof of work failed.');
-  }
-  // Wallet ownership: the signature must recover exactly this address.
-  let recovered;
-  try {
-    recovered = ethers.verifyMessage(ch.message, signature);
-  } catch {
-    throw httpErr(400, 'SIGNATURE_MISMATCH', 'Wallet signature does not verify.');
-  }
-  if (ethers.getAddress(recovered) !== address) {
-    throw httpErr(400, 'SIGNATURE_MISMATCH', 'Signature does not match the submitted address.');
   }
   return ch;
 }
@@ -241,7 +248,7 @@ function jobPublic(job) {
   return {
     job_id: job.job_id,
     status: job.status,
-    claimant: job.voucher.claimant,
+    recipient: job.voucher.recipient,
     voucher_nonce: job.voucher.nonce,
     tx_hash: job.tx_hash,
     explorer_url: job.tx_hash ? EXPLORER_TX_URL + job.tx_hash : null,
@@ -299,7 +306,7 @@ app.post('/api/v1/challenge', (req, res) => {
         {
           action: 'tell_your_muse',
           next_step: 'Ask your muse for a Bankr 0x address to receive the free mints, then call this endpoint again with that address.',
-          say_to_muse: 'To register you for the Muse Dogs free mint I need a Bankr 0x address from you — just the address as text, nothing to connect and nothing to sign. Please tell me which address should receive your free mints.',
+          say_to_muse: 'To register you for the Muse Dogs free mint I need a Bankr 0x address from you — just the address as text, no wallet connection and no ETH needed to share it. (You will sign the challenge message with your musebook identity key later in the flow; sharing the address itself needs no signature.) Please tell me which address should receive your free mints.',
         });
     }
     const muse_id = String(rawMuseId).slice(0, 128);
@@ -324,7 +331,6 @@ app.post('/api/v1/challenge', (req, res) => {
       muse_id,
       address,
       message: null, // filled below
-      pow_difficulty: POW_DIFFICULTY,
       issued_at: now.toISOString(),
       expires_at: new Date(now.getTime() + CHALLENGE_TTL_MS).toISOString(),
       consumed: false,
@@ -342,13 +348,10 @@ app.post('/api/v1/challenge', (req, res) => {
       nonce: challenge.nonce,
       expires_at: challenge.expires_at,
       message: challenge.message,
-      proof_of_work: {
-        algorithm: 'sha256',
-        instruction: 'Find a salt (<=64 chars) such that sha256(nonce + salt) hex starts with ' +
-          POW_DIFFICULTY + ' zero(s).',
-        difficulty: POW_DIFFICULTY,
-        salt_example: 's12345',
-      },
+      // No wallet connection, no wallet signature, no proof of work on this
+      // flow — by design. The muse pastes its Bankr 0x address as plain text
+      // and signs the message above with its musebook identity key.
+      // Per-IP rate limiting is the spam control.
     });
   } catch (e) {
     return err(res, 400, e.code || 'INVALID_REQUEST', e.message || 'Bad request.');
@@ -358,21 +361,20 @@ app.post('/api/v1/challenge', (req, res) => {
 app.post('/api/v1/register', async (req, res) => {
   try {
     strictBody(req.body, [
-      'muse_id', 'address', 'challenge_id', 'signature',
-      'musebook_signature', 'pow_result', 'idempotency_key',
+      'muse_id', 'address', 'challenge_id',
+      'musebook_signature', 'idempotency_key',
     ]);
     requireFields(req.body, [
-      'muse_id', 'address', 'challenge_id', 'signature', 'musebook_signature', 'pow_result', 'idempotency_key',
+      'muse_id', 'address', 'challenge_id', 'musebook_signature', 'idempotency_key',
     ]);
-    const { muse_id, challenge_id, pow_result, idempotency_key } = req.body;
+    const { muse_id, challenge_id, idempotency_key } = req.body;
     const address = checksumAddress(req.body.address);
-    if (!looksLikeSignature(req.body.signature)) {
-      return err(res, 400, 'SIGNATURE_MISMATCH', 'Malformed wallet signature.');
-    }
     // REAL: the musebook identity signature is REQUIRED and verified
     // cryptographically against musebook.lol's public identity registry
     // (Ed25519, base64url, over the exact challenge message bytes).
-    // One verified muse identity binds to exactly one wallet.
+    // One verified muse identity binds to exactly one address.
+    // There is NO wallet signature and NO proof of work on this flow —
+    // by design. The muse pastes its Bankr 0x address as plain text.
     if (!looksLikeIdentitySignature(req.body.musebook_signature)) {
       return err(res, 400, 'INVALID_IDENTITY_SIGNATURE', 'Malformed musebook identity signature.');
     }
@@ -385,16 +387,16 @@ app.post('/api/v1/register', async (req, res) => {
       return res.status(prior.status).json(prior.response);
     }
 
-    // The muse proof bundle: challenge + musebook identity signature +
-    // proof of work + wallet signature. One verified muse identity binds
-    // to exactly one wallet.
+    // The muse proof bundle: challenge + musebook identity signature.
+    // The signature proves the muse's identity — not control of the wallet.
+    // No wallet signature, no proof of work: the locked claim design keeps
+    // the muse flow simple (plain-text address + one identity signature),
+    // and per-IP rate limiting is the spam control.
     const ch = await verifyMuseProof(db, {
       muse_id,
       address,
       challenge_id,
-      signature: req.body.signature,
       musebook_signature: req.body.musebook_signature,
-      pow_result,
     });
 
     // Muses only: the holder path is gated on the same pre-announcement
@@ -410,7 +412,7 @@ app.post('/api/v1/register', async (req, res) => {
       return err(res, 403, 'NOT_WHITELISTED', 'This muse identity is not on the allowlist (muses active before the announcement).');
     }
 
-    // Duplicate protection: one identity, one wallet, ever.
+    // Duplicate protection: one identity, one address, ever.
     if (store.exists(db, 'registrations', 'muse_id_hash', hash(muse_id))) {
       return err(res, 409, 'DUPLICATE_IDENTITY', 'This muse identity is already registered.');
     }
@@ -529,26 +531,23 @@ app.get('/api/v1/status/:registration_id', (req, res) => {
 // verified muse identity, ever — this is the line that stops the
 // 500-address sniper: new wallets, same identity, no second voucher.
 //
-// Muses only: the voucher requires the SAME proof bundle as registration —
-// a challenge bound to (muse_id, address), the musebook Ed25519 identity
-// signature, the proof of work, and the wallet signature. Naming a
-// whitelisted muse_id is not enough; the caller must hold that muse's
-// identity key and the wallet key. A human has neither.
+// Muses only: the voucher requires the SAME identity proof as registration —
+// a challenge bound to (muse_id, address) and the musebook Ed25519 identity
+// signature over the exact challenge message. No wallet signature, no proof
+// of work. Naming a whitelisted muse_id is not enough; the caller must hold
+// that muse's identity key. A human has no identity key.
 app.post('/api/v1/community-voucher', async (req, res) => {
   try {
     strictBody(req.body, [
-      'muse_id', 'address', 'challenge_id', 'signature',
-      'musebook_signature', 'pow_result', 'idempotency_key',
+      'muse_id', 'address', 'challenge_id',
+      'musebook_signature', 'idempotency_key',
     ]);
     requireFields(req.body, [
-      'muse_id', 'address', 'challenge_id', 'signature', 'musebook_signature', 'pow_result', 'idempotency_key',
+      'muse_id', 'address', 'challenge_id', 'musebook_signature', 'idempotency_key',
     ]);
     const muse_id = String(req.body.muse_id);
     const idempotency_key = String(req.body.idempotency_key);
     const address = checksumAddress(req.body.address);
-    if (!looksLikeSignature(req.body.signature)) {
-      return err(res, 400, 'SIGNATURE_MISMATCH', 'Malformed wallet signature.');
-    }
     if (!looksLikeIdentitySignature(req.body.musebook_signature)) {
       return err(res, 400, 'INVALID_IDENTITY_SIGNATURE', 'Malformed musebook identity signature.');
     }
@@ -564,16 +563,16 @@ app.post('/api/v1/community-voucher', async (req, res) => {
       return res.status(priorKey.status).json(priorKey.response);
     }
 
-    // Prove it is really the muse: challenge + identity signature + PoW +
-    // wallet signature. The challenge is consumed here, before anything is
-    // issued, so it cannot be replayed.
+    // Prove it is really the muse: challenge + musebook identity signature.
+    // The challenge is consumed here, before anything is issued, so it
+    // cannot be replayed. No wallet signature and no proof of work — by
+    // design (see the locked claim flow: plain-text address, one identity
+    // signature, rate limiting as spam control).
     const ch = await verifyMuseProof(db, {
       muse_id,
       address,
       challenge_id: req.body.challenge_id,
-      signature: req.body.signature,
       musebook_signature: req.body.musebook_signature,
-      pow_result: req.body.pow_result,
     });
     ch.consumed = true;
 
@@ -588,19 +587,19 @@ app.post('/api/v1/community-voucher', async (req, res) => {
     if (db.vouchers.length >= VOUCHER_CAP) {
       return err(res, 409, 'VOUCHER_CAP_REACHED', 'All 380 community vouchers are issued.');
     }
-    // `claimant` is always stored checksummed (see `address` above), so
+    // Each path allows 3 vouchers per address and 3 per muse identity
+    // (matching the contract's MAX_COMMUNITY_PER_ADDRESS = 3). A muse who is
+    // eligible on BOTH paths can use both, for up to 6 total.
+    // `recipient` is always stored checksummed (see `address` above), so
     // compare in the same canonical form.
-    if (store.exists(db, 'vouchers', 'claimant', address)) {
-      return err(res, 409, 'VOUCHER_ALREADY_ISSUED', 'This address already has a voucher.');
-    }
-    // Holders must use the airdrop path, not the free mint.
-    const reg = db.registrations.find((r) => r.address.toLowerCase() === address.toLowerCase());
-    if (reg && reg.eligible_now) {
-      return err(res, 409, 'ALREADY_HOLDER', 'Holder-eligible addresses use the airdrop path.');
+    const forAddress = db.vouchers.filter((v) => v.recipient === address);
+    if (forAddress.length >= COMMUNITY_VOUCHERS_PER_ADDRESS) {
+      return err(res, 409, 'ADDRESS_VOUCHER_CAP_REACHED',
+        'This address already has its 3 community vouchers. (A muse eligible on both paths can still use the holder path.)');
     }
     // Whitelist gate: the free mint is only for muses who existed and
-    // participated before the announcement. 1-per-address is bypassed by
-    // anyone with 500 addresses; 1-per-verified-identity is not.
+    // participated before the announcement. 3-per-address is bypassed by
+    // anyone with many addresses; 3-per-verified-identity is not.
     // Fails closed if the allowlist is not loaded.
     let wl;
     try {
@@ -612,22 +611,26 @@ app.post('/api/v1/community-voucher', async (req, res) => {
     if (!wlEntry) {
       return err(res, 403, 'NOT_WHITELISTED', 'This muse identity is not on the community allowlist (muses active before the announcement).');
     }
-    // One voucher per muse identity, ever.
-    if (store.exists(db, 'vouchers', 'muse_id_hash', hash(muse_id))) {
-      return err(res, 409, 'VOUCHER_ALREADY_ISSUED_FOR_IDENTITY', 'This muse identity already has a voucher.');
+    // Up to 3 vouchers per muse identity on this path.
+    const forIdentity = db.vouchers.filter((v) => v.muse_id_hash === hash(muse_id));
+    if (forIdentity.length >= COMMUNITY_VOUCHERS_PER_IDENTITY) {
+      return err(res, 409, 'IDENTITY_VOUCHER_CAP_REACHED',
+        'This muse identity already has its 3 community vouchers. (A muse eligible on both paths can still use the holder path.)');
     }
 
     // Nonce is a random uint256 (decimal string) — it must fit the contract's
-    // EIP-712 ClaimVoucher(address claimant,uint256 nonce,uint256 expiresAt).
+    // EIP-712 MintVoucher(address recipient,uint8 mintType,uint256 nonce,uint256 expiry).
+    // Nonces are per-recipient on-chain; a random 256-bit nonce is unique in practice.
     const voucher_nonce = BigInt('0x' + randomBytes(32).toString('hex')).toString(10);
     const expires_at = new Date(Date.now() + 72 * 3600 * 1000).toISOString();
     const payload = {
       chainId: NFT_CHAIN_ID,
       contract: CONTRACT_ADDRESS,
-      claimant: address,
+      recipient: address,
+      mintType: 0, // COMMUNITY
       allocation: 'COMMUNITY',
       nonce: voucher_nonce,
-      expiresAt: Math.floor(new Date(expires_at).getTime() / 1000),
+      expiry: Math.floor(new Date(expires_at).getTime() / 1000),
       price: 0,
       quantity: 1,
     };
@@ -636,9 +639,10 @@ app.post('/api/v1/community-voucher', async (req, res) => {
       eip712_signature = await signVoucher(signerKey, {
         chainId: NFT_CHAIN_ID,
         contractAddress: CONTRACT_ADDRESS,
-        claimant: address,
+        recipient: address,
+        mintType: 0,
         nonce: voucher_nonce,
-        expiresAt: payload.expiresAt,
+        expiry: payload.expiry,
       });
     } catch (e) {
       return err(res, 503, e.code || 'VOUCHER_SIGNER_UNAVAILABLE', e.message || 'Voucher signing failed.', { retryable: true });
@@ -648,15 +652,15 @@ app.post('/api/v1/community-voucher', async (req, res) => {
       voucher_nonce,
       muse_id,
       muse_id_hash: hash(muse_id),
-      claimant: address,
+      recipient: address,
       allocation: 'COMMUNITY',
       issued_at: new Date().toISOString(),
       expires_at,
     };
-    store.insert(db, 'vouchers', { ...voucher, payload, eip712_signature }, ['voucher_nonce', 'claimant', 'muse_id_hash']);
+    store.insert(db, 'vouchers', { ...voucher, payload, eip712_signature }, ['voucher_nonce']);
 
-    // Exact calldata for claim(address,uint256,uint256,bytes) — the
-    // self-submit path on the mint page shows this verbatim so a muse can
+    // Exact calldata for mintWithVoucher(address,uint8,uint256,uint256,bytes) —
+    // the self-submit path on the mint page shows this verbatim so a muse can
     // send the transaction from any wallet without ABI-encoding it.
     const { buildClaimCalldata } = require('./lib/relayer');
     const resp = {
@@ -665,10 +669,12 @@ app.post('/api/v1/community-voucher', async (req, res) => {
       claim_calldata: buildClaimCalldata(payload, eip712_signature),
       vouchers_issued: db.vouchers.length,
       vouchers_cap: VOUCHER_CAP,
+      community_vouchers_for_address: forAddress.length + 1,
+      community_vouchers_cap_per_address: COMMUNITY_VOUCHERS_PER_ADDRESS,
       claim_with_relayer: claimQueue ? 'POST /api/v1/claim/submit' : null,
       note: claimQueue
-        ? 'Signed voucher. Submit it via the relayer, or send claim() yourself — the NFT always goes to the claimant address.'
-        : 'Signed voucher. The relayer is not running: send claim() yourself with the calldata shown on the mint page.',
+        ? 'Signed voucher. Submit it via the relayer, or call mintWithVoucher() yourself — the NFT always goes to the recipient address.'
+        : 'Signed voucher. The relayer is not running: call mintWithVoucher() yourself with the calldata shown on the mint page.',
     };
     store.insert(db, 'idempotency', { key: idempotency_key, muse_id, route: 'community-voucher', status: 200, response: resp, created_at: new Date().toISOString() }, ['key']);
     res.json(resp);
@@ -681,15 +687,166 @@ app.post('/api/v1/community-voucher', async (req, res) => {
 });
 
 // Claim submission via the project relayer.
-// The muse posts their signed voucher; the relayer submits claim() on-chain.
-// Idempotent: same idempotency_key => same job; same voucher nonce => same job.
-// The NFT always goes to the voucher's claimant — the relayer cannot redirect it.
+// The muse posts their signed voucher; the relayer submits mintWithVoucher()
+// on-chain and pays the gas. Idempotent: same idempotency_key => same job;
+// same (recipient, voucher nonce) => same job.
+// The NFT always goes to the voucher's recipient — the relayer cannot redirect it.
+
+// Holder voucher: mintType 1. Eligibility is the stored registration for this
+// (muse_id, address) with allocation === 'holder' ($10+ of MDOG in the supplied
+// address, verified off-chain at registration). The paths are independent —
+// a muse eligible for both can use both, for up to 6 total. 3 vouchers per
+// address and 3 per muse identity on this path, matching the contract.
+app.post('/api/v1/holder-voucher', async (req, res) => {
+  try {
+    strictBody(req.body, [
+      'muse_id', 'address', 'challenge_id',
+      'musebook_signature', 'idempotency_key',
+    ]);
+    requireFields(req.body, [
+      'muse_id', 'address', 'challenge_id', 'musebook_signature', 'idempotency_key',
+    ]);
+    const muse_id = String(req.body.muse_id);
+    const idempotency_key = String(req.body.idempotency_key);
+    const address = checksumAddress(req.body.address);
+    if (!looksLikeIdentitySignature(req.body.musebook_signature)) {
+      return err(res, 400, 'INVALID_IDENTITY_SIGNATURE', 'Malformed musebook identity signature.');
+    }
+    const db = store.load();
+
+    // Idempotency: same key + same muse => replay the recorded response.
+    // A key claimed by a different muse is rejected outright.
+    const priorKey = store.find(db, 'idempotency', 'key', idempotency_key);
+    if (priorKey && priorKey.route === 'holder-voucher') {
+      if (priorKey.muse_id !== muse_id) {
+        return err(res, 409, 'IDEMPOTENCY_KEY_REUSED', 'This idempotency key belongs to a different muse.');
+      }
+      return res.status(priorKey.status).json(priorKey.response);
+    }
+
+    // Prove it is really the muse: challenge + musebook identity signature.
+    // The challenge is consumed here, before anything is issued, so it
+    // cannot be replayed. No wallet signature and no proof of work — by
+    // design (see the locked claim flow: plain-text address, one identity
+    // signature, rate limiting as spam control).
+    const ch = await verifyMuseProof(db, {
+      muse_id,
+      address,
+      challenge_id: req.body.challenge_id,
+      musebook_signature: req.body.musebook_signature,
+    });
+    ch.consumed = true;
+
+    const signerKey = process.env.VOUCHER_SIGNER_KEY;
+    if (!signerKey) {
+      return err(res, 503, 'VOUCHER_SIGNER_UNAVAILABLE', 'Voucher signing is not configured yet. Try again later.', { retryable: true });
+    }
+    if (CONTRACT_ADDRESS === '0x0000000000000000000000000000000000000000') {
+      return err(res, 503, 'CONTRACT_NOT_DEPLOYED', 'The Muse Dogs contract is not deployed yet.', { retryable: true });
+    }
+
+    // Holder gate: the address must have held $10+ of MDOG at registration
+    // (verified off-chain against the live price then). Community eligibility
+    // is NOT required for the holder path — the paths are independent.
+    const registration = db.registrations.find(
+      (r) => r.muse_id === muse_id && String(r.address) === address
+    );
+    if (!registration) {
+      return err(res, 403, 'NOT_REGISTERED', 'Register this (muse_id, address) first — the holder path needs a registration.');
+    }
+    if (registration.allocation !== 'holder') {
+      return err(res, 403, 'NOT_HOLDER_ELIGIBLE', 'This address was not holder-eligible at registration: it needs $10+ of MDOG. It can still use the community path.');
+    }
+
+    const holderVouchers = db.vouchers.filter((v) => v.allocation === 'HOLDER');
+    if (holderVouchers.length >= HOLDER_VOUCHER_CAP) {
+      return err(res, 409, 'VOUCHER_CAP_REACHED', 'All 100 holder vouchers are issued.');
+    }
+    const forAddress = holderVouchers.filter((v) => v.recipient === address);
+    if (forAddress.length >= HOLDER_VOUCHERS_PER_ADDRESS) {
+      return err(res, 409, 'ADDRESS_VOUCHER_CAP_REACHED',
+        'This address already has its 3 holder vouchers. (A muse eligible on both paths can still use the community path.)');
+    }
+    // Up to 3 holder vouchers per muse identity.
+    const forIdentity = holderVouchers.filter((v) => v.muse_id_hash === hash(muse_id));
+    if (forIdentity.length >= HOLDER_VOUCHERS_PER_IDENTITY) {
+      return err(res, 409, 'IDENTITY_VOUCHER_CAP_REACHED',
+        'This muse identity already has its 3 holder vouchers. (A muse eligible on both paths can still use the community path.)');
+    }
+
+    // Nonce is a random uint256 (decimal string) — it must fit the contract's
+    // EIP-712 MintVoucher(address recipient,uint8 mintType,uint256 nonce,uint256 expiry).
+    // Nonces are per-recipient on-chain; a random 256-bit nonce is unique in practice.
+    const voucher_nonce = BigInt('0x' + randomBytes(32).toString('hex')).toString(10);
+    const expires_at = new Date(Date.now() + 72 * 3600 * 1000).toISOString();
+    const payload = {
+      chainId: NFT_CHAIN_ID,
+      contract: CONTRACT_ADDRESS,
+      recipient: address,
+      mintType: 1, // HOLDER
+      allocation: 'HOLDER',
+      nonce: voucher_nonce,
+      expiry: Math.floor(new Date(expires_at).getTime() / 1000),
+      price: 0,
+      quantity: 1,
+    };
+    let eip712_signature;
+    try {
+      eip712_signature = await signVoucher(signerKey, {
+        chainId: NFT_CHAIN_ID,
+        contractAddress: CONTRACT_ADDRESS,
+        recipient: address,
+        mintType: 1,
+        nonce: voucher_nonce,
+        expiry: payload.expiry,
+      });
+    } catch (e) {
+      return err(res, 503, e.code || 'VOUCHER_SIGNER_UNAVAILABLE', e.message || 'Voucher signing failed.', { retryable: true });
+    }
+
+    const voucher = {
+      voucher_nonce,
+      muse_id,
+      muse_id_hash: hash(muse_id),
+      recipient: address,
+      allocation: 'HOLDER',
+      issued_at: new Date().toISOString(),
+      expires_at,
+    };
+    store.insert(db, 'vouchers', { ...voucher, payload, eip712_signature }, ['voucher_nonce']);
+
+    // Exact calldata for mintWithVoucher(address,uint8,uint256,uint256,bytes) —
+    // the self-submit path on the mint page shows this verbatim so a muse can
+    // send the transaction from any wallet without ABI-encoding it.
+    const { buildClaimCalldata } = require('./lib/relayer');
+    const resp = {
+      voucher: payload,
+      eip712_signature,
+      claim_calldata: buildClaimCalldata(payload, eip712_signature),
+      vouchers_issued: holderVouchers.length + 1,
+      vouchers_cap: HOLDER_VOUCHER_CAP,
+      holder_vouchers_for_address: forAddress.length + 1,
+      holder_vouchers_cap_per_address: HOLDER_VOUCHERS_PER_ADDRESS,
+      claim_with_relayer: claimQueue ? 'POST /api/v1/claim/submit' : null,
+      note: claimQueue
+        ? 'Signed voucher. Submit it via the relayer, or call mintWithVoucher() yourself — the NFT always goes to the recipient address.'
+        : 'Signed voucher. The relayer is not running: call mintWithVoucher() yourself with the calldata shown on the mint page.',
+    };
+    store.insert(db, 'idempotency', { key: idempotency_key, muse_id, route: 'holder-voucher', status: 200, response: resp, created_at: new Date().toISOString() }, ['key']);
+    res.json(resp);
+  } catch (e) {
+    if (e.status) {
+      return err(res, e.status, e.code, e.message, e.extra || {});
+    }
+    return err(res, 400, e.code || 'INVALID_REQUEST', e.message || 'Bad request.');
+  }
+});
 app.post('/api/v1/claim/submit', async (req, res) => {
   try {
     strictBody(req.body, ['voucher', 'eip712_signature', 'idempotency_key']);
     requireFields(req.body, ['voucher', 'eip712_signature', 'idempotency_key']);
     if (!claimQueue) {
-      return err(res, 503, 'RELAYER_DISABLED', 'The claim relayer is not running right now. Send claim() yourself with the calldata on the mint page.', { retryable: true });
+      return err(res, 503, 'RELAYER_DISABLED', 'The claim relayer is not running right now. Call mintWithVoucher() yourself with the calldata on the mint page.', { retryable: true });
     }
     const idempotency_key = String(req.body.idempotency_key);
     const voucher = req.body.voucher;
@@ -734,23 +891,24 @@ app.get('/api/v1/claim/status/:job_id', async (req, res) => {
 });
 
 // Public mint state, read live from chain when the relayer is up.
-// Powers the mint page's live counter ("X of 100 claims left").
+// Powers the mint page's live counter ("X of 380 community mints left").
+// The contract has no pause mechanism, so there is no pause state to report.
 app.get('/api/v1/mint/stats', async (req, res) => {
   if (!claimQueue) {
-    return res.json({ relayer: false, chain_id: NFT_CHAIN_ID, contract: CONTRACT_ADDRESS, claims_remaining: null, paused: null });
+    return res.json({ relayer: false, chain_id: NFT_CHAIN_ID, contract: CONTRACT_ADDRESS, claims_remaining: null, holder_remaining: null });
   }
   try {
     const c = claimQueue.relayer.contract;
-    const [remaining, paused] = await Promise.all([
-      c.communityClaimsRemaining(),
-      c.paused(),
+    const [community, holder] = await Promise.all([
+      c.communityRemaining(),
+      c.holderRemaining(),
     ]);
     res.json({
       relayer: true,
       chain_id: NFT_CHAIN_ID,
       contract: CONTRACT_ADDRESS,
-      claims_remaining: remaining.toString(),
-      paused,
+      claims_remaining: community.toString(),
+      holder_remaining: holder.toString(),
     });
   } catch (e) {
     return err(res, 502, 'CHAIN_READ_FAILED', 'Could not read mint state from the chain.', { retryable: true });
@@ -832,35 +990,49 @@ app.get('/.well-known/muse-dog.json', (req, res) => {  res.json({
       },
       step_1: {
         title: 'Get a Bankr 0x address from your muse',
-        detail: 'Ask the muse for a Bankr 0x address as plain text (no wallet connection, nothing to sign). If the agent calls POST /api/v1/challenge without an address, the API answers 422 MISSING_ADDRESS with exact words to relay to the muse.',
+        detail: 'Ask the muse for a Bankr 0x address as plain text (no wallet connection needed to share it; the muse signs a challenge message later). If the agent calls POST /api/v1/challenge without an address, the API answers 422 MISSING_ADDRESS with exact words to relay to the muse.',
       },
       step_2: 'POST /api/v1/challenge with { muse_id, address }',
-      step_3: 'Muse signs the challenge message with its musebook identity key (Ed25519)',
-      step_4: 'POST /api/v1/register with { muse_id, address, challenge, signature }',
+      step_3: 'Muse signs the exact challenge message bytes (UTF-8) ONCE, with its musebook identity key (Ed25519, base64url). No wallet connection, no wallet signature, no ETH from the muse — the Bankr 0x address is supplied as plain text.',
+      step_4: 'POST /api/v1/register with { muse_id, address, challenge_id, musebook_signature, idempotency_key }',
+      step_5: 'POST /api/v1/community-voucher with { muse_id, address, challenge_id, musebook_signature, idempotency_key } for the free-mint voucher (3 per address, 3 per muse identity), or POST /api/v1/holder-voucher for the holder voucher when the address holds $10+ of MDOG (3 per address, 3 per muse identity — paths are independent, up to 6 total).',
+      step_6: 'POST /api/v1/claim/submit with { voucher, eip712_signature, idempotency_key } — the relayer submits mintWithVoucher() and pays the gas; the NFT always goes to the voucher recipient.',
     },
     chain: { id: CHAIN_ID, name: 'Robinhood Chain', currency: 'ETH' },
     nft_chain: { id: NFT_CHAIN_ID, name: 'Robinhood Chain', currency: 'ETH' },
     contracts: { mdog: MDOG_CONTRACT, nft: CONTRACT_ADDRESS },
     registration: {
       wallet_connection_required: false,
-      needs: ['muse_id', 'bankr_0x_address', 'signed_challenge', 'musebook_identity_signature', 'proof_of_work'],
-      never_asked_for: ['private_key', 'seed_phrase', 'token_approval', 'transfer'],
+      needs: ['muse_id', 'bankr_0x_address', 'challenge_id', 'musebook_identity_signature', 'idempotency_key'],
+      never_asked_for: ['private_key', 'seed_phrase', 'token_approval', 'transfer', 'wallet_signature'],
       identity_proof: {
         scheme: 'Ed25519, using the muse\'s musebook identity key',
-        signs: 'the exact challenge message bytes (UTF-8), same text the wallet signs',
+        signs: 'the exact challenge message bytes (UTF-8)',
         encoding: 'base64url of the raw 64-byte Ed25519 signature (no Ethereum prefix on the identity signature)',
         registry: 'verified against GET https://musebook.lol/api/identity.json?muse_id=<muse_id>; fails closed when the registry is unreachable',
-        note: 'one verified muse identity binds to exactly one wallet registration',
-      },
+        note: 'one verified muse identity binds to exactly one address; the identity signature proves the musebook identity only — NOT control of the wallet, and it approves no spending',
+      }, // end identity_proof — no wallet_proof, no proof_of_work on this flow
     },
     holder_threshold: { usd: THRESHOLD_USD, token: 'MDOG' },
     supply: { total: 500, holder_airdrops: 100, community_mints: 380, reserve: 20 },
     royalty_fee_engine: {
       royalty_pct: 5,
-      royalty_split: '0.5% to Mikey (raw ETH, immutable); 2% to the weekly holder rewards pot; 2.5% to the autonomous fee engine',
-      pot_shares: '10% Mikey; 40% holder rewards; 50% fee engine',
-      owner: 'none — autonomous contract',
+      royalty_split: '0.5% to Mikey (raw ETH, immutable); 2% to the weekly holder rewards pot; 1.25% to MDOG/musebook LP; 1.25% to MDOG/ETH LP',
+      pot_shares: '10% Mikey; 40% holder rewards; 25% MDOG/musebook LP; 25% MDOG/ETH LP',
+      owner: 'Ownable2Step — Safe multisig',
       process: 'anyone may call process() once collected fees cross the threshold',
+      buyback: 'royalty ETH buys MDOG (and musebook) off the market every cycle',
+      liquidity: 'both LP positions minted directly to the dead address — locked/burned forever',
+    },
+    holder_rewards: {
+      eligibility: 'every Muse Dogs holder earns, per NFT held',
+      snapshots: 'daily holder-balance snapshot at 00:00 UTC',
+      epoch: 'weekly, Monday 00:00 UTC to the next Monday',
+      pot_source: '2% of every resale royalty (where honored)',
+      share: 'time-weighted pro-rata across the 7 daily snapshots',
+      root: 'weekly merkle root published on-chain by the project multisig',
+      claim: 'claim(uint256 epochId, uint256 amount, bytes32[] proof) — pull, any time, no expiry',
+      endpoints: 'GET /api/v1/rewards/config, GET /api/v1/rewards/claim?epoch={epochId}&holder={address}',
     },
     phases: { current: CURRENT_PHASE },
     endpoints: {
@@ -869,6 +1041,7 @@ app.get('/.well-known/muse-dog.json', (req, res) => {  res.json({
       register: 'POST /api/v1/register',
       status: 'GET /api/v1/status/{registration_id}',
       community_voucher: 'POST /api/v1/community-voucher',
+      holder_voucher: 'POST /api/v1/holder-voucher',
       claim_submit: 'POST /api/v1/claim/submit',
       claim_status: 'GET /api/v1/claim/status/{job_id}',
       mint_stats: 'GET /api/v1/mint/stats',

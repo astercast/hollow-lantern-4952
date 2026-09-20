@@ -8,7 +8,9 @@ const { ethers } = require('ethers');
 const { generateKeyPairSync, createPrivateKey, sign: cryptoSign, randomBytes } = require('node:crypto');
 const fs = require('fs');
 const path = require('path');
-const { solve } = require('./lib/pow');
+// NOTE: there is no proof-of-work anywhere in the claim flow by design
+// (address as plain text + one musebook identity signature; per-IP rate
+// limiting is the spam control), so no PoW solver is used here.
 const { hash } = require('./lib/hash');
 
 const PORT = 4137;
@@ -79,7 +81,11 @@ const server = spawn('node', ['server.js'], {
     // The voucher endpoint fails closed without these; the smoke run signs
     // real EIP-712 vouchers with a throwaway test key.
     VOUCHER_SIGNER_KEY: '0x' + randomBytes(32).toString('hex'),
-    CONTRACT_ADDRESS: '0x1111111111111111111111111111111111111111' },
+    CONTRACT_ADDRESS: '0x1111111111111111111111111111111111111111',
+    // The in-process suite fires ~100 requests from one IP in seconds; the
+    // production default (60/min) is the spam control, but the harness
+    // needs headroom. A dedicated rate-limit test below pins the default.
+    RATE_LIMIT_PER_MIN: '1000' },
   stdio: 'ignore',
 });
 
@@ -106,23 +112,24 @@ async function waitForServer() {
   const wallet = ethers.Wallet.createRandom();
   r = await api('POST', '/api/v1/challenge', { muse_id: 'muse_smoke_1', address: wallet.address });
   log(r.status === 200 && !!r.json.challenge_id && !!r.json.message, 'challenge: issued');
+  // Locked design: no proof-of-work and no wallet signature anywhere in
+  // the claim flow — the muse pastes its Bankr address as plain text and
+  // signs the challenge with its musebook identity key only.
+  log(!r.json.proof_of_work, 'challenge: no proof-of-work in response');
   const challenge = r.json;
 
   // 3. reject unknown fields
   const bad = await api('POST', '/api/v1/challenge', { muse_id: 'x', address: wallet.address, evil: 1 });
   log(bad.status === 400 && bad.json.error === 'UNKNOWN_FIELDS', 'challenge: unknown fields rejected');
 
-  // 4. solve PoW, sign, register
-  const salt = solve(challenge.nonce, challenge.proof_of_work.difficulty);
-  const signature = await wallet.signMessage(challenge.message);
+  // 4. sign the challenge with the musebook identity key and register.
+  // No wallet signature, no PoW: the address is plain text.
   const idem = 'smoke-key-1';
   r = await api('POST', '/api/v1/register', {
     muse_id: 'muse_smoke_1',
     address: wallet.address,
     challenge_id: challenge.challenge_id,
-    signature,
     musebook_signature: identitySig(identities.muse_smoke_1, challenge.message),
-    pow_result: salt,
     idempotency_key: idem,
   });
   log(r.status === 200 && r.json.eligible_now === true && r.json.allocation === 'holder', 'register: eligible holder (2000 MDOG @ $0.01 = $20)');
@@ -132,43 +139,48 @@ async function waitForServer() {
   // 5. idempotency: same key replays the same response
   r = await api('POST', '/api/v1/register', {
     muse_id: 'muse_smoke_1', address: wallet.address, challenge_id: challenge.challenge_id,
-    signature, musebook_signature: identitySig(identities.muse_smoke_1, challenge.message),
-    pow_result: salt, idempotency_key: idem,
+    musebook_signature: identitySig(identities.muse_smoke_1, challenge.message),
+    idempotency_key: idem,
   });
   log(r.status === 200 && r.json.registration_id === regId, 'register: idempotent replay');
 
+  // 5b. the legacy proof bundle (wallet signature + proof of work) is REJECTED:
+  // strictBody allows only the locked fields.
+  r = await api('POST', '/api/v1/register', {
+    muse_id: 'muse_smoke_1', address: wallet.address, challenge_id: challenge.challenge_id,
+    signature: '0x' + '11'.repeat(65), pow_result: 's1',
+    musebook_signature: identitySig(identities.muse_smoke_1, challenge.message),
+    idempotency_key: 'smoke-key-legacy',
+  });
+  log(r.status === 400 && r.json.error === 'UNKNOWN_FIELDS', 'register: legacy wallet-signature/PoW fields rejected');
+
   // 6. duplicate identity rejected
-  const c2 = await api('POST', '/api/v1/challenge', { muse_id: 'muse_smoke_1', address: ethers.Wallet.createRandom().address });
   const w2 = ethers.Wallet.createRandom();
   const c2b = await api('POST', '/api/v1/challenge', { muse_id: 'muse_smoke_1', address: w2.address });
-  const s2 = solve(c2b.json.nonce, c2b.json.proof_of_work.difficulty);
-  const sig2 = await w2.signMessage(c2b.json.message);
   r = await api('POST', '/api/v1/register', {
     muse_id: 'muse_smoke_1', address: w2.address, challenge_id: c2b.json.challenge_id,
-    signature: sig2, musebook_signature: identitySig(identities.muse_smoke_1, c2b.json.message),
-    pow_result: s2, idempotency_key: 'smoke-key-dup',
+    musebook_signature: identitySig(identities.muse_smoke_1, c2b.json.message),
+    idempotency_key: 'smoke-key-dup',
   });
   log(r.status === 409 && r.json.error === 'DUPLICATE_IDENTITY', 'register: duplicate identity rejected');
-  void c2;
 
   // 7. challenge single-use: reuse of consumed challenge
+  const w3re = ethers.Wallet.createRandom();
   r = await api('POST', '/api/v1/register', {
-    muse_id: 'muse_smoke_3', address: ethers.Wallet.createRandom().address,
-    challenge_id: challenge.challenge_id, signature: '0x' + '22'.repeat(65),
+    muse_id: 'muse_smoke_3', address: w3re.address,
+    challenge_id: challenge.challenge_id,
     musebook_signature: identitySig(identities.muse_smoke_3, challenge.message),
-    pow_result: salt, idempotency_key: 'smoke-key-reuse',
+    idempotency_key: 'smoke-key-reuse',
   });
   log(r.status === 400 && r.json.error === 'INVALID_CHALLENGE', 'register: wrong muse on challenge rejected');
 
   // 7b. muses only: non-whitelisted identity is refused on the holder path too
   const w_nh = ethers.Wallet.createRandom();
   const cnh = await api('POST', '/api/v1/challenge', { muse_id: 'muse_smoke_7', address: w_nh.address });
-  const snh = solve(cnh.json.nonce, cnh.json.proof_of_work.difficulty);
-  const signh = await w_nh.signMessage(cnh.json.message);
   r = await api('POST', '/api/v1/register', {
     muse_id: 'muse_smoke_7', address: w_nh.address, challenge_id: cnh.json.challenge_id,
-    signature: signh, musebook_signature: identitySig(identities.muse_smoke_7, cnh.json.message),
-    pow_result: snh, idempotency_key: 'smoke-key-nh',
+    musebook_signature: identitySig(identities.muse_smoke_7, cnh.json.message),
+    idempotency_key: 'smoke-key-nh',
   });
   log(r.status === 403 && r.json.error === 'NOT_WHITELISTED', 'register: non-whitelisted identity refused (muses only)');
 
@@ -180,64 +192,161 @@ async function waitForServer() {
   r = await api('GET', '/api/v1/receipt/' + regId);
   log(r.status === 200 && r.json.tx_hash === null, 'receipt: pending stub');
 
-  // 10. holder cannot take a community voucher
-  // 11. non-holder gets a voucher
-  // Voucher requests carry the same muse proof bundle as registration
-  // (challenge + wallet signature + musebook identity signature + PoW):
-  // naming a whitelisted muse_id alone is refused — humans are out.
-  async function attemptVoucher(muse_id, wallet, idKey, idemKey, mutate) {
+  // 10. community and holder paths are INDEPENDENT: a holder-eligible muse
+  // still gets a community voucher. There is no ALREADY_HOLDER block — the
+  // locked design lets a muse eligible on both paths use both.
+  // Voucher requests carry the identity proof only: a challenge bound to
+  // (muse_id, address) plus the musebook Ed25519 identity signature.
+  // No wallet signature, no proof of work — by design.
+  async function attemptVoucher(muse_id, wallet, idKey, idemKey, mutate, route) {
     const c = await api('POST', '/api/v1/challenge', { muse_id, address: wallet.address });
     if (c.status !== 200) return { status: c.status, json: c.json };
-    const s = solve(c.json.nonce, c.json.proof_of_work.difficulty);
-    const sig = await wallet.signMessage(c.json.message);
     const body = {
       muse_id, address: wallet.address, challenge_id: c.json.challenge_id,
-      signature: sig, pow_result: s, idempotency_key: idemKey,
+      idempotency_key: idemKey,
     };
     if (idKey !== undefined) body.musebook_signature = identitySig(idKey, c.json.message);
     if (mutate) mutate(body, c.json);
-    return api('POST', '/api/v1/community-voucher', body);
+    return api('POST', '/api/v1/' + (route || 'community-voucher'), body);
+  }
+  async function attemptHolderVoucher(muse_id, wallet, idKey, idemKey, mutate) {
+    return attemptVoucher(muse_id, wallet, idKey, idemKey, mutate, 'holder-voucher');
   }
 
   r = await attemptVoucher('muse_smoke_1', wallet, identities.muse_smoke_1, 'smoke-v1');
-  log(r.status === 409 && r.json.error === 'ALREADY_HOLDER', 'voucher: holder blocked from community path');
+  log(r.status === 200 && r.json.voucher.chainId === 4663 && r.json.voucher.price === 0, 'voucher: holder-eligible muse gets a community voucher too (paths independent)');
 
+  // 11. each path allows 3 vouchers per address and 3 per muse identity.
   const w3 = ethers.Wallet.createRandom();
-  r = await attemptVoucher('muse_smoke_9', w3, identities.muse_smoke_9, 'smoke-v2');
-  log(r.status === 200 && r.json.voucher.chainId === 4663 && r.json.voucher.price === 0, 'voucher: issued for non-holder');
+  for (let i = 2; i <= 4; i++) {
+    r = await attemptVoucher('muse_smoke_9', w3, identities.muse_smoke_9, 'smoke-v' + i);
+  }
+  log(r.status === 200 && r.json.community_vouchers_for_address === 3 && r.json.community_vouchers_cap_per_address === 3, 'voucher: 3 vouchers per address issued');
+  r = await attemptVoucher('muse_smoke_9', w3, identities.muse_smoke_9, 'smoke-v5');
+  log(r.status === 409 && r.json.error === 'ADDRESS_VOUCHER_CAP_REACHED', 'voucher: 4th voucher for same address refused');
+
+  // 11c. same whitelisted identity, NEW address — the identity already used
+  // its 3, so it is refused (per-identity cap, not per-address).
+  const w5 = ethers.Wallet.createRandom();
+  r = await attemptVoucher('muse_smoke_9', w5, identities.muse_smoke_9, 'smoke-v6');
+  log(r.status === 409 && r.json.error === 'IDENTITY_VOUCHER_CAP_REACHED', 'voucher: 3-per-identity cap enforced');
 
   // 11b. non-whitelisted identity is refused, even with a fresh address
   const w4 = ethers.Wallet.createRandom();
-  r = await attemptVoucher('muse_smoke_7', w4, identities.muse_smoke_7, 'smoke-v3');
+  r = await attemptVoucher('muse_smoke_7', w4, identities.muse_smoke_7, 'smoke-v7');
   log(r.status === 403 && r.json.error === 'NOT_WHITELISTED', 'voucher: non-whitelisted identity refused');
 
-  // 11c. same whitelisted identity, NEW address — still refused (anti-snipe: 1 per identity)
-  const w5 = ethers.Wallet.createRandom();
-  r = await attemptVoucher('muse_smoke_9', w5, identities.muse_smoke_9, 'smoke-v4');
-  log(r.status === 409 && r.json.error === 'VOUCHER_ALREADY_ISSUED_FOR_IDENTITY', 'voucher: one voucher per identity, new address does not help');
-
-  // 11e. human-style request: muse name + address but no proof bundle at all
+  // 11e. human-style request: muse name + address but no proof at all
   const w6b = ethers.Wallet.createRandom();
   r = await api('POST', '/api/v1/community-voucher', {
-    muse_id: 'muse_smoke_9', address: w6b.address, idempotency_key: 'smoke-v6',
+    muse_id: 'muse_smoke_9', address: w6b.address, idempotency_key: 'smoke-v8',
   });
   log(r.status === 400 && r.json.error === 'MISSING_FIELD', 'voucher: name-and-address alone refused, proof required (humans out)');
 
   // 11f. forged identity signature on the voucher path
   const w7 = ethers.Wallet.createRandom();
-  r = await attemptVoucher('muse_smoke_9', w7, identities.muse_forged, 'smoke-v7');
+  r = await attemptVoucher('muse_smoke_9', w7, identities.muse_forged, 'smoke-v9');
   log(r.status === 400 && r.json.error === 'INVALID_IDENTITY_SIGNATURE', 'voucher: forged identity signature rejected');
+
+  // 11g. the legacy proof bundle (wallet signature + proof of work) is rejected
+  const w8 = ethers.Wallet.createRandom();
+  r = await attemptVoucher('muse_smoke_9', w8, identities.muse_smoke_9, 'smoke-v10', (body) => {
+    body.signature = '0x' + '11'.repeat(65);
+    body.pow_result = 's1';
+  });
+  log(r.status === 400 && r.json.error === 'UNKNOWN_FIELDS', 'voucher: legacy wallet-signature/PoW fields rejected');
 
   // 11d. allowlist missing -> fail closed, nobody gets through
   fs.unlinkSync(WL_PATH);
   const w6 = ethers.Wallet.createRandom();
-  r = await attemptVoucher('muse_smoke_9', w6, identities.muse_smoke_9, 'smoke-v5');
+  r = await attemptVoucher('muse_smoke_9', w6, identities.muse_smoke_9, 'smoke-v11');
   log(r.status === 503 && r.json.error === 'WHITELIST_UNAVAILABLE', 'voucher: fails closed without allowlist');
+
+  // 11h. holder vouchers: the holder path is the same registration, mintType 1.
+  // The smoke stub gives every address 2000 MDOG, so muse_smoke_1's
+  // registration carries the holder allocation.
+  r = await attemptHolderVoucher('muse_smoke_1', wallet, identities.muse_smoke_1, 'smoke-h1');
+  log(r.status === 200 && r.json.voucher.mintType === 1 && r.json.voucher.allocation === 'HOLDER'
+    && r.json.holder_vouchers_for_address === 1 && r.json.holder_vouchers_cap_per_address === 3
+    && r.json.vouchers_cap === 100,
+    'holder-voucher: holder-eligible muse gets a holder voucher (mintType 1, 3 per address)');
+
+  // Fixture: holder-eligible registrations for muse_smoke_7 on two addresses
+  // (allocation 'holder' = $10+ of MDOG verified off-chain at registration).
+  // muse_smoke_7 and muse_smoke_3 are used here so muse_smoke_9 stays free for
+  // the fresh-registration test later (one registration per muse identity).
+  const w9 = ethers.Wallet.createRandom();
+  const w9b = ethers.Wallet.createRandom();
+  {
+    const db = JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
+    const regFixture = (muse_id, addr) => ({
+      registration_id: 'reg-smoke-h-' + addr.slice(2, 10),
+      muse_id,
+      address: ethers.getAddress(addr),
+      muse_id_hash: hash(muse_id),
+      address_hash: hash(addr.toLowerCase()),
+      allocation: 'holder',
+      created_at: new Date().toISOString(),
+    });
+    db.registrations.push(regFixture('muse_smoke_7', w9.address), regFixture('muse_smoke_7', w9b.address));
+    fs.writeFileSync(DB_PATH, JSON.stringify(db, null, 2));
+  }
+
+  // 11i. holder path: 3 per address, then refused.
+  for (let i = 2; i <= 4; i++) {
+    r = await attemptHolderVoucher('muse_smoke_7', w9, identities.muse_smoke_7, 'smoke-h' + i);
+  }
+  log(r.status === 200 && r.json.holder_vouchers_for_address === 3, 'holder-voucher: 3 vouchers per address issued');
+  r = await attemptHolderVoucher('muse_smoke_7', w9, identities.muse_smoke_7, 'smoke-h5');
+  log(r.status === 409 && r.json.error === 'ADDRESS_VOUCHER_CAP_REACHED', 'holder-voucher: 4th voucher for same address refused');
+
+  // 11j. holder path: 3 per identity, then refused on a new address.
+  r = await attemptHolderVoucher('muse_smoke_7', w9b, identities.muse_smoke_7, 'smoke-h6');
+  log(r.status === 409 && r.json.error === 'IDENTITY_VOUCHER_CAP_REACHED', 'holder-voucher: 3-per-identity cap enforced');
+
+  // 11k. holder path: unregistered muse is refused (holder eligibility comes
+  // from the stored registration's $10+ MDOG check).
+  const w11 = ethers.Wallet.createRandom();
+  r = await attemptHolderVoucher('muse_smoke_3', w11, identities.muse_smoke_3, 'smoke-h7');
+  log(r.status === 403 && r.json.error === 'NOT_REGISTERED', 'holder-voucher: unregistered muse refused');
+
+  // 11k2. holder path: registered but below the $10 MDOG threshold refused.
+  const w11b = ethers.Wallet.createRandom();
+  {
+    const db = JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
+    db.registrations.push({
+      registration_id: 'reg-smoke-h-poor',
+      muse_id: 'muse_smoke_3',
+      address: ethers.getAddress(w11b.address),
+      muse_id_hash: hash('muse_smoke_3'),
+      address_hash: hash(w11b.address.toLowerCase()),
+      allocation: null,
+      created_at: new Date().toISOString(),
+    });
+    fs.writeFileSync(DB_PATH, JSON.stringify(db, null, 2));
+  }
+  r = await attemptHolderVoucher('muse_smoke_3', w11b, identities.muse_smoke_3, 'smoke-h7b');
+  log(r.status === 403 && r.json.error === 'NOT_HOLDER_ELIGIBLE', 'holder-voucher: below-threshold registration refused');
+
+  // 11l. holder path: forged identity signature rejected.
+  const w12 = ethers.Wallet.createRandom();
+  r = await attemptHolderVoucher('muse_smoke_1', w12, identities.muse_forged, 'smoke-h8');
+  log(r.status === 400 && r.json.error === 'INVALID_IDENTITY_SIGNATURE', 'holder-voucher: forged identity signature rejected');
+
+  // 11m. holder path: legacy wallet-signature/PoW fields rejected.
+  const w13 = ethers.Wallet.createRandom();
+  r = await attemptHolderVoucher('muse_smoke_1', w13, identities.muse_smoke_1, 'smoke-h9', (body) => {
+    body.signature = '0x' + '11'.repeat(65);
+    body.pow_result = 's1';
+  });
+  log(r.status === 400 && r.json.error === 'UNKNOWN_FIELDS', 'holder-voucher: legacy wallet-signature/PoW fields rejected');
 
   // 12. discovery doc
   r = await api('GET', '/.well-known/muse-dog.json');
   log(r.status === 200 && r.json.contracts.mdog && r.json.endpoints.register, 'well-known: discovery doc');
   log(r.json.registration.needs.includes('musebook_identity_signature'), 'well-known: identity proof documented');
+  log(!r.json.registration.needs.includes('wallet_signature') && !r.json.registration.needs.includes('proof_of_work'), 'well-known: no wallet signature or PoW in the proof bundle');
+  log(!r.json.registration.wallet_proof && !r.json.registration.proof_of_work, 'well-known: no wallet/PoW proof blocks');
 
   // ---- identity verification tests — added 2026-09-18 ----
   // Test 11d deleted the allowlist; re-seed it for the register calls below.
@@ -246,15 +355,14 @@ async function waitForServer() {
     { identity_hash: hash('muse_smoke_1'), approved_at: '2026-09-18', reason: 'smoke test allowlist' },
   ], null, 2));
   // Helper: full registration attempt for a muse with a chosen identity key.
+  // Identity proof only: challenge + musebook Ed25519 identity signature.
   async function attemptRegister(muse_id, idemKey, idKey, idKeyFor) {
     const w = ethers.Wallet.createRandom();
     const c = await api('POST', '/api/v1/challenge', { muse_id, address: w.address });
     if (c.status !== 200) return { status: c.status, json: c.json };
-    const s = solve(c.json.nonce, c.json.proof_of_work.difficulty);
-    const sig = await w.signMessage(c.json.message);
     const body = {
       muse_id, address: w.address, challenge_id: c.json.challenge_id,
-      signature: sig, pow_result: s, idempotency_key: idemKey,
+      idempotency_key: idemKey,
     };
     if (idKey !== undefined) {
       body.musebook_signature = identitySig(idKey, c.json.message);
@@ -275,12 +383,10 @@ async function waitForServer() {
   {
     const w = ethers.Wallet.createRandom();
     const c = await api('POST', '/api/v1/challenge', { muse_id: 'muse_smoke_9', address: w.address });
-    const s = solve(c.json.nonce, c.json.proof_of_work.difficulty);
-    const sig = await w.signMessage(c.json.message);
     r = await api('POST', '/api/v1/register', {
       muse_id: 'muse_smoke_9', address: w.address, challenge_id: c.json.challenge_id,
-      signature: sig, musebook_signature: 'not-a-valid-signature!!!',
-      pow_result: s, idempotency_key: 'smoke-id-15b',
+      musebook_signature: 'not-a-valid-signature!!!',
+      idempotency_key: 'smoke-id-15b',
     });
   }
   log(r.status === 400 && r.json.error === 'INVALID_IDENTITY_SIGNATURE', 'identity: malformed signature rejected');
@@ -305,13 +411,10 @@ async function waitForServer() {
   {
     const w = ethers.Wallet.createRandom();
     const c = await api('POST', '/api/v1/challenge', { muse_id: 'muse_smoke_9', address: w.address });
-    const s = solve(c.json.nonce, c.json.proof_of_work.difficulty);
-    const sig = await w.signMessage(c.json.message);
     r = await api('POST', '/api/v1/register', {
       muse_id: 'muse_smoke_9', address: w.address, challenge_id: c.json.challenge_id,
-      signature: sig,
       musebook_signature: identitySig(identities.muse_smoke_9, 'tampered message'),
-      pow_result: s, idempotency_key: 'smoke-id-19',
+      idempotency_key: 'smoke-id-19',
     });
   }
   log(r.status === 400 && r.json.error === 'INVALID_IDENTITY_SIGNATURE', 'identity: signature over wrong message rejected');
@@ -432,6 +535,33 @@ async function waitForServer() {
 
   // R6. fixture cleanup: the served data was test-only.
   fs.rmSync(REWARDS_DIR, { recursive: true, force: true });
+
+  // R7. rate limit: the production default (60 req/IP/min, no env override)
+  // still 429s — the spam control on the claim path. A second short-lived
+  // server with the default env proves the default trips.
+  {
+    const rlPort = PORT + 1;
+    const rlServer = spawn('node', ['server.js'], {
+      cwd: __dirname,
+      env: { ...process.env, PORT: String(rlPort), TEST_MODE: '1', RATE_LIMIT_PER_MIN: '' },
+      stdio: 'ignore',
+    });
+    const rlBase = 'http://127.0.0.1:' + rlPort;
+    let up = false;
+    for (let i = 0; i < 60 && !up; i++) {
+      try { const rr = await fetch(rlBase + '/api/v1/config'); if (rr.ok || rr.status === 429) up = true; } catch { /* not up */ }
+      if (!up) await new Promise((r) => setTimeout(r, 250));
+    }
+    let saw429 = false;
+    if (up) {
+      for (let i = 0; i < 65; i++) {
+        const rr = await fetch(rlBase + '/api/v1/config');
+        if (rr.status === 429) { saw429 = true; break; }
+      }
+    }
+    rlServer.kill();
+    log(up && saw429, 'rate-limit: default 60/min trips 429 (spam control intact)');
+  }
 
   console.log('\nAll smoke tests passed.');
   server.kill();
