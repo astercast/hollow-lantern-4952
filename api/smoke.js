@@ -346,6 +346,93 @@ async function waitForServer() {
   r = await api('GET', '/api/v1/status/' + regId);
   log(r.status === 200 && r.json.price_usd_per_mdog === 0.01 && !!r.json.price_checked_at, 'price: registration records price used for decision');
 
+  // ---- holder rewards — added 2026-09-19 ----
+  const { spawnSync } = require('child_process');
+  const REWARDS_DIR = path.join(__dirname, 'data', 'rewards');
+  // Wipe first: a crashed run must never leave fixture data behind.
+  fs.rmSync(REWARDS_DIR, { recursive: true, force: true });
+
+  // R1. rewards config shape (200)
+  r = await api('GET', '/api/v1/rewards/config');
+  log(r.status === 200 && r.json.epoch_days === 7, 'rewards: config epoch_days=7');
+  log(r.json.snapshot === 'daily 00:00 UTC' && r.json.payout === 'weekly', 'rewards: config snapshot/payout');
+  log(typeof r.json.pot_source === 'string' && r.json.pot_source.includes('royalt'), 'rewards: config pot_source');
+  log(typeof r.json.leaf_scheme === 'string' && r.json.leaf_scheme.includes('keccak256'), 'rewards: config leaf_scheme');
+  log(r.json.data_dir === 'api/data/rewards', 'rewards: config data_dir');
+
+  // R2. unknown epoch fails closed (404, no fake data)
+  r = await api('GET', '/api/v1/rewards/claim?epoch=9999999999&holder=' + wallet.address);
+  log(r.status === 404 && r.json.error === 'NOT_FOUND', 'rewards: unknown epoch 404');
+
+  // R3. malformed inputs rejected
+  r = await api('GET', '/api/v1/rewards/claim?epoch=notanumber&holder=' + wallet.address);
+  log(r.status === 400 && r.json.error === 'INVALID_EPOCH', 'rewards: malformed epoch 400');
+  r = await api('GET', '/api/v1/rewards/claim?epoch=1789344000&holder=notanaddress');
+  log(r.status === 400 && r.json.error === 'INVALID_ADDRESS', 'rewards: malformed holder 400');
+
+  // R4. end-to-end: 7 fixture snapshots -> rewards-publish.js -> epoch file ->
+  //     independent known-vector check -> served by /claim -> cleaned up.
+  //     Week 2026-09-14 is a Monday; epochId = 1789344000.
+  const holderA = ethers.getAddress('0x' + '11'.repeat(20));
+  const holderB = ethers.getAddress('0x' + '22'.repeat(20));
+  const fixtureNft = ethers.getAddress('0x' + '33'.repeat(20));
+  const snapDir = path.join(REWARDS_DIR, 'snapshots');
+  fs.mkdirSync(snapDir, { recursive: true });
+  const weekDays = ['2026-09-14', '2026-09-15', '2026-09-16', '2026-09-17', '2026-09-18', '2026-09-19', '2026-09-20'];
+  for (const day of weekDays) {
+    fs.writeFileSync(path.join(snapDir, day + '.json'), JSON.stringify({
+      date: day, boundaryUtc: day + 'T00:00:00.000Z', blockNumber: 1000,
+      nft: fixtureNft, chainId: 4663, balances: { [holderA]: 1, [holderB]: 2 },
+    }));
+  }
+  // weights: A=7, B=14, total=21. pot=1000 -> A=floor(7000/21)=333,
+  // B=floor(14000/21)=666, dust=1 -> B (largest weight). Final: A=333, B=667.
+  const pub = spawnSync('node', ['scripts/rewards-publish.js', '--week', '2026-09-14', '--pot', '1000'], {
+    cwd: __dirname, encoding: 'utf8',
+  });
+  log(pub.status === 0, 'rewards: publish script exits 0');
+  const lastLine = (pub.stdout || '').trim().split('\n').pop() || '';
+  log(pub.stdout.includes('publishRoot') && /^0x[0-9a-f]{8,}$/.test(lastLine),
+    'rewards: publish script prints publishRoot calldata');
+  const epochPath = path.join(REWARDS_DIR, 'epochs', '1789344000.json');
+  let epoch = null;
+  try { epoch = JSON.parse(fs.readFileSync(epochPath, 'utf8')); } catch { /* checked below */ }
+  log(!!epoch && epoch.epochId === 1789344000, 'rewards: epoch file written with epochId');
+
+  // Known vector, recomputed by an independent code path (no reuse of the
+  // script's tree builder): 2 leaves -> root = sorted-pair hash of the two.
+  function indepLeaf(addr, amountWei) {
+    return ethers.keccak256(ethers.solidityPacked(['address', 'uint256'], [addr, BigInt(amountWei)]));
+  }
+  function indepPair(a, b) {
+    const [x, y] = BigInt(a) < BigInt(b) ? [a, b] : [b, a];
+    return ethers.keccak256(ethers.concat([x, y]));
+  }
+  const leafA = indepLeaf(holderA, 333);
+  const leafB = indepLeaf(holderB, 667);
+  const expectRoot = indepPair(leafA, leafB);
+  log(epoch && epoch.root.toLowerCase() === expectRoot.toLowerCase(), 'rewards: root matches known vector');
+  log(epoch && epoch.claims[holderA].amount === '333' && epoch.claims[holderB].amount === '667',
+    'rewards: pro-rata shares with dust to largest holder (333/667 of 1000)');
+  const sumClaims = Object.values(epoch.claims).reduce((s, c) => s + BigInt(c.amount), 0n);
+  log(sumClaims === 1000n, 'rewards: claims sum exactly to the pot');
+  // A's proof must be exactly [leafB]; walking it must land on the root
+  // (this is what the Solidity OZ MerkleProof.verify check does).
+  const proofA = epoch.claims[holderA].proof;
+  log(proofA.length === 1 && proofA[0].toLowerCase() === leafB.toLowerCase(), 'rewards: proof of A is [leafB]');
+  log(indepPair(leafA, proofA[0]).toLowerCase() === epoch.root.toLowerCase(), 'rewards: proof of A verifies against the root');
+
+  // R5. served by the API
+  r = await api('GET', '/api/v1/rewards/claim?epoch=1789344000&holder=' + holderA);
+  log(r.status === 200 && r.json.epochId === 1789344000 && r.json.holder === holderA &&
+    r.json.amount === '333' && r.json.root === epoch.root && r.json.totalAmount === '1000' &&
+    Array.isArray(r.json.proof), 'rewards: claim served with full shape');
+  r = await api('GET', '/api/v1/rewards/claim?epoch=1789344000&holder=' + wallet.address);
+  log(r.status === 404 && r.json.error === 'NO_CLAIM', 'rewards: holder with no claim 404');
+
+  // R6. fixture cleanup: the served data was test-only.
+  fs.rmSync(REWARDS_DIR, { recursive: true, force: true });
+
   console.log('\nAll smoke tests passed.');
   server.kill();
   process.exit(0);

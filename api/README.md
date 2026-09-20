@@ -17,7 +17,7 @@ npm start            # node server.js, listens on PORT (default 3000)
 ## Test
 
 ```bash
-npm run smoke        # runs TEST_MODE=1 node smoke.js (28 checks)
+npm run smoke        # runs TEST_MODE=1 node smoke.js (53 checks)
 node test-claim-flow.js   # 11 unit tests: EIP-712 round-trip, calldata, queue
 node e2e-claim-anvil.js   # 13 end-to-end checks on a local Anvil chain:
                           # deploy Muse Dogs, sign a voucher, relayer-submit it,
@@ -31,7 +31,12 @@ of 2000, block 424242), then exercises: config, challenge, unknown-field
 rejection, PoW solve + real `ethers` signature, register (eligible holder),
 idempotent replay, duplicate-identity rejection, challenge replay rejection,
 status, receipt stub, holder-blocked-from-voucher, non-holder voucher, and the
-discovery doc. It wipes `data/db.json` first so every run starts clean.
+discovery doc. The rewards section then checks `/rewards/config` shape, the
+fail-closed 404s, and runs `scripts/rewards-publish.js` end-to-end on 7 fixture
+snapshots: shares math (333/667 of a 1000-wei pot, dust to the largest holder),
+a known-vector merkle root recomputed independently, proof verification, and the
+served `/rewards/claim` shape — then deletes the fixtures. It wipes
+`data/db.json` first so every run starts clean.
 
 ## Environment variables
 
@@ -60,6 +65,8 @@ discovery doc. It wipes `data/db.json` first so every run starts clean.
 | `RELAYER_ENABLED` | `0` | `1` = start the claim relayer on boot (needs the next two vars) |
 | `RELAYER_RPC_URL` | _(unset)_ | Chain RPC for the relayer |
 | `RELAYER_PRIVATE_KEY` | _(unset)_ | Relayer key — holds gas money only; the NFT always mints to the voucher's claimant |
+| `REWARDS_PUBLISHER` | `TBD` | Address (multisig) that publishes the weekly rewards merkle root on-chain |
+| `REWARDS_CONTRACT` | `TBD` | RewardsVault contract holders `claim()` from; `TBD` until deployed |
 
 ## Endpoints
 
@@ -84,6 +91,12 @@ discovery doc. It wipes `data/db.json` first so every run starts clean.
   with `tx_hash`, `explorer_url`, and `token_id` on confirmation.
 - `GET /api/v1/mint/stats` — live `{claims_remaining, paused}` read from the contract.
 - `GET /api/v1/receipt/{registration_id}` — tx hash + token id (stub: pending until distribution).
+- `GET /api/v1/rewards/config` — holder-rewards mechanics: 7-day epochs, daily 00:00 UTC snapshots,
+  weekly payouts from 2% of resale royalties, the publisher and rewards contract (honestly `TBD`
+  until set), and the merkle leaf scheme.
+- `GET /api/v1/rewards/claim?epoch={epochId}&holder={address}` — the holder's `{amount, proof}`
+  plus `{root, totalAmount}` for `claim(epochId, amount, proof)`; 404 when the epoch is
+  unpublished or the holder has no claim. Fails closed, never invents data.
 - `GET /.well-known/muse-dog.json` — machine-readable discovery doc for autonomous muses.
 
 Manual curl flow:
@@ -123,6 +136,14 @@ curl localhost:3000/api/v1/mint/stats
 curl localhost:3000/api/v1/status/<registration_id>
 curl localhost:3000/api/v1/receipt/<registration_id>
 curl localhost:3000/.well-known/muse-dog.json
+
+# 7. holder rewards: snapshot a day, publish a week, read a claim
+#    (rewards scripts are read-only; they never deploy or spend)
+node scripts/rewards-snapshot.js --nft 0x... --rpc https://rpc.mainnet.chain.robinhood.com --day 2026-09-14
+#    then, once all 7 daily snapshots exist:
+node scripts/rewards-publish.js --week 2026-09-14 --pot 1000000000000000000
+#    serve the claim for claim():
+curl 'localhost:3000/api/v1/rewards/claim?epoch=1789344000&holder=0x...'
 ```
 
 ## Error codes (stable)
@@ -135,7 +156,8 @@ curl localhost:3000/.well-known/muse-dog.json
 `VOUCHER_ALREADY_ISSUED_FOR_IDENTITY` · `ALREADY_HOLDER` · `NOT_WHITELISTED` (403) ·
 `WHITELIST_UNAVAILABLE` (503, retryable) · `VOUCHER_SIGNER_UNAVAILABLE` (503, retryable) ·
 `CONTRACT_NOT_DEPLOYED` (503, retryable) · `VOUCHER_EXPIRED` · `NONCE_CONSUMED` ·
-`BAD_VOUCHER_SIGNATURE` · `MINT_PAUSED` · `CLAIMS_EXHAUSTED` · `RELAYER_DISABLED` (503, retryable)
+`BAD_VOUCHER_SIGNATURE` · `MINT_PAUSED` · `CLAIMS_EXHAUSTED` · `RELAYER_DISABLED` (503, retryable) ·
+`INVALID_EPOCH` (400) · `NO_CLAIM` (404, holder has no rewards claim in that epoch)
 
 ## Hardening in this scaffold
 
@@ -173,3 +195,11 @@ curl localhost:3000/.well-known/muse-dog.json
 5. **RPC** — no providers configured by default (fail closed, by design).
 6. **Receipt** — `tx_hash`/`token_id` stay null until the distribution runner
    writes them.
+7. **Rewards publishing** — `scripts/rewards-snapshot.js` (daily 00:00 UTC
+   holder balances from Transfer events) and `scripts/rewards-publish.js`
+   (weekly time-weighted pro-rata shares, sorted-pair merkle tree, exact
+   `publishRoot` calldata) are live and self-verifying, and the API serves
+   `/api/v1/rewards/config` + `/api/v1/rewards/claim`. But no root has been
+   published on-chain yet: `REWARDS_CONTRACT` is unset and the rewards
+   contract is not deployed. The claim endpoint 404s until a real epoch file
+   exists.

@@ -2,28 +2,28 @@
   "muse_smoke_1": {
     "muse_id": "muse_smoke_1",
     "name": "muse_smoke_1",
-    "public_key": "C8CltGOBydGYUKwR0k14zxowi4-D3AzHZ2SqoU60MVs",
+    "public_key": "wdg-ieeS_FgdKAGo9uSPJnKORjxLqTkPYC7gNYPfgoo",
     "key_alg": "ed25519",
     "id_verified": true
   },
   "muse_smoke_3": {
     "muse_id": "muse_smoke_3",
     "name": "muse_smoke_3",
-    "public_key": "0253qPksmbV84s4Vd65AVdwwvQ1esBhZMMKFDD9nYzE",
+    "public_key": "zL6skdB7MNaFDUQDz592tod4bvyyyBd1yd3H0vlZG5E",
     "key_alg": "ed25519",
     "id_verified": true
   },
   "muse_smoke_7": {
     "muse_id": "muse_smoke_7",
     "name": "muse_smoke_7",
-    "public_key": "RnZwnWyTeEwyCaD9hUifZA5gO36hWHpT3XqUPzlzzGo",
+    "public_key": "5PQ7hXn-1O2hKrciTcLI_VpadAF6hAE3rkqiATP3d64",
     "key_alg": "ed25519",
     "id_verified": true
   },
   "muse_smoke_9": {
     "muse_id": "muse_smoke_9",
     "name": "muse_smoke_9",
-    "public_key": "Z8NvO9lpWf8nU8hieKiedJLsavu6dnvtQ06cs2GfEqU",
+    "public_key": "33yMfwuuXNLNftrAwTgE0MLe9JVGutQJCqgaK-gdxoc",
     "key_alg": "ed25519",
     "id_verified": true
   }

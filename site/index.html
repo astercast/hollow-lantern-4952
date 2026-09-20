@@ -72,8 +72,8 @@
 <script>
 (function () {
   // Passcode is verified SERVER-SIDE by /api/unlock (see site/api/unlock.js).
-  // A correct code sets a signed HttpOnly cookie; the edge middleware
-  // (site/middleware.js) requires that cookie for every inner page.
+  // A correct code sets a signed HttpOnly cookie; the rewrite gate
+  // (site/api/gate.js via site/vercel.json) requires that cookie for every inner page.
   // Nothing here can be bypassed from page source.
   var pw = document.getElementById("pw");
   var msg = document.getElementById("msg");

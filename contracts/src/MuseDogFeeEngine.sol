@@ -5,16 +5,17 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+import {V4Math} from "./V4Math.sol";
 
 /// @title MuseDogFeeEngine
 /// @notice Autonomous fee engine for the Muse Dogs collection (MUSEDOGS) on
 ///         Robinhood Chain (chain id 4663).
 ///
-///         This contract is the ERC-2981 royalty recipient of the collection.
-///         It collects the 2.5% resale royalty (via the separate royalty
-///         splitter) in ETH and, once enough has piled up, ANYONE can call
-///         process() to run the full loop. There is no owner, no multisig
-///         signing, no middleman, no off switch.
+///         The separate royalty splitter is the ERC-2981 recipient; this
+///         engine receives its 2.5% share of sale price from the splitter in
+///         ETH. Once enough has piled up, ANYONE can call process() to run
+///         the full loop. There is no owner, no multisig signing, no
+///         middleman, no off switch.
 ///
 ///         Every process() run does three things:
 ///           1. BUYBACK — half the processed ETH buys MDOG on the MDOG/ETH
@@ -71,12 +72,14 @@ contract MuseDogFeeEngine is ReentrancyGuard {
         bytes hookData;
     }
 
-    /// @notice Mint-position params for the V4 PositionManager.
+    /// @notice Mint-position params for the V4 PositionManager (MINT_POSITION,
+    ///         action 0x02): explicit liquidity followed by the amount caps.
     /// @dev Field order mirrors v4-periphery IPositionManager mint params.
     struct MintPositionParams {
         PoolKey poolKey;
         int24 tickLower;
         int24 tickUpper;
+        uint256 liquidity;
         uint256 amount0Max;
         uint256 amount1Max;
         address recipient;
@@ -115,14 +118,24 @@ contract MuseDogFeeEngine is ReentrancyGuard {
     // Universal Router commands (universal-router Commands library)
     uint8 private constant CMD_WRAP_ETH = 0x0b;
     uint8 private constant CMD_V4_SWAP = 0x10;
-    uint8 private constant CMD_SWEEP = 0x04;
 
     // V4 PositionManager / swap-router actions (v4-periphery Actions library)
+    //
+    // NOTE on the mint action: the engine uses MINT_POSITION (0x02) with
+    // EXPLICIT, on-chain-computed liquidity — not MINT_POSITION_FROM_DELTAS
+    // (0x05). This is the exact pattern of the proven on-chain MDOG/ETH mint
+    // (position NFT 2864985): actions [0x02, 0x0d, 0x14] with 8-field params
+    // (poolKey, tickLower, tickUpper, liquidity, amount0Max, amount1Max,
+    // recipient, hookData). During fork testing, 0x05 with from-deltas params
+    // made the deployed PositionManager call PoolManager.modifyLiquidity with
+    // liquidityDelta = 0 (CannotUpdateEmptyPosition), while 0x02 with explicit
+    // liquidity is byte-proven to work on this PositionManager.
     uint8 private constant ACT_SWAP_EXACT_IN_SINGLE = 0x06;
-    uint8 private constant ACT_MINT_POSITION_FROM_DELTAS = 0x05;
+    uint8 private constant ACT_MINT_POSITION = 0x02;
     uint8 private constant ACT_SETTLE_ALL = 0x0c;
     uint8 private constant ACT_SETTLE_PAIR = 0x0d;
     uint8 private constant ACT_TAKE_ALL = 0x0f;
+    uint8 private constant ACT_SWEEP = 0x14;
 
     // -------------------------------------------------------------------------
     // Immutables (set once at deploy, never changeable — that is the point)
@@ -203,6 +216,10 @@ contract MuseDogFeeEngine is ReentrancyGuard {
         bytes32 poolId = keccak256(abi.encode(poolKey));
         (uint160 sqrtPriceX96,,,) = IStateView(STATE_VIEW).getSlot0(poolId);
         require(sqrtPriceX96 != 0, "FeeEngine: pool not initialized");
+        require(
+            minProcessAmount <= type(uint256).max / MAX_PROCESS_MULTIPLE,
+            "FeeEngine: minProcessAmount too large"
+        );
 
         MDOG = IERC20(mdog);
         WETH = IERC20(weth);
@@ -300,7 +317,7 @@ contract MuseDogFeeEngine is ReentrancyGuard {
     {
         if (ethIn == 0) return 0;
 
-        uint256 minOut = (_spotMdogOut(ethIn) * MIN_OUT_BPS) / 10_000;
+        uint256 minOut = Math.mulDiv(_spotMdogOut(ethIn), MIN_OUT_BPS, 10_000);
 
         // The input/ETH-leg currency: where the swap's input token settles.
         // (Not always currency0 — for a WETH pool with MDOG as currency0,
@@ -330,18 +347,18 @@ contract MuseDogFeeEngine is ReentrancyGuard {
         bytes memory commands;
         bytes[] memory inputs;
         if (NATIVE_POOL) {
-            commands = abi.encodePacked(bytes1(CMD_V4_SWAP), bytes1(CMD_SWEEP));
-            inputs = new bytes[](2);
+            // V4_SWAP only: TAKE_ALL delivers MDOG directly to this engine
+            // (no SWEEP needed — the fork trace proved the router holds zero).
+            commands = abi.encodePacked(bytes1(CMD_V4_SWAP));
+            inputs = new bytes[](1);
             inputs[0] = abi.encode(actions, swapParams);
-            inputs[1] = abi.encode(address(MDOG), address(this), minOut);
         } else {
             commands = abi.encodePacked(
-                bytes1(CMD_WRAP_ETH), bytes1(CMD_V4_SWAP), bytes1(CMD_SWEEP)
+                bytes1(CMD_WRAP_ETH), bytes1(CMD_V4_SWAP)
             );
-            inputs = new bytes[](3);
+            inputs = new bytes[](2);
             inputs[0] = abi.encode(ROUTER_SELF, ethIn); // wrap, keep in router
             inputs[1] = abi.encode(actions, swapParams);
-            inputs[2] = abi.encode(address(MDOG), address(this), minOut);
         }
         IUniversalRouter(UNIVERSAL_ROUTER).execute{value: ethIn}(
             commands, inputs, block.timestamp
@@ -357,8 +374,13 @@ contract MuseDogFeeEngine is ReentrancyGuard {
 
     /// @dev Mint a full-range V4 LP position and send the NFT straight to the
     ///      dead address. The liquidity can never be withdrawn — by anyone.
-    ///      Token pulls go through Permit2 with the PositionManager as
-    ///      spender (never the PoolManager — see AGENTS.md).
+    ///      Uses MINT_POSITION (action 0x02) with EXPLICIT liquidity computed
+    ///      on-chain from the current spot price — the same pattern as the
+    ///      proven on-chain MDOG/ETH mint. Token pulls go through Permit2
+    ///      with the PositionManager as spender (never the PoolManager —
+    ///      see AGENTS.md). A final SWEEP returns any unneeded native ETH
+    ///      (msg.value minus what the mint actually consumed) to the engine
+    ///      so no dust is stranded in the PositionManager.
     function _mintPositionToDeadAddress(uint256 ethAmount, uint256 mdogAmount)
         internal
     {
@@ -375,6 +397,22 @@ contract MuseDogFeeEngine is ReentrancyGuard {
             amount0Max = ethAmount;
             amount1Max = mdogAmount;
         }
+
+        // Explicit liquidity from the live spot price. getLiquidityForAmounts
+        // is defined so the mint never needs more than (amount0Max,
+        // amount1Max); leftover dust simply stays in the engine for the next
+        // run. A zero result means dust-only amounts — skip the mint rather
+        // than revert and brick process().
+        bytes32 poolId = keccak256(abi.encode(POOL_KEY));
+        (uint160 sqrtPriceX96,,,) = IStateView(STATE_VIEW).getSlot0(poolId);
+        uint128 liquidity = V4Math.getLiquidityForAmounts(
+            sqrtPriceX96,
+            V4Math.getSqrtPriceAtTick(TICK_LOWER),
+            V4Math.getSqrtPriceAtTick(TICK_UPPER),
+            amount0Max,
+            amount1Max
+        );
+        if (liquidity == 0) return;
 
         if (NATIVE_POOL) {
             nativeValue = ethAmount;
@@ -398,20 +436,22 @@ contract MuseDogFeeEngine is ReentrancyGuard {
         );
 
         bytes memory actions = abi.encodePacked(
-            bytes1(ACT_MINT_POSITION_FROM_DELTAS),
+            bytes1(ACT_MINT_POSITION),
             bytes1(ACT_SETTLE_PAIR)
         );
         bytes[] memory params = new bytes[](2);
+        // Encode as flattened fields (not a struct) to match the real
+        // PositionManager's abi.decode — struct encoding adds a leading
+        // tuple offset that causes SliceOutOfBounds on the real chain.
         params[0] = abi.encode(
-            MintPositionParams({
-                poolKey: POOL_KEY,
-                tickLower: TICK_LOWER,
-                tickUpper: TICK_UPPER,
-                amount0Max: amount0Max,
-                amount1Max: amount1Max,
-                recipient: BURN_ADDRESS, // born burned
-                hookData: ""
-            })
+            POOL_KEY,
+            TICK_LOWER,
+            TICK_UPPER,
+            uint256(liquidity),
+            amount0Max,
+            amount1Max,
+            BURN_ADDRESS, // born burned
+            bytes("")
         );
         params[1] = abi.encode(POOL_KEY.currency0, POOL_KEY.currency1);
 
@@ -463,4 +503,16 @@ interface IPermit2 {
         uint160 amount,
         uint48 expiration
     ) external;
+
+    function allowance(address owner, address token, address spender)
+        external
+        view
+        returns (uint160 amount, uint48 expiration, uint48 nonce);
+}
+
+interface IPermit2Allowance {
+    function allowance(address owner, address token, address spender)
+        external
+        view
+        returns (uint160 amount, uint48 expiration, uint48 nonce);
 }

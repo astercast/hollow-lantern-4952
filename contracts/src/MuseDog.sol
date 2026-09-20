@@ -14,10 +14,10 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 ///         Name/symbol locked 2026-09-18: "Muse Dogs" / "MUSEDOGS".
 /// @dev Non-upgradeable. No proxies, no selfdestruct, no delegatecall, no owner "god mint".
 ///      Supply is split into three contract-enforced buckets that can never overlap:
-///        - 380 holder airdrops  (owner-only batch mint to verified addresses)
-///        - 100 community claims (free, voucher-based, one per address)
+///        - 100 holder airdrops  (owner-only batch mint to verified addresses)
+///        - 380 community claims (free, voucher-based, one per address)
 ///        - 20  reserve          (owner-only mints for waitlist, prizes, team)
-///      380 + 100 + 20 = 500 = MAX_SUPPLY. Token IDs are sequential across buckets.
+///      100 + 380 + 20 = 500 = MAX_SUPPLY. Token IDs are sequential across buckets.
 contract MuseDog is ERC721, ERC721Royalty, EIP712, Ownable, Pausable, ReentrancyGuard {
     // -------------------------------------------------------------------------
     // Constants
@@ -26,17 +26,21 @@ contract MuseDog is ERC721, ERC721Royalty, EIP712, Ownable, Pausable, Reentrancy
     /// @notice Absolute hard cap. Nothing can ever mint above this.
     uint256 public constant MAX_SUPPLY = 500;
     /// @notice Holder airdrop bucket cap (direct mints by the project).
-    uint256 public constant HOLDER_CAP = 380;
+    uint256 public constant HOLDER_CAP = 100;
     /// @notice Community bucket cap (voucher claims + reserve combined).
-    uint256 public constant COMMUNITY_CAP = 120;
+    uint256 public constant COMMUNITY_CAP = 400;
     /// @notice Reserve slice inside the community bucket.
     uint256 public constant RESERVE_MAX = 20;
-    /// @notice Max voucher claims: COMMUNITY_CAP - RESERVE_MAX = 100.
+    /// @notice Max voucher claims: COMMUNITY_CAP - RESERVE_MAX = 380.
     uint256 public constant COMMUNITY_CLAIM_MAX = COMMUNITY_CAP - RESERVE_MAX;
     /// @notice Max recipients per holderMintBatch call (gas safety).
     uint256 public constant MAX_BATCH = 100;
-    /// @notice Royalty ceiling: 700 bps = 7%. Never changeable above this.
-    uint96 public constant MAX_ROYALTY_BPS = 700;
+    /// @notice EIP-2981 royalty: 500 bps = 5%. Locked 2026-09-19 (supersedes the
+    ///         old 7% ceiling). Fixed forever — there is no setter anywhere in
+    ///         this contract. The recipient is the MuseDogRoyaltySplitter,
+    ///         which splits every royalty payment 10/40/50
+    ///         (Mikey / holder-rewards vault / fee engine) on arrival.
+    uint256 public constant ROYALTY_BPS = 500;
     /// @notice Robinhood Chain mainnet chain id, bound into every voucher.
     uint256 public constant CHAIN_ID = 4663;
 
@@ -82,7 +86,6 @@ contract MuseDog is ERC721, ERC721Royalty, EIP712, Ownable, Pausable, Reentrancy
     error AlreadyClaimed();
     error BadVoucherSignature();
     error MetadataAlreadyFrozen();
-    error RoyaltyTooHigh();
 
     // -------------------------------------------------------------------------
     // Events
@@ -104,26 +107,29 @@ contract MuseDog is ERC721, ERC721Royalty, EIP712, Ownable, Pausable, Reentrancy
     /// @param initialBaseURI    Arweave gateway/manifesto base URI (e.g. https://arweave.net/<manifest-txid>/),
     ///                           set once the 500 images + metadata are uploaded (see storage-plan-arweave.md).
     ///                           Reveal is immediate, so this must be final before the mint opens.
-    /// @param royaltyReceiver  EIP-2981 royalty receiver (zero address disables).
-    /// @param royaltyBps       EIP-2981 royalty in basis points, bounded at 700 (7%).
+    /// @param royaltySplitter  MuseDogRoyaltySplitter: permanent ERC-2981 royalty
+    ///                           recipient. Receives a locked 5% (500 bps) of every
+    ///                           resale, split on arrival 10/40/50 (Mikey /
+    ///                           holder-rewards vault / fee engine). A zero address
+    ///                           reverts — the royalty cannot be disabled.
     constructor(
         address initialOwner,
         address initialVoucherSigner,
         string memory initialBaseURI,
-        address royaltyReceiver,
-        uint96 royaltyBps
+        address royaltySplitter
     )
         ERC721("Muse Dogs", "MUSEDOGS")
         EIP712("Muse Dogs", "1")
         Ownable(initialOwner)
     {
-        if (initialOwner == address(0) || initialVoucherSigner == address(0)) revert ZeroAddress();
-        if (royaltyBps > MAX_ROYALTY_BPS) revert RoyaltyTooHigh();
+        if (
+            initialOwner == address(0) ||
+            initialVoucherSigner == address(0) ||
+            royaltySplitter == address(0)
+        ) revert ZeroAddress();
         voucherSigner = initialVoucherSigner;
         _baseTokenURI = initialBaseURI;
-        if (royaltyReceiver != address(0) && royaltyBps > 0) {
-            _setDefaultRoyalty(royaltyReceiver, royaltyBps);
-        }
+        _setDefaultRoyalty(royaltySplitter, uint96(ROYALTY_BPS));
     }
 
     // -------------------------------------------------------------------------
@@ -269,19 +275,11 @@ contract MuseDog is ERC721, ERC721Royalty, EIP712, Ownable, Pausable, Reentrancy
     // Royalties (EIP-2981)
     // -------------------------------------------------------------------------
 
-    /// @notice Update the default royalty. Bounded at 7%.
-    /// @dev The 7% total is unchanged; the fee-engine receiver routes 0.5%
-    ///      of it to Mikey's Bankr address and runs its loop on the rest.
-    ///      Passing (address(0), 0) removes the default royalty entirely.
-    function setDefaultRoyalty(address receiver, uint96 feeNumerator) external onlyOwner {
-        if (feeNumerator > MAX_ROYALTY_BPS) revert RoyaltyTooHigh();
-        if (receiver == address(0)) {
-            if (feeNumerator != 0) revert ZeroAddress();
-            _deleteDefaultRoyalty();
-        } else {
-            _setDefaultRoyalty(receiver, feeNumerator);
-        }
-    }
+    /// @notice The collection royalty is pinned at ROYALTY_BPS (5%) forever and
+    ///         points at the MuseDogRoyaltySplitter, which splits each payment
+    ///         10/40/50 (Mikey / holder-rewards vault / fee engine).
+    /// @dev There is intentionally no setter: the receiver and the bps were fixed
+    ///      at deploy and can never be changed or removed.
 
     // -------------------------------------------------------------------------
     // Supply helpers

@@ -4,12 +4,14 @@ pragma solidity ^0.8.30;
 import {Test} from "forge-std/Test.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {MuseDog} from "../src/MuseDog.sol";
+import {MuseDogRoyaltySplitter} from "../src/MuseDogRoyaltySplitter.sol";
 
 /// @notice Full test suite for the Muse Dogs collection contract.
 ///         Covers caps, both mint paths, voucher replay safety, pause,
-///         metadata freeze, access control, and royalty bounds.
+///         metadata freeze, access control, and the pinned royalty.
 contract MuseDogTest is Test {
     MuseDog public muse;
+    MuseDogRoyaltySplitter public splitter;
 
     address public owner = makeAddr("multisig-owner");
     uint256 public signerKey = 0xA11CE;
@@ -22,7 +24,13 @@ contract MuseDogTest is Test {
 
     function setUp() public {
         voucherSigner = vm.addr(signerKey);
-        muse = new MuseDog(owner, voucherSigner, BASE, owner, 700); // 7% royalty (locked)
+        // 10/40/50 royalty splitter: Mikey / rewards vault / fee engine.
+        splitter = new MuseDogRoyaltySplitter(
+            makeAddr("mikey"),
+            makeAddr("rewards-vault"),
+            makeAddr("fee-engine")
+        );
+        muse = new MuseDog(owner, voucherSigner, BASE, address(splitter));
     }
 
     // -------------------------------------------------------------------------
@@ -109,14 +117,10 @@ contract MuseDogTest is Test {
     }
 
     function test_HolderBatchEnforcesCap() public {
-        // Fill the holder bucket exactly: 3 x 100 + 80 = 380.
-        for (uint256 i = 0; i < 3; i++) {
-            vm.prank(owner);
-            muse.holderMintBatch(_batch(100, 100 + i));
-        }
+        // Fill the holder bucket exactly: one full batch of 100.
         vm.prank(owner);
-        muse.holderMintBatch(_batch(80, 400));
-        assertEq(muse.holderMinted(), 380);
+        muse.holderMintBatch(_batch(100, 100));
+        assertEq(muse.holderMinted(), 100);
 
         address[] memory one = new address[](1);
         one[0] = alice;
@@ -256,12 +260,12 @@ contract MuseDogTest is Test {
 
     function test_CommunityClaimCapEnforced() public {
         uint256 expiry = block.timestamp + 7 days;
-        // Fill all 100 voucher claims.
-        for (uint256 i = 0; i < 100; i++) {
+        // Fill all 380 voucher claims.
+        for (uint256 i = 0; i < 380; i++) {
             address claimant = address(uint160(i + 1));
             muse.claim(claimant, i + 1000, expiry, _signVoucher(claimant, i + 1000, expiry));
         }
-        assertEq(muse.communityMinted(), 100);
+        assertEq(muse.communityMinted(), 380);
         assertEq(muse.communityClaimsRemaining(), 0);
 
         bytes memory lastSig = _signVoucher(alice, 9999, expiry); // precompute: nested calls defeat expectRevert
@@ -295,15 +299,11 @@ contract MuseDogTest is Test {
     // -------------------------------------------------------------------------
 
     function test_CapsNeverExceed500() public {
-        // 380 holder + 100 claims + 20 reserve = exactly 500.
-        for (uint256 i = 0; i < 3; i++) {
-            vm.prank(owner);
-            muse.holderMintBatch(_batch(100, 500 + i));
-        }
+        // 100 holder + 380 claims + 20 reserve = exactly 500.
         vm.prank(owner);
-        muse.holderMintBatch(_batch(80, 800));
+        muse.holderMintBatch(_batch(100, 500));
         uint256 expiry = block.timestamp + 7 days;
-        for (uint256 i = 0; i < 100; i++) {
+        for (uint256 i = 0; i < 380; i++) {
             address claimant = address(uint160(9_000_000 + i));
             muse.claim(claimant, 50_000 + i, expiry, _signVoucher(claimant, 50_000 + i, expiry));
         }
@@ -433,10 +433,6 @@ contract MuseDogTest is Test {
         vm.prank(attacker);
         vm.expectRevert();
         muse.freezeMetadata();
-
-        vm.prank(attacker);
-        vm.expectRevert();
-        muse.setDefaultRoyalty(attacker, 100);
     }
 
     // -------------------------------------------------------------------------
@@ -473,38 +469,32 @@ contract MuseDogTest is Test {
     // Royalties
     // -------------------------------------------------------------------------
 
-    function test_RoyaltyBounded() public {
-        vm.prank(owner);
-        vm.expectRevert(MuseDog.RoyaltyTooHigh.selector);
-        muse.setDefaultRoyalty(owner, 701); // above 7%
+    /// @dev The royalty is pinned, not settable: ERC-2981 points at the splitter
+    ///      with a fixed 500 bps (5%) on every token id. There is no setter to
+    ///      probe, so the invariant is "royaltyInfo always returns (splitter, 5%)".
+    function test_RoyaltyPinnedAtFivePercent() public view {
+        assertEq(muse.ROYALTY_BPS(), 500);
 
-        vm.prank(owner);
-        muse.setDefaultRoyalty(owner, 700); // exactly 7% is fine
         (address receiver, uint256 amount) = muse.royaltyInfo(0, 10_000);
-        assertEq(receiver, owner);
-        assertEq(amount, 700);
+        assertEq(receiver, address(splitter));
+        assertEq(amount, 500);
 
-        // Zero receiver with nonzero fee is rejected; (0,0) removes royalty.
-        vm.prank(owner);
-        vm.expectRevert(MuseDog.ZeroAddress.selector);
-        muse.setDefaultRoyalty(address(0), 100);
-
-        vm.prank(owner);
-        muse.setDefaultRoyalty(address(0), 0);
-        (receiver, amount) = muse.royaltyInfo(0, 10_000);
-        assertEq(receiver, address(0));
-        assertEq(amount, 0);
+        // Same on a different token id and a realistic sale price.
+        (receiver, amount) = muse.royaltyInfo(499, 1 ether);
+        assertEq(receiver, address(splitter));
+        assertEq(amount, 0.05 ether);
     }
 
     function test_ConstructorRejectsBadParams() public {
         // OZ's Ownable base constructor rejects a zero owner before our body runs.
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableInvalidOwner.selector, address(0)));
-        new MuseDog(address(0), voucherSigner, BASE, owner, 1000);
+        new MuseDog(address(0), voucherSigner, BASE, address(splitter));
 
         vm.expectRevert(MuseDog.ZeroAddress.selector);
-        new MuseDog(owner, address(0), BASE, owner, 1000);
+        new MuseDog(owner, address(0), BASE, address(splitter));
 
-        vm.expectRevert(MuseDog.RoyaltyTooHigh.selector);
-        new MuseDog(owner, voucherSigner, BASE, owner, 1001);
+        // A zero royalty splitter would kill royalties — it reverts.
+        vm.expectRevert(MuseDog.ZeroAddress.selector);
+        new MuseDog(owner, voucherSigner, BASE, address(0));
     }
 }

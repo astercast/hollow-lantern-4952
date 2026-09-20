@@ -11,7 +11,7 @@
 //     visible on-chain and has a documented fallback (self-submit calldata).
 //   - The relayer key holds only gas money. If it is drained, top it up;
 //     no NFTs or user funds are ever at risk.
-//   - One voucher per identity/address bounds griefing: at most 100 txs.
+//   - One voucher per identity/address bounds griefing: at most 380 txs.
 //   - The voucher signature is re-verified against the ON-CHAIN
 //     voucherSigner() before every submission — the chain is the source of
 //     truth, not our config.

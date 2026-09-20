@@ -1,6 +1,8 @@
 // Muse Dogs — registration + eligibility API scaffold.
 // Node + Express, plain JS. See README.md for env vars and how to run.
 const express = require('express');
+const fs = require('fs');
+const path = require('path');
 const { randomUUID, randomBytes } = require('crypto');
 const { ethers } = require('ethers');
 
@@ -27,13 +29,19 @@ const THRESHOLD_USD = Number(process.env.THRESHOLD_USD || 10);
 const MDOG_DECIMALS = Number(process.env.MDOG_DECIMALS || 18);
 const POW_DIFFICULTY = Number(process.env.POW_DIFFICULTY || 2);
 const CHALLENGE_TTL_MS = 10 * 60 * 1000;
-const VOUCHER_CAP = 100;
+const VOUCHER_CAP = 380;
 const CURRENT_PHASE = process.env.CURRENT_PHASE || 'rules-locked';
 // Chain the Muse Dogs NFT contract lives on. 4663 = Robinhood Chain mainnet.
 // Overridable for local rehearsal (e.g. 31337 on anvil) — the voucher
 // signature binds this exact chain id, so signing and submitting must agree.
 const NFT_CHAIN_ID = Number(process.env.NFT_CHAIN_ID || 4663);
 const EXPLORER_TX_URL = process.env.EXPLORER_TX_URL || 'https://robinhoodchain.blockscout.com/tx/';
+// Holder rewards (weekly epochs): the multisig address that publishes the
+// weekly merkle root, and the rewards contract holders claim from. Both are
+// TBD until the rewards system ships — the config endpoint says so honestly.
+const REWARDS_PUBLISHER = process.env.REWARDS_PUBLISHER || 'TBD';
+const REWARDS_CONTRACT = process.env.REWARDS_CONTRACT || 'TBD';
+const REWARDS_DATA_DIR = path.join(__dirname, 'data', 'rewards');
 
 const env = {
   TEST_MODE: process.env.TEST_MODE,
@@ -254,7 +262,7 @@ app.get('/api/v1/config', (req, res) => {
     mdog_contract: MDOG_CONTRACT,
     nft_contract: CONTRACT_ADDRESS,
     holder_threshold_usd: THRESHOLD_USD,
-    supply: { total: 500, holder_airdrops: 380, community_mints: 100, reserve: 20 },
+    supply: { total: 500, holder_airdrops: 100, community_mints: 380, reserve: 20 },
     phases: {
       current: CURRENT_PHASE,
       registration_opens: process.env.REGISTRATION_OPENS || 'TBD',
@@ -543,7 +551,7 @@ app.post('/api/v1/community-voucher', async (req, res) => {
     }
 
     if (db.vouchers.length >= VOUCHER_CAP) {
-      return err(res, 409, 'VOUCHER_CAP_REACHED', 'All 100 community vouchers are issued.');
+      return err(res, 409, 'VOUCHER_CAP_REACHED', 'All 380 community vouchers are issued.');
     }
     // `claimant` is always stored checksummed (see `address` above), so
     // compare in the same canonical form.
@@ -728,8 +736,58 @@ app.get('/api/v1/receipt/:registration_id', (req, res) => {
   });
 });
 
-app.get('/.well-known/muse-dog.json', (req, res) => {
+// --- holder rewards ---------------------------------------------------------
+// Weekly epochs: 7 daily snapshots (00:00 UTC), time-weighted pro-rata
+// shares, a weekly merkle root published on-chain by the multisig, pull
+// claims by holders. The backend builders are api/scripts/rewards-*.js.
+// Everything here fails closed: no epoch file => 404, no claim for the
+// holder => 404. No data is ever invented.
+
+app.get('/api/v1/rewards/config', (req, res) => {
   res.json({
+    epoch_days: 7,
+    snapshot: 'daily 00:00 UTC',
+    payout: 'weekly',
+    pot_source: '2% of resale royalties (where honored)',
+    publisher: REWARDS_PUBLISHER,
+    rewards_contract: REWARDS_CONTRACT,
+    leaf_scheme: 'keccak256(abi.encode(address,uint256)), sorted pairs',
+    data_dir: 'api/data/rewards',
+  });
+});
+
+app.get('/api/v1/rewards/claim', (req, res) => {
+  const epochRaw = String(req.query.epoch || '');
+  if (!/^\d+$/.test(epochRaw)) {
+    return err(res, 400, 'INVALID_EPOCH', 'Query param epoch must be the epoch id (the Monday 00:00 UTC unix timestamp).');
+  }
+  let holder;
+  try {
+    holder = checksumAddress(req.query.holder || '');
+  } catch (e) {
+    return err(res, 400, e.code || 'INVALID_ADDRESS', e.message || 'Not a valid holder address.');
+  }
+  let doc;
+  try {
+    doc = JSON.parse(fs.readFileSync(path.join(REWARDS_DATA_DIR, 'epochs', epochRaw + '.json'), 'utf8'));
+  } catch {
+    return err(res, 404, 'NOT_FOUND', 'No published rewards for that epoch yet.', { epoch: epochRaw });
+  }
+  const claim = doc.claims && doc.claims[holder];
+  if (!claim) {
+    return err(res, 404, 'NO_CLAIM', 'This holder has no claim in that epoch.', { epoch: epochRaw, holder });
+  }
+  res.json({
+    epochId: doc.epochId,
+    holder,
+    amount: claim.amount,
+    proof: claim.proof,
+    root: doc.root,
+    totalAmount: doc.totalAmount,
+  });
+});
+
+app.get('/.well-known/muse-dog.json', (req, res) => {  res.json({
     name: 'Muse Dogs',
     chain: { id: CHAIN_ID, name: 'Robinhood Chain', currency: 'ETH' },
     nft_chain: { id: NFT_CHAIN_ID, name: 'Robinhood Chain', currency: 'ETH' },
@@ -747,12 +805,13 @@ app.get('/.well-known/muse-dog.json', (req, res) => {
       },
     },
     holder_threshold: { usd: THRESHOLD_USD, token: 'MDOG' },
-    supply: { total: 500, holder_airdrops: 380, community_mints: 100, reserve: 20 },
+    supply: { total: 500, holder_airdrops: 100, community_mints: 380, reserve: 20 },
     royalty_fee_engine: {
-      royalty_pct: 7,
+      royalty_pct: 5,
+      royalty_split: '0.5% to Mikey (raw ETH, immutable); 2% to the weekly holder rewards pot; 2.5% to the autonomous fee engine',
+      pot_shares: '10% Mikey; 40% holder rewards; 50% fee engine',
       owner: 'none — autonomous contract',
       process: 'anyone may call process() once collected fees cross the threshold',
-      split: '50% buys MDOG and burns it; 50% becomes MDOG/ETH liquidity, LP position NFT minted directly to a dead address',
     },
     phases: { current: CURRENT_PHASE },
     endpoints: {
@@ -765,6 +824,8 @@ app.get('/.well-known/muse-dog.json', (req, res) => {
       claim_status: 'GET /api/v1/claim/status/{job_id}',
       mint_stats: 'GET /api/v1/mint/stats',
       receipt: 'GET /api/v1/receipt/{registration_id}',
+      rewards_config: 'GET /api/v1/rewards/config',
+      rewards_claim: 'GET /api/v1/rewards/claim?epoch={epochId}&holder={address}',
     },
     docs: '/api.html',
     verify: '/verify.html',
