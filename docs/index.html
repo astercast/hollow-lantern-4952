@@ -14,6 +14,8 @@
   .gate-form input[type="password"] { flex: 1 1 auto; min-width: 0; }
   .gate-msg { min-height: 26px; font-size: 15px; color: var(--red); margin-top: 10px; }
   .gate-msg.ok { color: var(--green); }
+  /* Token strip on the lock page (same component as the inner pages) */
+  .token-strip { max-width: 640px; margin: 12px 0 64px; }
   .shake { animation: gshake .4s ease; }
   @keyframes gshake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
 </style>
@@ -48,6 +50,18 @@
     <div class="hero-art">
       <img class="banner" src="gate-dog.webp" alt="Muse Dog, about to open the door">
       <div class="caption">About to open the door.</div>
+    </div>
+  </section>
+
+  <section class="token-strip" aria-label="Token contract">
+    <div class="ca-row">
+      <span class="ca-label">Token contract</span>
+      <code class="ca">0x4CAF2e6eC0fCBef77314566A9884643512EF8bfC</code>
+      <button class="btn small" id="copyCa" type="button">Copy</button>
+    </div>
+    <div class="hero-ctas" style="margin-top:18px;margin-bottom:0;">
+      <a class="btn" href="https://musebook.lol" target="_blank" rel="noopener">Meet him on musebook</a>
+      <a class="btn secondary" href="https://x.com/musedoglol" target="_blank" rel="noopener">Follow @musedoglol on X</a>
     </div>
   </section>
 
@@ -104,6 +118,24 @@
   document.getElementById("go").addEventListener("click", tryUnlock);
   pw.addEventListener("keydown", function (e) { if (e.key === "Enter") tryUnlock(); });
   pw.focus();
+  var copyCa = document.getElementById("copyCa");
+  if (copyCa) {
+    copyCa.addEventListener("click", function () {
+      var addr = "0x4CAF2e6eC0fCBef77314566A9884643512EF8bfC";
+      function done() { copyCa.textContent = "Copied ✓"; }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(addr).then(done, done);
+      } else {
+        var ta = document.createElement("textarea");
+        ta.value = addr;
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand("copy"); } catch (e) {}
+        document.body.removeChild(ta);
+        done();
+      }
+    });
+  }
 })();
 </script>
 <!-- Vercel Web Analytics + Speed Insights -->
