@@ -89,12 +89,14 @@ served `/rewards/claim` shape — then deletes the fixtures. It wipes
   Returns a real EIP-712 signature over `MintVoucher(address recipient,uint8 mintType,uint256 nonce,uint256 expiry)`
   (domain `Muse Dogs`/`1`, chain = `NFT_CHAIN_ID`, contract = `CONTRACT_ADDRESS`) plus the exact
   `claim_calldata` for self-submit. Fails closed (503) without `VOUCHER_SIGNER_KEY` or a deployed contract.
-- `POST /api/v1/holder-voucher` — for holder-eligible registrations; capped at 100 issued.
+- `POST /api/v1/holder-voucher` — for registered muses; capped at 100 issued.
   Muses only: requires only the identity proof —
   `{muse_id, address, challenge_id, musebook_signature, idempotency_key}`.
-  The stored registration for this (muse_id, address) must carry the `holder`
-  allocation ($10+ of MDOG verified off-chain at registration); community
-  eligibility is not required — the paths are independent.
+  The stored registration for this (muse_id, address) must exist with a
+  verified identity. The $10 MDOG check is NOT done here — it happens on
+  mint day, on-chain (the multisig sets `holderThresholdMDOG` and the
+  contract reverts holder mints for recipients below it at mint time);
+  community eligibility is not required — the paths are independent.
   3 vouchers per address and 3 per muse identity on this path; a muse eligible
   for both paths can use both, up to 6 total. Fails closed (503) without
   `VOUCHER_SIGNER_KEY` or a deployed contract.

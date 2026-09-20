@@ -15,7 +15,7 @@ Full design notes, trust assumptions, and the audit log: [`NOTES.md`](NOTES.md).
 | `src/MuseDogs.sol` | The collection (ERC-721, vouchers, team mint, metadata freeze, royalties) |
 | `src/MuseDogsFeeSplitter.sol` | Royalty splitter: 10/40/25/25 of every royalty payment |
 | `src/MuseDogRewards.sol` | Holder-rewards vault: weekly Merkle-distributed ETH (40% leg recipient) |
-| `test/MuseDogs.t.sol` | 37 tests — vouchers, caps, freeze, royalties, reentrancy |
+| `test/MuseDogs.t.sol` | 44 tests — vouchers, caps, freeze, royalties, reentrancy |
 | `test/MuseDogsFeeSplitter.t.sol` | 19 tests — split math, accounting, fail-open, forwarding |
 | `test/MuseDogRewards.t.sol` | 14 pre-existing vault tests |
 | `script/Deploy.s.sol` | Deploy script (all params from env; key via `--private-key`) |
@@ -25,13 +25,17 @@ Full design notes, trust assumptions, and the audit log: [`NOTES.md`](NOTES.md).
 There are 500 NFTs, split into three buckets the contract enforces on-chain —
 380 + 100 + 20, and nothing can ever mint a 501st:
 
-1. **380 community mints** — free and gasless. The backend signs an EIP-712
+1. **380 community mints** — free for the claimant. The backend signs an EIP-712
    voucher (`recipient`, `mintType`, `nonce`, `expiry`); a relayer submits it
    and pays the gas. The NFT can only ever go to the voucher's recipient
    (max 3 per address). Nonces are single-use per recipient; vouchers expire.
-2. **100 holder-airdrop mints** — same voucher system with `mintType=1`
-   (max 1 per address). The backend checks the $10 MDOG holdings off-chain
-   before issuing the voucher; the contract trusts the voucher signer.
+2. **100 holder voucher mints** — same voucher system with `mintType=1`
+   (max 3 per address). The MDOG check happens **on-chain at mint time**:
+   the owner sets `holderThresholdMDOG` (the raw MDOG amount worth ~$10 at
+   the live price) on mint day, and `mintWithVoucher` reverts unless the
+   recipient holds at least that much MDOG. The path is fail-closed: until
+   the threshold is set, every holder mint reverts with
+   `HolderThresholdNotSet`. No balance is checked before mint.
 3. **20 team/treasury mints** — owner-only batch mint. The deployer wallet
    mints these pre-launch as the end-to-end test, then transfers ownership of
    everything to the Safe multisig (two-step, so a typo can't brick it).
@@ -40,9 +44,14 @@ Token IDs are sequential: 1, 2, 3, … 500.
 
 Every 5% resale royalty flows to the fee splitter, which divides it —
 10% to Mikey's Bankr address in raw ETH, 40% to the holder-rewards vault,
-25% escrowed for MDOG buyback-and-burn, 25% escrowed for MDOG/ETH liquidity
-to the dead address. The two DEX-dependent legs are forwarded by the
-multisig (no autonomous swaps ship — see `NOTES.md` §2 for why).
+25% buys MDOG + musebook via Uniswap v4 (routed through META) and mints a
+full-range MDOG/musebook position **directly to the dead address**,
+25% buys MDOG the same way and mints a full-range MDOG/ETH position
+**directly to the dead address**. Both LP positions are locked forever on
+mint. No MDOG is ever burned. `process()` is permissionless: anyone can call
+it once new funds cross the threshold; the DEX legs run autonomously and
+fail safe (a leg that can't complete is skipped, its ETH stays escrowed —
+see `NOTES.md` §2).
 
 Reveal is immediate: the base URI is set **exactly once** by the owner, then
 frozen forever in the same call. There is no unfreeze and no silent metadata
@@ -77,7 +86,8 @@ change, ever.
 # compile
 forge build
 
-# run tests (70 tests)
+# run tests (112 tests; 4 fork-dependent tests fail on a local-only chain,
+# which is expected — see NOTES.md)
 forge test
 
 # deploy to Robinhood Chain with verification (Blockscout, no key needed)
@@ -97,7 +107,8 @@ See the full checklist in [`NOTES.md`](NOTES.md). The short version:
 2. Independent Solidity review — no unresolved high/criticals.
 3. Full rehearsal on the Robinhood testnet (chain 46630): deploy, setBaseURI,
    teamMint 20, hand both contracts to the Safe, backend voucher + relayer
-   mint, royalty `process()`, one DEX-leg forward.
+   mint, royalty `process()`, and an autonomous DEX-leg execution (or the
+   fail-safe skip path if a test pool isn't configured).
 4. Deploy mainnet, verify source, setBaseURI once, teamMint 20, transfer both
    contracts to the multisig, publish the canonical addresses from a verified
    channel.

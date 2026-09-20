@@ -5,6 +5,7 @@ import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import {ERC721Royalty} from "@openzeppelin/contracts/token/ERC721/extensions/ERC721Royalty.sol";
 import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
@@ -17,9 +18,14 @@ import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 ///          A backend relayer submits the tx and pays gas; the NFT always goes
 ///          to the voucher's `recipient` (never msg.sender). Max 3 per address.
 ///        - 100 holder-airdrop mints: same voucher system with
-///          mintType = HOLDER. Max 3 per address. The backend checks the $10
-///          MDOG holdings off-chain before issuing a voucher; the contract
-///          trusts the voucher signer.
+///          mintType = HOLDER. Max 3 per address. The $10 MDOG wallet check
+///          happens ON MINT DAY, on-chain: the owner sets holderThresholdMDOG
+///          (the raw MDOG amount worth ~$10 at the live price) and
+///          mintWithVoucher reverts unless the recipient holds at least that
+///          much MDOG at mint time. FAIL-CLOSED: until the threshold is set,
+///          every HOLDER mint reverts with HolderThresholdNotSet, so the
+///          holder path can never open early with no MDOG check. No balance
+///          check happens before mint.
 ///        - 20 team/treasury mints: owner-only batch mint (the pre-launch test
 ///          mint by the deployer wallet, then ownership moves to the Safe).
 ///      380 + 100 + 20 = 500 = MAX_SUPPLY. Token IDs are sequential 1..500.
@@ -126,6 +132,19 @@ contract MuseDogs is ERC721, ERC721Royalty, EIP712, Ownable2Step, ReentrancyGuar
     /// @notice True once the fee splitter has been set; it can never change.
     bool public feeSplitterLocked;
 
+    /// @notice MDOG token contract on Robinhood Chain. Immutable: the holder
+    ///         path checks the recipient's MDOG balance on-chain at mint time.
+    address public immutable mdogToken;
+
+    /// @notice Raw MDOG amount (18 decimals) a recipient must hold for a
+    ///         HOLDER mint. Set by the owner ON MINT DAY to the amount worth
+    ///         ~$10 at the live price. The wallet check runs at mint time —
+    ///         never before. FAIL-CLOSED: zero means UNSET, and every
+    ///         HOLDER-path mint reverts with HolderThresholdNotSet until the
+    ///         owner sets a nonzero threshold (an explicit set(0) is treated
+    ///         as unset too, so the MDOG check can never be silently waived).
+    uint256 public holderThresholdMDOG;
+
     // -------------------------------------------------------------------------
     // Errors (custom errors: no revert strings anywhere)
     // -------------------------------------------------------------------------
@@ -143,6 +162,8 @@ contract MuseDogs is ERC721, ERC721Royalty, EIP712, Ownable2Step, ReentrancyGuar
     error MaxSupplyExceeded();
     error CommunityLimitExceeded(address recipient);
     error HolderLimitExceeded(address recipient);
+    error InsufficientMDOG(address recipient, uint256 thresholdMDOG);
+    error HolderThresholdNotSet();
     error EmptyRecipients();
     error BaseURIAlreadySet();
     error EmptyBaseURI();
@@ -180,6 +201,8 @@ contract MuseDogs is ERC721, ERC721Royalty, EIP712, Ownable2Step, ReentrancyGuar
     event BaseURISet(string baseURI);
     /// @notice Emitted when the fee-splitter address is locked in.
     event FeeSplitterSet(address indexed feeSplitter);
+    /// @notice Emitted when the owner sets the holder MDOG threshold (on mint day).
+    event HolderThresholdSet(uint256 thresholdMDOG);
 
     // -------------------------------------------------------------------------
     // Constructor
@@ -195,14 +218,21 @@ contract MuseDogs is ERC721, ERC721Royalty, EIP712, Ownable2Step, ReentrancyGuar
     ///        wire it later via setFeeSplitter (once). Until it is set,
     ///        royaltyInfo returns a zero receiver — set it before secondary
     ///        sales matter.
+    /// @param mdogToken_ MDOG ERC20 on Robinhood Chain, used for the on-chain
+    ///        holder balance check at mint time. Must be a contract.
     constructor(
         address initialOwner,
         address initialVoucherSigner,
-        address initialFeeSplitter
+        address initialFeeSplitter,
+        address mdogToken_
     ) ERC721("Muse Dogs", "MUSEDOGS") EIP712("Muse Dogs", "1") Ownable(initialOwner) {
         if (initialOwner == address(0) || initialVoucherSigner == address(0)) {
             revert ZeroAddress();
         }
+        if (mdogToken_.code.length == 0) {
+            revert NotAContract(mdogToken_);
+        }
+        mdogToken = mdogToken_;
         voucherSigner = initialVoucherSigner;
         emit VoucherSignerSet(address(0), initialVoucherSigner);
 
@@ -262,6 +292,14 @@ contract MuseDogs is ERC721, ERC721Royalty, EIP712, Ownable2Step, ReentrancyGuar
             if (holderMinted >= HOLDER_CAP) revert HolderCapExceeded();
             if (holderMintsByAddress[recipient] >= MAX_HOLDER_PER_ADDRESS) {
                 revert HolderLimitExceeded(recipient);
+            }
+            // FAIL-CLOSED: the $10 MDOG wallet check happens here, at mint
+            // time — never before. Until the owner sets holderThresholdMDOG
+            // (on mint day), every HOLDER mint reverts. Zero is treated as
+            // unset so the check can never be silently waived by omission.
+            if (holderThresholdMDOG == 0) revert HolderThresholdNotSet();
+            if (IERC20(mdogToken).balanceOf(recipient) < holderThresholdMDOG) {
+                revert InsufficientMDOG(recipient, holderThresholdMDOG);
             }
         }
         // Defense-in-depth: even if a bucket cap were ever mis-set, the hard
@@ -389,6 +427,19 @@ contract MuseDogs is ERC721, ERC721Royalty, EIP712, Ownable2Step, ReentrancyGuar
         feeSplitterLocked = true;
         _setDefaultRoyalty(newFeeSplitter, uint96(ROYALTY_BPS));
         emit FeeSplitterSet(newFeeSplitter);
+    }
+
+    /// @notice Set the MDOG amount required for holder mints. Called by the
+    ///         owner ON MINT DAY: set to the raw MDOG amount (18 decimals)
+    ///         worth ~$10 at the live price. The check itself runs on-chain
+    ///         at mint time inside mintWithVoucher. Emits HolderThresholdSet.
+    /// @dev Fail-closed: while the threshold is zero (unset), HOLDER mints
+    ///      revert with HolderThresholdNotSet. Setting 0 explicitly is
+    ///      accepted but behaves exactly like unset — the holder path stays
+    ///      closed until a nonzero threshold is set.
+    function setHolderThresholdMDOG(uint256 thresholdMDOG) external onlyOwner {
+        holderThresholdMDOG = thresholdMDOG;
+        emit HolderThresholdSet(thresholdMDOG);
     }
 
     // -------------------------------------------------------------------------

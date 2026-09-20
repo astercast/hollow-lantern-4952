@@ -14,7 +14,7 @@ Files:
 | `src/MuseDogs.sol` | The collection: ERC-721 "Muse Dogs" / "MUSEDOGS", 500 hard cap |
 | `src/MuseDogsFeeSplitter.sol` | Royalty splitter: 10/40/25/25 of every 5% resale royalty |
 | `src/MuseDogRewards.sol` | Pre-existing holder-rewards vault (40% leg recipient) — unchanged |
-| `test/MuseDogs.t.sol` | 37 tests: vouchers, caps, metadata freeze, royalties, reentrancy |
+| `test/MuseDogs.t.sol` | 44 tests: vouchers, caps, metadata freeze, royalties, reentrancy |
 | `test/MuseDogsFeeSplitter.t.sol` | 19 tests: split math, accounting invariant, fail-open, forwarding |
 | `test/MuseDogRewards.t.sol` | Pre-existing vault tests (14, still passing) |
 | `script/Deploy.s.sol` | Deploy script; all params from env, key via `--private-key` flag |
@@ -59,17 +59,22 @@ Files:
   The voucher signer is rotatable by the owner at any time with an event;
   rotation instantly kills the old key's vouchers.
 - **Fee splitter: autonomous Uniswap DEX legs** (decision reversed 2026-09-20,
-  see §2). The manual `forwardBuyback`/`forwardLiquidity` functions are kept
-  as owner-only emergency hatches.
+  see §2). The manual `forwardMusebookLiquidity` / `forwardLiquidity`
+  functions are kept as owner-only emergency hatches.
 
 ## 2. The fee-splitter decision (read before changing)
 
-The task allowed two designs for the 25% buyback-burn and 25% LP legs:
-(a) fully-autonomous on-chain swaps, or (b) escrow + multisig forwarding.
-**We first shipped (b), deliberately — then Andrew reversed the decision on
-2026-09-19: "uniswap is very trustworthy we can do it automated."**
-The contracts below now implement (a), with (b) retained as the emergency
-fallback.
+The task allowed two designs for the two 25% DEX legs (MDOG/musebook LP and
+MDOG/ETH LP, both to the dead address): (a) fully-autonomous on-chain swaps,
+or (b) escrow + multisig forwarding. **We first shipped (b), deliberately —
+then Andrew reversed the decision on 2026-09-19: "uniswap is very trustworthy
+we can do it automated."** The contracts below now implement (a), with (b)
+retained as the emergency fallback.
+
+> Historical note: the verification trail immediately below documented the
+> v3-era Uniswap deployments used by an earlier draft. The current
+> implementation (§2 "What ships now", above) routes via the pinned Uniswap
+> **v4** PoolManager / PositionManager in `MuseDogsFeeSplitter.sol`.
 
 Why (a) became shippable: the blocker for (a) was pinning the DEX surface on
 Robinhood Chain. On 2026-09-19 the official Uniswap deployment page
@@ -83,38 +88,50 @@ on `https://rpc.mainnet.chain.robinhood.com`:
   (code + on-chain `factory()`/`WETH9()` point at the two official contracts
   above — first-party linkage, not a docs claim)
 
-What ships now:
+What ships now (updated 2026-09-20 — supersedes the earlier v3/TWAP draft,
+which is preserved in git history):
 
 - `process()` (permissionless keeper, runs when new funds ≥ threshold) splits
   ONLY newly arrived funds into the four buckets exactly as before
   (**escrowed funds are never re-split** — invariant unchanged), pushes the
   10%/40% legs failing-open as before, then settles the two DEX legs
   **fail-SAFE**: each leg runs inside `try/catch`; a leg that cannot complete
-  (no pool, MDOG unset, TWAP guard tripped, router revert) is SKIPPED with a
-  `DexLegSkipped` event, its ETH stays escrowed, and `process()` still
-  succeeds. Any keeper can retry a leg via `executeBuyback()` /
+  (no pool, unconfigured key, slippage guard tripped, pool revert) is SKIPPED
+  with a `DexLegSkipped` event, its ETH stays escrowed, and `process()` still
+  succeeds. Any keeper can retry a leg via `executeMusebookLiquidity()` /
   `executeLiquidity()`.
-- **Buyback leg:** wraps the bucket to WETH, `exactInputSingle` WETH→MDOG on
-  the configured fee-tier pool with `deadline = block.timestamp`, checks the
-  ACTUAL received amount against the pool's TWAP (default 30-min window,
-  default 3% tolerance) and reverts the whole leg on shortfall — a sandwich
-  that moves execution >3% off TWAP just burns the attacker's gas — then
-  burns the full MDOG balance to the dead address.
-- **Liquidity leg:** wraps the bucket, swaps half to MDOG (same TWAP guard),
-  and mints a FULL-RANGE v3 position (ticks aligned to the pool's tick
-  spacing) DIRECTLY to the dead address — locked forever on mint, no
-  withdrawal possible, no exit to front-run. WETH dust is unwrapped back to
-  ETH so the next `process()` sweeps it; MDOG dust stays for the next leg.
-- **Why the router/NPM/factory/WETH are IMMUTABLE:** an owner-updatable
-  router would let a compromised owner key point the DEX legs at a malicious
-  contract and drain the escrowed buckets. Immutable means even a stolen
-  multisig key cannot redirect DEX funds — only the pre-existing `forward*`
-  trust assumption remains. If Uniswap ever migrates, the autonomous legs
-  brick safely (skip forever) and the multisig falls back to `forward*`.
-- **Owner-tunable DEX policy** (guarded): `mdogToken` (required before legs
-  run; zero/ EOA/ WETH rejected), `feeTier`, `twapWindow` (5 min–24 h),
-  `maxSlippageBps` (0–20%), `processThreshold`. The constructor refuses to
-  deploy on any chain other than 4663.
+- **MDOG/musebook leg (25%):** half the bucket's ETH is routed
+  ETH → META → MDOG and half ETH → META → musebook across Uniswap v4 pools on
+  Robinhood Chain (the splitter is its own router via `unlock()`), then a
+  FULL-RANGE MDOG/musebook v4 position is minted **directly to the dead
+  address** — locked forever on mint, no withdrawal possible, no exit to
+  front-run.
+- **MDOG/ETH leg (25%):** half the bucket's ETH is routed ETH → META → MDOG,
+  half stays native ETH, then a FULL-RANGE MDOG/ETH v4 position is minted
+  **directly to the dead address** — locked forever. The exact native amount
+  the mint will consume is computed up front; the remainder stays escrowed
+  and is swept as new funds on the next `process()`.
+- **No MDOG is ever burned.** The two DEX legs buy MDOG (+ musebook) off the
+  market and lock it inside full-range LP positions at the dead address. Any
+  document text describing a "buyback-and-burn" is stale.
+- **Per-hop slippage guards, not TWAP:** each hop's spot price is read
+  immediately before the leg (same transaction), and two guards are derived:
+  `sqrtPriceLimitX96` bounds how far the pool price may move during the swap,
+  and a per-hop `amountOutMinimum` is quoted from spot discounted by
+  `maxSlippageBps` (default 3%). A partial fill reverts the leg; a sandwich
+  within tolerance can still extract a small profit — bounded, not eliminated.
+- **Why the Uniswap wiring is IMMUTABLE:** pool keys are pinned at deploy and
+  validated (currencies, fee, tickSpacing, hooks); there is no setter. An
+  owner-updatable router would let a compromised owner key point the DEX legs
+  at a malicious contract and drain the escrowed buckets. Immutable means even
+  a stolen multisig key cannot redirect DEX funds — only the pre-existing
+  `forward*` trust assumption remains. If Uniswap ever migrates, the
+  autonomous legs brick safely (skip forever) and the multisig falls back to
+  the `forward*` hatches.
+- **Owner-tunable DEX policy** (guarded): `processThreshold` and
+  `maxSlippageBps` (0–20%). The token set (MDOG/META/musebook), the pinned
+  Uniswap addresses, and the pool keys are immutable after deploy. The
+  constructor refuses to deploy on any chain other than 4663.
 - Tick math (`_getSqrtRatioAtTick`) is a clean-room implementation of the
   1.0001-tick curve (constants are fixed-point encodings of powers of the
   tick base — mathematical facts), pinned by canonical vectors in
@@ -128,14 +145,16 @@ What ships now:
 
 1. **The owner is the project Safe multisig** (after the post-test-mint
    handover). It is trusted to: rotate the voucher signer only when needed,
-   set the base URI to the true final Arweave manifest, set the correct
-   `mdogToken` address, tune the DEX policy (`feeTier`, `twapWindow`,
-   `maxSlippageBps`) and the process threshold sanely, and use the manual
-   `forwardBuyback`/`forwardLiquidity` hatches only as intended. It CANNOT:
+   set the base URI to the true final Arweave manifest, set the holder MDOG
+   threshold (`holderThresholdMDOG`) on mint day, tune `processThreshold`
+   and `maxSlippageBps` sanely, and use the manual
+   `forwardMusebookLiquidity` / `forwardLiquidity` hatches only as intended.
+   It CANNOT:
    exceed any mint cap, change metadata after the freeze, change the royalty
    rate or receiver after wiring, redirect the mikey/vault legs (immutable
    recipients), forward more than each escrow bucket holds, **or change the
-   pinned Uniswap wiring** (router/factory/NPM/WETH are immutable — see §2,
+   pinned Uniswap wiring** (PoolManager / PositionManager / pool keys are
+   immutable — see §2,
    this is deliberate: a mutable router would let a compromised owner key
    drain the DEX buckets via a fake router).
 2. **The voucher signer key is dedicated** (signs vouchers only, never sends
@@ -148,8 +167,12 @@ What ships now:
    wrong-but-valid address). The contracts additionally refuse EOAs for the
    fee-splitter and rewards-vault parameters (`NotAContract`).
 4. **The backend is trusted to**: issue unique nonces per recipient, keep
-   voucher expiries short, check the $10 MDOG holdings before issuing HOLDER
-   vouchers, and never reuse the voucher key as a hot transaction key.
+   voucher expiries short, enforce the 3-per-muse-identity voucher-issuance
+   caps, and never reuse the voucher key as a hot transaction key. The $10
+   MDOG holder check is NOT the backend's job: it runs on-chain at mint
+   execution, and the contract is fail-closed (`HolderThresholdNotSet`)
+   until the owner sets `holderThresholdMDOG` on mint day — so the backend
+   must never gate issuance on a balance it checked off-chain.
 5. **Marketplaces are trusted to honor ERC-2981.** Royalty bypass via
    non-compliant marketplaces or OTC transfers is inherent to ERC-2981 and
    cannot be fixed on-chain without breaking free transfers (which we will
@@ -256,6 +279,13 @@ double-dip. Lesson recorded: assert the invariant, not the mechanism.
 
 ### Pass 4 — autonomous DEX legs (2026-09-20). Decision reversed by Andrew:
 
+> **2026-09-20 implementation note:** this pass record was written against a
+> v3/TWAP/buyback draft. The splitter was then reimplemented against Uniswap
+> **v4** (routing via META, per-hop spot-price guards, no TWAP, no burn —
+> see §2 "What ships now", updated). The historical details below are
+> preserved as the audit trail, but v3/TWAP/`executeBuyback` specifics no
+> longer describe the code.
+
 > "uniswap is very trustworthy we can do it automated"
 
 Rewrote `MuseDogsFeeSplitter` to execute the 25%/25% legs itself against
@@ -312,15 +342,13 @@ rewards vault). No deployment, no gas spent, nothing broadcast.
    worth calling but not spammable; the multisig can tune it later.
 7. **DEX-leg residuals (accepted):** (a) sandwich tolerance is bounded by
    `maxSlippageBps` (default 3%) — a price move within tolerance can extract
-   a small profit from a buyback leg; (b) TWAP manipulation costs scale with
-   the window (default 30 min) and pool depth — thin MDOG liquidity makes
-   legs expensive or skippable; (c) a dead-address LP is IRREVERSIBLE — a
-   mistyped `mdogToken` or wrong `feeTier` burns funds into the wrong pool
-   forever; the multisig must verify the pool on Blockscout before setting
-   `mdogToken`; (d) if Uniswap deprecates the pinned router, the autonomous
-   legs brick safely and the multisig falls back to `forward*`; (e) an
-   immature pool without enough TWAP observations fails SAFE (legs skip) but
-   could delay automation until the pool matures.
+   a small profit from a DEX leg; (b) a price-manipulation attack costs scale
+   with the pool depth — thin MDOG liquidity makes legs expensive or
+   skippable; (c) a dead-address LP is IRREVERSIBLE — a misconfigured pool
+   key burns funds into the wrong pool forever; the deployer must verify the
+   pool keys against live pools before deploy (they are immutable); (d) if
+   Uniswap migrates, the autonomous legs brick safely and the multisig falls
+   back to the `forward*` hatches.
 8. The old escrow-only splitter design is preserved in git history
    (pre-autonomous commits). The manual `forward*` hatches are kept in the
    contract as the emergency path.

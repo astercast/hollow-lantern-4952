@@ -70,8 +70,14 @@ signer. Any Solidity EIP-712 verifier will accept these vouchers.
 1. Muse submits `muse_id` + fresh identity signature over a mint challenge
    (same challenge scheme as register, action "mint").
 2. Server verifies identity sig, checks whitelist registration (community path)
-   or $10 MDOG holder eligibility (holder path), checks the address hasn't
-   already minted 3 on that path, checks that path's bucket supply remains
+   — the holder path does NOT check the $10 MDOG balance at issuance: the
+   check happens on mint day, on-chain, when the relayer submits the voucher
+   (the multisig sets `holderThresholdMDOG` and the contract reverts HOLDER
+   mints for recipients below it at mint time; fail-closed until set). The
+   server checks the address hasn't already minted 3 on that path, checks the
+   muse identity hasn't already received 3 vouchers on that path (the
+   3-per-identity cap is enforced at issuance; the contract enforces the
+   3-per-address cap on-chain), and checks that path's bucket supply remains
    (380 community / 100 holder, read contract).
 3. Server issues nonce, signs voucher with `MUSEDOG_VOUCHER_KEY`.
 4. Server submits `mintWithVoucher` via `MUSEDOG_RELAYER_KEY`, pays gas.

@@ -132,8 +132,8 @@ async function waitForServer() {
     musebook_signature: identitySig(identities.muse_smoke_1, challenge.message),
     idempotency_key: idem,
   });
-  log(r.status === 200 && r.json.eligible_now === true && r.json.allocation === 'holder', 'register: eligible holder (2000 MDOG @ $0.01 = $20)');
-  log(r.json.recheck_required === true && !!r.json.status_path, 'register: response shape from plan');
+  log(r.status === 200 && r.json.status === 'registered' && r.json.allocation === null, 'register: muse registered (no balance check at registration — the $10 MDOG check happens on mint day, on-chain)');
+  log(r.json.recheck_required === false && !!r.json.status_path, 'register: response shape from plan');
   const regId = r.json.registration_id;
 
   // 5. idempotency: same key replays the same response
@@ -186,7 +186,7 @@ async function waitForServer() {
 
   // 8. status
   r = await api('GET', '/api/v1/status/' + regId);
-  log(r.status === 200 && r.json.allocation === 'holder', 'status: registration found');
+  log(r.status === 200 && r.json.allocation === null && r.json.distribution_status === 'registered', 'status: registration found');
 
   // 9. receipt (stub)
   r = await api('GET', '/api/v1/receipt/' + regId);
@@ -262,17 +262,19 @@ async function waitForServer() {
   r = await attemptVoucher('muse_smoke_9', w6, identities.muse_smoke_9, 'smoke-v11');
   log(r.status === 503 && r.json.error === 'WHITELIST_UNAVAILABLE', 'voucher: fails closed without allowlist');
 
-  // 11h. holder vouchers: the holder path is the same registration, mintType 1.
-  // The smoke stub gives every address 2000 MDOG, so muse_smoke_1's
-  // registration carries the holder allocation.
+  // 11h. holder vouchers: the holder path needs only a registration with a
+  // verified identity. The $10 MDOG check is NOT done here — it happens on
+  // mint day, on-chain (the multisig sets holderThresholdMDOG and the
+  // contract checks the recipient wallet at mint time).
   r = await attemptHolderVoucher('muse_smoke_1', wallet, identities.muse_smoke_1, 'smoke-h1');
   log(r.status === 200 && r.json.voucher.mintType === 1 && r.json.voucher.allocation === 'HOLDER'
     && r.json.holder_vouchers_for_address === 1 && r.json.holder_vouchers_cap_per_address === 3
     && r.json.vouchers_cap === 100,
     'holder-voucher: holder-eligible muse gets a holder voucher (mintType 1, 3 per address)');
 
-  // Fixture: holder-eligible registrations for muse_smoke_7 on two addresses
-  // (allocation 'holder' = $10+ of MDOG verified off-chain at registration).
+  // Fixture: holder-path registrations for muse_smoke_7 on two addresses.
+  // Registration alone is enough for a holder voucher now — the $10 MDOG
+  // check happens on mint day, on-chain, not at registration.
   // muse_smoke_7 and muse_smoke_3 are used here so muse_smoke_9 stays free for
   // the fresh-registration test later (one registration per muse identity).
   const w9 = ethers.Wallet.createRandom();
@@ -304,13 +306,14 @@ async function waitForServer() {
   r = await attemptHolderVoucher('muse_smoke_7', w9b, identities.muse_smoke_7, 'smoke-h6');
   log(r.status === 409 && r.json.error === 'IDENTITY_VOUCHER_CAP_REACHED', 'holder-voucher: 3-per-identity cap enforced');
 
-  // 11k. holder path: unregistered muse is refused (holder eligibility comes
-  // from the stored registration's $10+ MDOG check).
+  // 11k. holder path: unregistered muse is refused (a stored registration
+  // with a verified identity is still required for the holder path).
   const w11 = ethers.Wallet.createRandom();
   r = await attemptHolderVoucher('muse_smoke_3', w11, identities.muse_smoke_3, 'smoke-h7');
   log(r.status === 403 && r.json.error === 'NOT_REGISTERED', 'holder-voucher: unregistered muse refused');
 
-  // 11k2. holder path: registered but below the $10 MDOG threshold refused.
+  // 11k2. holder path: a registered muse gets a holder voucher even with no
+  // MDOG — the $10 check happens on mint day, on-chain, not here.
   const w11b = ethers.Wallet.createRandom();
   {
     const db = JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
@@ -326,7 +329,7 @@ async function waitForServer() {
     fs.writeFileSync(DB_PATH, JSON.stringify(db, null, 2));
   }
   r = await attemptHolderVoucher('muse_smoke_3', w11b, identities.muse_smoke_3, 'smoke-h7b');
-  log(r.status === 403 && r.json.error === 'NOT_HOLDER_ELIGIBLE', 'holder-voucher: below-threshold registration refused');
+  log(r.status === 200 && r.json.voucher.mintType === 1, 'holder-voucher: registered muse gets holder voucher without a balance check (check is on mint day)');
 
   // 11l. holder path: forged identity signature rejected.
   const w12 = ethers.Wallet.createRandom();
@@ -373,7 +376,7 @@ async function waitForServer() {
 
   // 13. happy path: real Ed25519 identity signature verifies against the registry
   r = await attemptRegister('muse_smoke_9', 'smoke-id-13a', identities.muse_smoke_9);
-  log(r.status === 200 && r.json.eligible_now === true, 'identity: valid Ed25519 signature registers (holder)');
+  log(r.status === 200 && r.json.status === 'registered', 'identity: valid Ed25519 signature registers');
 
   // 14. forged signature (signed with a key NOT registered for this identity)
   r = await attemptRegister('muse_smoke_9', 'smoke-id-14', identities.muse_forged);
@@ -445,9 +448,10 @@ async function waitForServer() {
   try { _agreeOnPrice(0.00004, 0.000041, 20); } catch (e) { pthrew = e; }
   log(pthrew === null, 'price: small deviation agrees');
 
-  // P5. the holder registration recorded which price its decision used
+  // P5. the holder check is on mint day, on-chain — the status endpoint no
+  // longer carries a registration-time price decision.
   r = await api('GET', '/api/v1/status/' + regId);
-  log(r.status === 200 && r.json.price_usd_per_mdog === 0.01 && !!r.json.price_checked_at, 'price: registration records price used for decision');
+  log(r.status === 200 && r.json.holder_check && r.json.holder_check.includes('mint day'), 'price: status points to the mint-day holder check');
 
   // ---- holder rewards — added 2026-09-19 ----
   const { spawnSync } = require('child_process');

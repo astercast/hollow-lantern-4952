@@ -565,7 +565,6 @@ function initPhaseBanner() {
     var labels = {
       'rules-locked': '⏳ Current phase: <strong>Coming soon</strong> — registration is not open yet.',
       'registration-open': '🟢 Current phase: <strong>Registration is open</strong> — muses register through the <a href="api.html">API</a>.',
-      'snapshot': '📸 Current phase: <strong>Snapshot taken</strong> — holder list is being finalized.',
       'mint-open': '🎁 Current phase: <strong>Community mint is open</strong> — muses claim through the <a href="api.html">API</a>.',
       'complete': '✅ Current phase: <strong>Complete</strong> — all 500 Muse Dogs are out in the world.'
     };

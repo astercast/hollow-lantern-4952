@@ -76,7 +76,10 @@ contract MuseDogsTest is Test {
             mdogMusebookKey
         );
         splitter = address(realSplitter);
-        nft = new MuseDogs(owner, signer, splitter);
+        // The etched MockToken at 0xF002 stands in for the real MDOG token so
+        // the on-chain holder balance check is testable (constructor requires
+        // mdogToken to be a contract, mirroring the real MDOG address).
+        nft = new MuseDogs(owner, signer, splitter, address(mdog));
         vm.prank(owner); // setBaseURI is onlyOwner; the test contract is not the owner
         nft.setBaseURI("https://arweave.net/test-manifest/");
     }
@@ -113,6 +116,15 @@ contract MuseDogsTest is Test {
         assertEq(nft.ownerOf(tokenId), recipient);
     }
 
+    /// @notice Open the holder path: the owner sets the MDOG threshold and
+    ///         the recipient is funded. The holder path is fail-closed until
+    ///         this happens (HolderThresholdNotSet on a zero threshold).
+    function _openHolder(address recipient, uint256 threshold, uint256 balance) internal {
+        MockToken(address(0xF002)).mint(recipient, balance);
+        vm.prank(owner);
+        nft.setHolderThresholdMDOG(threshold);
+    }
+
     // -------------------------------------------------------------------------
     // Happy paths
     // -------------------------------------------------------------------------
@@ -131,6 +143,7 @@ contract MuseDogsTest is Test {
 
     function test_HolderMintHappyPath() public {
         address bob = address(0xB0B);
+        _openHolder(bob, 100 ether, 100 ether);
         _mint(bob, 1, 7, block.timestamp + 1 days);
         assertEq(nft.holderMinted(), 1);
         assertEq(nft.holderMintsByAddress(bob), 1);
@@ -177,6 +190,9 @@ contract MuseDogsTest is Test {
 
     function test_TamperedMintTypeReverts() public {
         address alice = address(0xA11CE);
+        // The HOLDER path must be open (threshold set + funded) so the mint
+        // reaches signature verification and fails on the tampered mintType.
+        _openHolder(alice, 100 ether, 100 ether);
         bytes memory sig = _signVoucher(signerKey, alice, 0, 1, block.timestamp + 1 days);
         vm.prank(relayer);
         vm.expectRevert(MuseDogs.BadVoucherSignature.selector);
@@ -264,6 +280,7 @@ contract MuseDogsTest is Test {
 
     function test_HolderLimitThreePerAddress() public {
         address bob = address(0xB0B);
+        _openHolder(bob, 100 ether, 100 ether);
         _mint(bob, 1, 1, block.timestamp + 1 days);
         _mint(bob, 1, 2, block.timestamp + 1 days);
         _mint(bob, 1, 3, block.timestamp + 1 days);
@@ -293,8 +310,13 @@ contract MuseDogsTest is Test {
     }
 
     function test_HolderCap100() public {
+        vm.prank(owner);
+        nft.setHolderThresholdMDOG(100 ether);
+        MockToken mdog = MockToken(address(0xF002));
         for (uint256 a = 0; a < 100; a++) {
-            _mint(address(uint160(0x3000 + a)), 1, 1, block.timestamp + 1 days);
+            address r = address(uint160(0x3000 + a));
+            mdog.mint(r, 100 ether);
+            _mint(r, 1, 1, block.timestamp + 1 days);
         }
         assertEq(nft.holderMinted(), 100);
         bytes memory sig = _signVoucher(signerKey, address(0x9999), 1, 1, block.timestamp + 1 days);
@@ -313,8 +335,13 @@ contract MuseDogsTest is Test {
         }
         _mint(address(0x2000), 0, 1, block.timestamp + 1 days);
         _mint(address(0x2000), 0, 2, block.timestamp + 1 days);
+        vm.prank(owner);
+        nft.setHolderThresholdMDOG(100 ether);
+        MockToken mdog = MockToken(address(0xF002));
         for (uint256 a = 0; a < 100; a++) {
-            _mint(address(uint160(0x3000 + a)), 1, 1, block.timestamp + 1 days);
+            address r = address(uint160(0x3000 + a));
+            mdog.mint(r, 100 ether);
+            _mint(r, 1, 1, block.timestamp + 1 days);
         }
         address[] memory team = new address[](20);
         for (uint256 i = 0; i < 20; i++) {
@@ -399,7 +426,7 @@ contract MuseDogsTest is Test {
     }
 
     function test_TokenURIRevertsBeforeBaseURISet() public {
-        MuseDogs fresh = new MuseDogs(owner, signer, splitter);
+        MuseDogs fresh = new MuseDogs(owner, signer, splitter, address(0xF002));
         address[] memory one = new address[](1);
         one[0] = address(0x1);
         vm.prank(owner);
@@ -414,10 +441,84 @@ contract MuseDogsTest is Test {
     }
 
     function test_SetBaseURIOnlyOwner() public {
-        MuseDogs fresh = new MuseDogs(owner, signer, splitter);
+        MuseDogs fresh = new MuseDogs(owner, signer, splitter, address(0xF002));
         vm.prank(relayer);
         vm.expectRevert();
         fresh.setBaseURI("https://x/");
+    }
+
+    // -------------------------------------------------------------------------
+    // Holder MDOG threshold: set on mint day, checked on-chain at mint time
+    // -------------------------------------------------------------------------
+
+    function test_ConstructorRevertsForNonContractMdog() public {
+        vm.expectRevert(
+            abi.encodeWithSelector(MuseDogs.NotAContract.selector, address(0xDEAD))
+        );
+        new MuseDogs(owner, signer, splitter, address(0xDEAD));
+    }
+
+    function test_SetHolderThresholdMDOG() public {
+        assertEq(nft.holderThresholdMDOG(), 0);
+        vm.expectEmit(true, true, true, true);
+        emit MuseDogs.HolderThresholdSet(1_000_000 ether);
+        vm.prank(owner);
+        nft.setHolderThresholdMDOG(1_000_000 ether);
+        assertEq(nft.holderThresholdMDOG(), 1_000_000 ether);
+    }
+
+    function test_SetHolderThresholdMDOGOnlyOwner() public {
+        vm.prank(relayer);
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", relayer));
+        nft.setHolderThresholdMDOG(1);
+    }
+
+    function test_HolderMintRevertsWhenThresholdUnset() public {
+        // FAIL-CLOSED: a zero threshold means "not set" — the holder path is
+        // closed until the owner sets the MDOG threshold on mint day.
+        assertEq(nft.holderThresholdMDOG(), 0);
+        address bob = address(0xB0B);
+        bytes memory sig = _signVoucher(signerKey, bob, 1, 7, block.timestamp + 1 days);
+        vm.prank(relayer);
+        vm.expectRevert(MuseDogs.HolderThresholdNotSet.selector);
+        nft.mintWithVoucher(bob, 1, 7, block.timestamp + 1 days, sig);
+    }
+
+    function test_HolderMintRevertsWhenThresholdExplicitlyZero() public {
+        // An explicit set(0) is treated as unset: the MDOG check can never
+        // be silently waived by setting a zero threshold. (Bob is a whale —
+        // the balance is irrelevant while the path is closed.)
+        address bob = address(0xB0B);
+        MockToken(address(0xF002)).mint(bob, 1_000_000 ether);
+        vm.prank(owner);
+        nft.setHolderThresholdMDOG(0);
+        bytes memory sig = _signVoucher(signerKey, bob, 1, 7, block.timestamp + 1 days);
+        vm.prank(relayer);
+        vm.expectRevert(MuseDogs.HolderThresholdNotSet.selector);
+        nft.mintWithVoucher(bob, 1, 7, block.timestamp + 1 days, sig);
+    }
+
+    function test_HolderMintRevertsBelowThreshold() public {
+        address bob = address(0xB0B);
+        vm.prank(owner);
+        nft.setHolderThresholdMDOG(100 ether);
+        // bob holds no MDOG: the mint-day wallet check reverts.
+        bytes memory sig = _signVoucher(signerKey, bob, 1, 7, block.timestamp + 1 days);
+        vm.expectRevert(
+            abi.encodeWithSelector(MuseDogs.InsufficientMDOG.selector, bob, 100 ether)
+        );
+        vm.prank(relayer);
+        nft.mintWithVoucher(bob, 1, 7, block.timestamp + 1 days, sig);
+    }
+
+    function test_HolderMintSucceedsAtThreshold() public {
+        address bob = address(0xB0B);
+        MockToken(address(0xF002)).mint(bob, 100 ether);
+        vm.prank(owner);
+        nft.setHolderThresholdMDOG(100 ether);
+        uint256 tokenId = _mint(bob, 1, 7, block.timestamp + 1 days);
+        assertEq(nft.ownerOf(tokenId), bob);
+        assertEq(nft.holderMinted(), 1);
     }
 
     // -------------------------------------------------------------------------
@@ -431,7 +532,7 @@ contract MuseDogsTest is Test {
     }
 
     function test_FeeSplitterSetOnce() public {
-        MuseDogs fresh = new MuseDogs(owner, signer, address(0));
+        MuseDogs fresh = new MuseDogs(owner, signer, address(0), address(0xF002));
         (address receiver,) = fresh.royaltyInfo(1, 1 ether);
         assertEq(receiver, address(0)); // unset until wired
         vm.prank(owner);
@@ -446,7 +547,7 @@ contract MuseDogsTest is Test {
     }
 
     function test_FeeSplitterZeroReverts() public {
-        MuseDogs fresh = new MuseDogs(owner, signer, address(0));
+        MuseDogs fresh = new MuseDogs(owner, signer, address(0), address(0xF002));
         vm.prank(owner);
         vm.expectRevert(MuseDogs.ZeroAddress.selector);
         fresh.setFeeSplitter(address(0));
@@ -455,7 +556,7 @@ contract MuseDogsTest is Test {
     function test_FeeSplitterEOAReverts() public {
         // An EOA (no code) can never be the royalty receiver: it would
         // silently swallow the irrevocable royalty stream.
-        MuseDogs fresh = new MuseDogs(owner, signer, address(0));
+        MuseDogs fresh = new MuseDogs(owner, signer, address(0), address(0xF002));
         vm.prank(owner);
         vm.expectRevert(abi.encodeWithSelector(MuseDogs.NotAContract.selector, address(0xE0A)));
         fresh.setFeeSplitter(address(0xE0A));
@@ -498,10 +599,10 @@ contract MuseDogsTest is Test {
     function test_ConstructorZeroChecks() public {
         // Zero owner is rejected by OZ Ownable itself (runs before our body).
         vm.expectRevert(abi.encodeWithSignature("OwnableInvalidOwner(address)", address(0)));
-        new MuseDogs(address(0), signer, splitter);
+        new MuseDogs(address(0), signer, splitter, address(0xF002));
         // Zero voucher signer is rejected by our own check.
         vm.expectRevert(MuseDogs.ZeroAddress.selector);
-        new MuseDogs(owner, address(0), splitter);
+        new MuseDogs(owner, address(0), splitter, address(0xF002));
     }
 
     // -------------------------------------------------------------------------

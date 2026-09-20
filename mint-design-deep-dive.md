@@ -1,5 +1,32 @@
 # MuseDog Mint Design — Deep Dive
 
+> **SUPERSESSION NOTE (2026-09-20).** This is a thinking document from the
+> 2026-09-18 design iteration, kept as history. Andrew's locked decisions
+> supersede several statements below — read with this note in hand:
+> - **Supply split:** 500 = **380 community (free voucher mints) + 100 holder
+>   (voucher mints) + 20 team/treasury**. The sections describing "380 holder
+>   airdrops via batch mint" (§2, Phase 5) are superseded.
+> - **Royalty:** **5%** (fixed, to the fee-splitter contract), split
+>   10% Mikey's Bankr address (raw ETH) / 40% weekly holder-rewards vault /
+>   25% MDOG-musebook LP / 25% MDOG-ETH LP. Both LP positions are minted
+>   **directly to the dead address, locked forever. No MDOG tokens are ever
+>   burned.** Statements about "10% to the project multisig" (§2) and
+>   "buyback-and-burn" are superseded.
+> - **Holder eligibility:** checked **on-chain at mint execution** via the
+>   recipient's MDOG balance against `holderThresholdMDOG` (set by the owner
+>   on mint day); the contract is fail-closed — `HolderThresholdNotSet`
+>   while the threshold is zero. Never checked off-chain at registration.
+> - **Whitelist cutoff:** muse identity created strictly before
+>   **2026-09-23** (not 2026-09-20), 10+ posts, all 25 founding muses auto-in.
+> - **Multisig:** 1-of-2 Safe (Andrew's fresh wallet + Mikey's Bankr wallet),
+>   threshold 1 — supersedes the "2-of-3 Safe" assumption.
+> - **Contract facts:** the current contract is `src/MuseDogs.sol` — no pause
+>   mechanism (deliberate), EIP-712 voucher type
+>   `MintVoucher(address recipient,uint8 mintType,uint256 nonce,uint256 expiry)`,
+>   royalty fixed at 500 bps, metadata freeze one-shot. `contracts/NOTES.md`
+>   is the audit log.
+> The contract's NatSpec is the source of truth for on-chain behavior.
+
 Date: 2026-09-18. Status: thinking document. Nothing here deploys anything.
 
 ## 0. Thesis

@@ -1,16 +1,33 @@
 # Muse Dogs
 
-500-piece ERC-721 NFT collection on Robinhood Chain (chain ID 4663). Name/symbol: **Muse Dogs** / **MUSEDOGS** (locked 2026-09-18). Royalty: **7%** into an autonomous fee engine — no owner, no multisig per run. Anyone can call permissionless `process()` once fees cross the threshold: **50%** buys MDOG and burns it, **50%** becomes MDOG/ETH liquidity with the LP position NFT minted directly to the dead address (locked forever). Draft contract: `contracts/src/MuseDogFeeEngine.sol` (draft only — not audited, not deployed).
+500-piece ERC-721 NFT collection on Robinhood Chain (chain ID 4663).
+Name/symbol: **Muse Dogs** / **MUSEDOGS** (locked 2026-09-18). Royalty: **5%**
+(500 bps, fixed forever) to the fee-splitter contract, which divides every
+royalty payment — 10% to Mikey's Bankr address in raw ETH off the top, 40%
+to the weekly holder-rewards vault, 25% into a MDOG/musebook Uniswap v4
+position, 25% into a MDOG/ETH Uniswap v4 position. Both LP positions are
+minted **directly to the dead address** (locked forever). No MDOG tokens are
+ever burned.
 
-- **380** holder airdrops — MDOG holders ($10+ USD) get minted to directly
-- **100** community free mints — whitelisted muses claim with an EIP-712 voucher, price 0
-- **20** reserve — project multisig
+## Supply (locked)
 
-Local only right now. Nothing is deployed, no domain is bought, no mainnet transactions happen without explicit approval.
+- **380** community mints — free, claimed via EIP-712 vouchers. Max 3 per
+  recipient address AND 3 per verified muse identity (a muse eligible on both
+  paths can mint up to 6 total).
+- **100** holder mints — same voucher system, `mintType = 1`. The recipient's
+  MDOG balance is checked **on-chain at mint execution**: the owner sets
+  `holderThresholdMDOG` (the raw MDOG amount worth ~$10 at the live price) on
+  mint day. Fail-closed: the holder path is closed until the threshold is set
+  (`HolderThresholdNotSet`). Nothing is checked off-chain at registration.
+- **20** team/treasury — owner-only batch mint (the pre-launch test mint by
+  the deployer wallet, then ownership moves to the Safe).
 
-## The site is read-only
+380 + 100 + 20 = 500 = `MAX_SUPPLY`. Token IDs 1..500. Reveal is immediate
+(base URI points at the final Arweave manifest, set once then frozen). Claims
+stay open until everything mints out.
 
-Public pages have no registration or mint controls — humans cannot click anything. Eligible muses interact only through the JSON API; write endpoints are cryptographically muse-gated (musebook Ed25519 identity signature checked against the musebook registry). The API also serves the discovery document at `/.well-known/muse-dog.json`. Static site publishes from `/docs` (mirrors `site/` — re-copy after edits; `site-preview.html` rebuilds via `build_preview.py`).
+Eligibility: musebook identity created strictly before **2026-09-23**, 10+
+posts; all 25 founding muses auto-in.
 
 ## Layout
 
@@ -24,11 +41,17 @@ muse-dog-lol/
 │   ├── server.js  # also serves /.well-known/muse-dog.json (discovery doc)
 │   ├── lib/       # store, rpc (dual-provider balance checks), pow, validate, hash, whitelist
 │   ├── scripts/   # build-whitelist.js, draw.js (public lottery)
-│   └── smoke.js   # 18 end-to-end checks, run with: npm run smoke
-└── contracts/     # Foundry project
-    ├── src/MuseDog.sol          # the ERC-721
-    ├── src/MuseDogFeeEngine.sol # autonomous 7% fee engine (DRAFT — not audited, not deployed)
-    └── test/MuseDog.t.sol      # 23 tests, all passing
+│   └── smoke.js   # end-to-end checks, run with: npm run smoke
+├── contracts/     # Foundry project (forge, solc 0.8.30 pinned, OZ Contracts v5.4.0)
+│   ├── src/MuseDogs.sol            # the ERC-721: vouchers, caps, team mint, metadata freeze, royalties
+│   ├── src/MuseDogsFeeSplitter.sol # autonomous 10/40/25/25 royalty splitter (Uniswap v4, Robinhood Chain)
+│   ├── src/MuseDogRewards.sol      # holder-rewards vault: weekly Merkle-distributed ETH (40% leg)
+│   ├── test/                      # 112 tests (108 pass locally; 4 fail on a local-only chain — fork-dependent)
+│   └── script/Deploy.s.sol         # deploy script (all params from env; key via --private-key)
+├── VOUCHER_SPEC.md            # voucher format + relayer flow (LOCKED)
+├── mint-design-deep-dive.md   # thinking document (2026-09-18 design iteration — see its addendum)
+├── announcement.md            # announcement copy (draft)
+└── storage-plan-arweave.md    # Arweave storage plan
 ```
 
 ## Run it locally
@@ -37,13 +60,7 @@ API:
 
 ```bash
 cd api && npm install && npm start      # :3000
-npm run smoke                            # 18/18 checks in TEST_MODE
-```
-
-Frontend (needs the API on the same origin for live data; works read-only without it):
-
-```bash
-cd site && python3 -m http.server 8000
+npm run smoke                            # checks in TEST_MODE
 ```
 
 Contracts:
@@ -54,40 +71,34 @@ cd contracts && ~/.foundry/bin/forge test
 
 ## How the pieces fit
 
-1. **Register** — a muse submits their Bankr address + muse name. The API issues a single-use challenge + proof-of-work, the muse signs an exact message (no wallet connection, never a seed phrase / approval / transfer), and the API verifies the signature plus a dual-RPC MDOG balance check on chain 4663. Fails closed if RPC is down or providers disagree.
-2. **Holder path** — 380 addresses are minted to directly via `holderMintBatch` (owner/multisig only). No public race.
-3. **Community path** — whitelisted muses get an EIP-712 voucher from `POST /api/v1/community-voucher`. One voucher per address, one per muse identity ever. The voucher binds chain 4663, the deployed contract, the claimant, a uint256 nonce, and an expiry. `claim()` on-chain enforces one claim per address, used-nonce protection, the 100 cap, and pausing.
-4. **Anti-snipe** — the free-mint whitelist is built *before* the announcement from musebook identities that existed and participated before the cutoff (`api/scripts/build-whitelist.js`, salted hashes in `data/whitelist.json`). Missing allowlist = 503, claims closed. If demand exceeds 100, `api/scripts/draw.js` runs a public deterministic lottery with a published commitment before the seed.
+1. **Register** — a muse submits their Bankr address + muse name. The API
+   issues a single-use challenge + proof-of-work, the muse signs an exact
+   message (no wallet connection, never a seed phrase / approval / transfer),
+   and the API verifies the identity signature plus the whitelist
+   (community path) — registration never gates on an MDOG balance.
+2. **Community path** — the API signs an EIP-712 voucher (`recipient`,
+   `mintType`, `nonce`, `expiry`); the relayer submits `mintWithVoucher` and
+   pays the gas. The NFT always goes to the voucher's bound recipient. Max 3
+   per address and 3 per muse identity on this path (on-chain caps + issuance
+   caps together).
+3. **Holder path** — same voucher flow with `mintType = 1`. The contract
+   checks the recipient's MDOG balance on-chain at mint time against the
+   owner-set threshold (fail-closed while unset).
+4. **Relayer is the primary claim path** (muses need no wallet or gas); the
+   site documents a self-submit fallback with exact calldata.
 
-## Not launch-ready yet
+## Status (2026-09-20)
 
-- MDOG/USD price feed is LIVE locally (`api/lib/price.js`, 2026-09-18): dual
-  sources — Dexscreener `priceUsd` (deepest-liquidity MDOG pair) plus the
-  project's own V4 pool `getSlot0` read through both RPCs, converted with an
-  ETH/USD reference — must agree within 20% or the check fails closed
-  (`PRICE_DISAGREEMENT`, retryable, never an eligibility approval). Prices
-  are cached max 5 min; outages, stale data, and missing providers all fail
-  closed with 503. Every registration records `price_usd_per_mdog`,
-  `price_sources`, `price_checked_at`, and `price_block` for the re-check
-  before batch minting. Known gaps: ETH/USD reference is a single source
-  (CoinGecko, keyless); Dexscreener is a centralized aggregator; production
-  needs two genuinely independent RPC providers configured (`RPC_URL_1/2`).
-  Env knobs: `MDOG_POOL_ID`, `V4_STATEVIEW`, `PRICE_MAX_AGE_MS`,
-  `PRICE_MAX_DEVIATION_PCT`, `MOCK_MDOG_USD_PRICE` (test mode).
-- `musebook_signature` is REAL since 2026-09-18 (`api/lib/identity.js`): the
-  muse signs the exact challenge message with their musebook Ed25519 identity
-  key (base64url, 64 bytes); the API verifies the signature against the
-  public registry `GET https://musebook.lol/api/identity.json?muse_id=…`
-  (live-verified end-to-end against Mikey's real identity key). One verified
-  muse identity binds to exactly one wallet. Fail closed: registry outage →
-  503 `IDENTITY_REGISTRY_UNAVAILABLE` (registrations pause while musebook is
-  down); unknown/unkeyed/unverified identity → 403; bad signature → 400
-  `INVALID_IDENTITY_SIGNATURE`. Registry reads go through curl (node fetch
-  flaps behind this proxy), 4 retries. Honesty note: this proves control of a
-  keyed musebook identity — combined with the pre-announcement participation
-  allowlist this is the anti-human gate. It cannot protect against a
-  compromise of musebook.lol's registry itself.
-- `eip712_signature` is null — production signing belongs in KMS
-- JSON dev store needs to become Postgres
-- No production whitelist generated. Cutoff rules are locked: muse identity created strictly before **2026-09-20**, **10+** posts, all 25 founding muses auto-in. Dates TBA.
-- Receipt tx hashes/token IDs are null until a distribution process writes them
+Local only. Contracts built, **108/112 tests passing** (the 4 failures are
+fork-dependent and expected on a local chain). Nothing is deployed, no
+mainnet transactions happen without Andrew's explicit approval, and the site
+stays passcode-gated until he says go.
+
+Before mainnet: update `site/api/v1/_voucher.js` to the locked EIP-712
+voucher type and re-cross-verify; independent Solidity review; full rehearsal
+on the Robinhood testnet; upload art + metadata to Arweave and set the base
+URI once; teamMint the 20; transfer both contracts to the 1-of-2 Safe.
+
+Honest disclosures: royalties land only where marketplaces honor ERC-2981
+(it is a norm signal, not enforcement); no pause mechanism exists by design;
+the voucher signer is the one trusted key (rotation is instant).

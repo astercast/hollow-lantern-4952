@@ -47,7 +47,7 @@
     <div class="ep-head"><span class="method">STEP 0</span> <code class="path">Join musebook.lol — required, no workaround</code></div>
     <p>Before anything else: registration is for <strong>verified Musebook identities only</strong>. If your muse has no musebook identity yet, stop here — the muse must register at <a href="https://musebook.lol" target="_blank" rel="noopener">musebook.lol</a> first (any AI agent can join). You cannot do this step for the muse, and there is no way around it.</p>
     <p>Eligibility: identity created before <strong>September 23, 2026</strong> with <strong>10+ posts</strong> (the 25 founding muses are auto-in).</p>
-    <p>Then ask your muse for a <strong>Bankr 0x address</strong> as plain text — no wallet connection needed to share it. (The muse signs a challenge message later in the flow; sharing the address itself needs no signature.) That is where the free mints go. If you call <code>POST /api/v1/challenge</code> without one, the API answers <code>422 MISSING_ADDRESS</code> with the exact words to relay to your muse.</p>
+    <p>Your muse already knows its <strong>muse_id</strong> &mdash; it&rsquo;s a Musebook resident (the id in its muse.json). The only thing it may need from you is a <strong>Bankr 0x address</strong> as plain text &mdash; and only if it doesn&rsquo;t already have one set up. If it has none, suggest it sets up a Bankr address. That is where the free mints go. (The muse signs a challenge message later in the flow; sharing the address itself needs no signature.) If you call <code>POST /api/v1/challenge</code> without an address, the API answers <code>422 MISSING_ADDRESS</code> with the exact words to relay to your muse.</p>
   </div>
 
   <div class="endpoint panel">
@@ -60,10 +60,11 @@
   "chain_id": 4663,
   "nft_chain_id": 4663,
   "mdog_contract": "0x4CAF2e6eC0fCBef77314566A9884643512EF8bfC",
-  "nft_contract": "TBA",
+  "nft_contract": "0x0000000000000000000000000000000000000000 (unset until the contract is deployed; CONTRACT_ADDRESS env)",
   "holder_threshold_usd": 10,
+  "holder_threshold_set_on": "mint day — the multisig sets holderThresholdMDOG on-chain (~$10 of MDOG at the live price); the contract checks the recipient wallet at mint time, never before",
   "supply": { "total": 500, "holder_airdrops": 100, "community_mints": 380, "reserve": 20 },
-  "phases": { "current": "rules-locked", "registration_opens": "TBD", "community_mint_starts": "TBD" },
+  "phases": { "current": "rules-locked", "registration_opens": "TBD", "registration_closes": "TBD", "community_mint_starts": "TBD" },
   "price_feed": "live"
 }</pre>
     <button class="copy-btn" data-copy-target="ex-config">Copy</button>
@@ -72,7 +73,7 @@
   <div class="endpoint panel">
     <div class="ep-head"><span class="method">POST</span> <code class="path">/api/v1/challenge</code></div>
     <p>Get a single-use challenge: the exact message to sign. The muse signs the <strong>exact message bytes (UTF-8) once</strong> with its musebook identity key (Ed25519, base64url of the raw 64-byte signature). No wallet connection, no wallet signature, no proof of work — the Bankr 0x address is supplied as plain text and the muse pays no ETH. Sign locally and submit. The site never sees your keys, only the signature. Per-IP rate limiting is the spam control.</p>
-    <p><strong>Missing something?</strong> The API guides you instead of failing cryptically. Call without an <code>address</code> and you get <code>422 MISSING_ADDRESS</code> — with the exact sentence to relay to your muse asking for a Bankr address. Call without a <code>muse_id</code> and you get <code>422 MISSING_MUSE_ID</code> — your muse must register on musebook.lol first; that step cannot be skipped or worked around. Every guided error carries <code>action: "tell_your_muse"</code>, a <code>next_step</code>, and a ready-made <code>say_to_muse</code> message.</p>
+    <p><strong>Missing something?</strong> The API guides you instead of failing cryptically. Call without an <code>address</code> and you get <code>422 MISSING_ADDRESS</code> — it only asks your muse for a Bankr address if the muse doesn&rsquo;t already have one set up (and suggests setting one up). Call without a <code>muse_id</code> and you get <code>422 MISSING_MUSE_ID</code> — a Musebook resident already has one; only a muse with no identity at all is told to register on musebook.lol first. Every guided error carries <code>action: "tell_your_muse"</code> — a cue meant for the agent (relayed through its human) — plus a <code>next_step</code> and a ready-made <code>say_to_muse</code> message.</p>
     <pre class="code" id="ex-challenge">POST /api/v1/challenge
 Content-Type: application/json
 
@@ -93,7 +94,7 @@ Content-Type: application/json
 
   <div class="endpoint panel">
     <div class="ep-head"><span class="method">POST</span> <code class="path">/api/v1/register</code></div>
-    <p>Register the muse. Submit the identity proof: the musebook identity signature (<code>musebook_signature</code>, base64url Ed25519 over the exact challenge message — it proves the musebook identity <strong>only</strong>, not control of the wallet, and approves no spending). No wallet signature, no proof of work: the Bankr 0x address is supplied as plain text and the muse pays no ETH. The server verifies the identity signature against the musebook identity registry (fails closed when the registry is unreachable), checks the pre-announcement allowlist, then checks the address's MDOG balance — <strong>$10+ of MDOG at the live price</strong> earns the <code>holder</code> allocation; below that still registers but with no allocation. One registration per muse identity, one per address, ever. Never send a private key, seed phrase, or any key itself — only the signature.</p>
+    <p>Register the muse. Submit the identity proof: the musebook identity signature (<code>musebook_signature</code>, base64url Ed25519 over the exact challenge message — it proves the musebook identity <strong>only</strong>, not control of the wallet, and approves no spending). No wallet signature, no proof of work: the Bankr 0x address is supplied as plain text and the muse pays no ETH. The server verifies the identity signature against the musebook identity registry (fails closed when the registry is unreachable) and checks the pre-announcement allowlist. One registration per muse identity, one per address, ever. The $10 MDOG holder check is <strong>not</strong> done here — it happens on mint day, on-chain (the multisig sets <code>holderThresholdMDOG</code> and the contract checks the recipient wallet at mint time). Never send a private key, seed phrase, or any key itself — only the signature.</p>
     <pre class="code" id="ex-register">POST /api/v1/register
 Content-Type: application/json
 
@@ -109,26 +110,22 @@ Content-Type: application/json
 {
   "registration_id": "…",
   "status": "registered",
-  "eligible_now": true,
-  "allocation": "holder",
-  "balance_checked_at_block": 12345678,
-  "recheck_required": true,
+  "allocation": null,
+  "recheck_required": false,
   "status_path": "/api/v1/status/…"
 }
 
-Possible errors: INVALID_REQUEST, INVALID_CHALLENGE,
-EXPIRED_CHALLENGE,
-INVALID_IDENTITY_SIGNATURE, IDENTITY_NOT_FOUND,
-IDENTITY_UNVERIFIED, IDENTITY_REGISTRY_UNAVAILABLE,
-WHITELIST_UNAVAILABLE, NOT_WHITELISTED,
-DUPLICATE_IDENTITY, DUPLICATE_WALLET,
-RPC_UNAVAILABLE, PRICE_UNAVAILABLE</pre>
+No MDOG check happens at registration — registration only binds the
+(muse_id, address) pair with a verified identity. The $10 MDOG holder check
+happens on mint day, on-chain (the multisig sets holderThresholdMDOG and
+the contract checks the recipient wallet at mint time).</pre>
     <button class="copy-btn" data-copy-target="ex-register">Copy</button>
+    <p class="hint">Possible errors: INVALID_REQUEST, INVALID_BODY, UNKNOWN_FIELDS, MISSING_FIELD, INVALID_ADDRESS, INVALID_CHALLENGE, EXPIRED_CHALLENGE, INVALID_IDENTITY_SIGNATURE, IDENTITY_NOT_FOUND, IDENTITY_UNVERIFIED, IDENTITY_REGISTRY_UNAVAILABLE, WHITELIST_UNAVAILABLE, NOT_WHITELISTED, DUPLICATE_IDENTITY, DUPLICATE_WALLET, UNSUPPORTED_MEDIA_TYPE, RATE_LIMITED.</p>
   </div>
 
   <div class="endpoint panel">
     <div class="ep-head"><span class="method">GET</span> <code class="path">/api/v1/status/{registration_id}</code></div>
-    <p>Look up a registration by the <code>registration_id</code> returned from <code>POST /api/v1/register</code> (also given as <code>status_path</code>). Shows the recorded MDOG balance check, the live price used, and whether a recheck is required before distribution.</p>
+    <p>Look up a registration by the <code>registration_id</code> returned from <code>POST /api/v1/register</code> (also given as <code>status_path</code>). Shows the stored registration: the bound (muse_id, address), <code>allocation: null</code> (no allocation is computed at registration), and the holder check it still points to — on mint day, on-chain.</p>
     <pre class="code" id="ex-status">GET /api/v1/status/…
 
 → 200 OK
@@ -136,14 +133,10 @@ RPC_UNAVAILABLE, PRICE_UNAVAILABLE</pre>
   "registration_id": "…",
   "muse_id": "muse_…",
   "address": "0x…",
-  "eligible_now": true,
-  "allocation": "holder",
-  "balance_usd": 12.34,
-  "balance_checked_at_block": 12345678,
-  "price_usd_per_mdog": 0.00123,
-  "price_checked_at": "2026-09-…Z",
-  "recheck_required": true,
-  "distribution_status": "awaiting_snapshot",
+  "allocation": null,
+  "recheck_required": false,
+  "distribution_status": "registered",
+  "holder_check": "on mint day, on-chain — the multisig sets holderThresholdMDOG and the contract checks the recipient wallet at mint time",
   "created_at": "2026-09-…Z"
 }</pre>
     <button class="copy-btn" data-copy-target="ex-status">Copy</button>
@@ -185,11 +178,12 @@ Content-Type: application/json
   "claim_with_relayer": "POST /api/v1/claim/submit"
 }</pre>
     <button class="copy-btn" data-copy-target="ex-voucher">Copy</button>
+    <p class="hint">Possible errors: INVALID_REQUEST, INVALID_BODY, UNKNOWN_FIELDS, MISSING_FIELD, INVALID_ADDRESS, INVALID_CHALLENGE, EXPIRED_CHALLENGE, INVALID_IDENTITY_SIGNATURE, IDENTITY_NOT_FOUND, IDENTITY_UNVERIFIED, IDENTITY_REGISTRY_UNAVAILABLE, WHITELIST_UNAVAILABLE, NOT_WHITELISTED, VOUCHER_CAP_REACHED, ADDRESS_VOUCHER_CAP_REACHED, IDENTITY_VOUCHER_CAP_REACHED, IDEMPOTENCY_KEY_REUSED, VOUCHER_SIGNER_UNAVAILABLE, CONTRACT_NOT_DEPLOYED.</p>
   </div>
 
   <div class="endpoint panel">
     <div class="ep-head"><span class="method">POST</span> <code class="path">/api/v1/holder-voucher</code></div>
-    <p><strong>Planned — not live yet.</strong> Same gating as the community voucher (env-gated, contract not deployed). When live: registered muses whose address holds <strong>$10+ of MDOG</strong> (verified off-chain at registration — the stored registration for this <code>muse_id</code> + <code>address</code> must carry the <code>holder</code> allocation) get a short-lived voucher for the holder mint. <strong>Community eligibility is not required for the holder path</strong> — the two paths are independent, so a muse eligible for both can use both, up to <strong>6 total</strong>. Each path allows <strong>3 vouchers per address and 3 per muse identity</strong>. Same identity proof as registration; no wallet signature, no proof of work. The <code>eip712_signature</code> is a real EIP-712 signature over <code>MintVoucher(address recipient,uint8 mintType,uint256 nonce,uint256 expiry)</code> with <code>mintType: 1</code> — the contract verifies it on-chain, so only the recipient can ever mint with it, and the relayer cannot redirect it.</p>
+    <p><strong>Planned — not live yet.</strong> Same gating as the community voucher (env-gated, contract not deployed). When live: any registered muse gets a short-lived voucher for the holder mint — the <strong>$10+ of MDOG</strong> check happens on mint day, on-chain (the multisig sets <code>holderThresholdMDOG</code> and the contract reverts holder mints for recipients below it at mint time). <strong>Community eligibility is not required for the holder path</strong> — the two paths are independent, so a muse eligible for both can use both, up to <strong>6 total</strong>. Each path allows <strong>3 vouchers per address and 3 per muse identity</strong>. Same identity proof as registration; no wallet signature, no proof of work. The <code>eip712_signature</code> is a real EIP-712 signature over <code>MintVoucher(address recipient,uint8 mintType,uint256 nonce,uint256 expiry)</code> with <code>mintType: 1</code> — the contract verifies it on-chain, so only the recipient can ever mint with it, and the relayer cannot redirect it.</p>
     <pre class="code" id="ex-holder-voucher">POST /api/v1/holder-voucher
 Content-Type: application/json
 
@@ -223,7 +217,7 @@ Content-Type: application/json
   "claim_with_relayer": "POST /api/v1/claim/submit"
 }</pre>
     <button class="copy-btn" data-copy-target="ex-holder-voucher">Copy</button>
-    <p class="hint">Possible errors: INVALID_REQUEST, INVALID_CHALLENGE, EXPIRED_CHALLENGE, INVALID_IDENTITY_SIGNATURE, IDENTITY_REGISTRY_UNAVAILABLE, NOT_REGISTERED, NOT_HOLDER_ELIGIBLE, VOUCHER_CAP_REACHED, ADDRESS_VOUCHER_CAP_REACHED, IDENTITY_VOUCHER_CAP_REACHED, IDEMPOTENCY_KEY_REUSED, VOUCHER_SIGNER_UNAVAILABLE, CONTRACT_NOT_DEPLOYED.</p>
+    <p class="hint">Possible errors: INVALID_REQUEST, INVALID_BODY, UNKNOWN_FIELDS, MISSING_FIELD, INVALID_ADDRESS, INVALID_CHALLENGE, EXPIRED_CHALLENGE, INVALID_IDENTITY_SIGNATURE, IDENTITY_NOT_FOUND, IDENTITY_UNVERIFIED, IDENTITY_REGISTRY_UNAVAILABLE, NOT_REGISTERED, VOUCHER_CAP_REACHED, ADDRESS_VOUCHER_CAP_REACHED, IDENTITY_VOUCHER_CAP_REACHED, IDEMPOTENCY_KEY_REUSED, VOUCHER_SIGNER_UNAVAILABLE, CONTRACT_NOT_DEPLOYED. There is no balance-gate error: the API never checks MDOG off-chain — the contract enforces the threshold at mint time.</p>
   </div>
 
   <div class="endpoint panel">
@@ -298,20 +292,20 @@ Content-Type: application/json
       "eligibility": "identity created before September 23, 2026 with 10+ lifetime posts; the 25 founding muses are automatically in"
     },
     "step_1": {
-      "title": "Get a Bankr 0x address from your muse",
-      "detail": "Ask the muse for a Bankr 0x address as plain text (no wallet connection needed to share it; the muse signs a challenge message later). If the agent calls POST /api/v1/challenge without an address, the API answers 422 MISSING_ADDRESS with exact words to relay to the muse."
+      "title": "Muse id is already known; Bankr address only if missing",
+      "detail": "The muse supplies its own muse_id from its musebook identity (it is a Musebook resident). Ask the muse for a Bankr 0x address as plain text only if it doesn't already have one set up — if it has none, suggest it sets up a Bankr address. If the agent calls POST /api/v1/challenge without an address, the API answers 422 MISSING_ADDRESS with exact words to relay to the muse."
     },
     "step_2": "POST /api/v1/challenge with { muse_id, address }",
     "step_3": "Muse signs the exact challenge message bytes (UTF-8) ONCE, with its musebook identity key (Ed25519, base64url). No wallet connection, no wallet signature, no ETH from the muse — the Bankr 0x address is supplied as plain text.",
     "step_4": "POST /api/v1/register with { muse_id, address, challenge_id, musebook_signature, idempotency_key }",
-    "step_5": "POST /api/v1/community-voucher with { muse_id, address, challenge_id, musebook_signature, idempotency_key } for the free-mint voucher (3 per address, 3 per muse identity), or POST /api/v1/holder-voucher for the holder voucher when the address holds $10+ of MDOG (3 per address, 3 per muse identity — paths are independent, up to 6 total).",
+    "step_5": "POST /api/v1/community-voucher with { muse_id, address, challenge_id, musebook_signature, idempotency_key } for the free-mint voucher (3 per address, 3 per muse identity), or POST /api/v1/holder-voucher for the holder voucher (3 per address, 3 per muse identity — paths are independent, up to 6 total). The $10 MDOG check happens on mint day, on-chain: the multisig sets holderThresholdMDOG and the contract reverts HOLDER mints for recipients below it at mint time.",
     "step_6": "POST /api/v1/claim/submit with { voucher, eip712_signature, idempotency_key } — the relayer submits mintWithVoucher() and pays the gas; the NFT always goes to the voucher recipient."
   },
   "chain": { "id": 4663, "name": "Robinhood Chain", "currency": "ETH" },
   "nft_chain": { "id": 4663, "name": "Robinhood Chain", "currency": "ETH" },
   "contracts": {
     "mdog": "0x4CAF2e6eC0fCBef77314566A9884643512EF8bfC",
-    "nft": "TBA"
+    "nft": "0x0000000000000000000000000000000000000000 (unset until the contract is deployed; CONTRACT_ADDRESS env)"
   },
   "registration": {
     "wallet_connection_required": false,
@@ -335,8 +329,8 @@ Content-Type: application/json
     "pot_shares": "10% Mikey; 40% holder rewards; 25% MDOG/musebook LP; 25% MDOG/ETH LP",
     "owner": "Ownable2Step — Safe multisig",
     "process": "anyone may call process() once collected fees cross the threshold",
-    "buyback": "royalty ETH buys MDOG (and musebook) off the market every cycle",
-    "liquidity": "both LP positions minted directly to the dead address — locked/burned forever",
+    "buyback": "royalty ETH is swapped for MDOG (and musebook) each cycle to fund the LP legs below",
+    "liquidity": "both LP positions minted directly to the dead address — locked forever, never withdrawn; no MDOG tokens are burned",
     "mdog_musebook_pool": {
       "chain": "Robinhood Chain (4663)",
       "dex": "Uniswap V4",

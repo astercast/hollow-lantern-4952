@@ -135,7 +135,7 @@ contract Deploy is Script {
         );
 
         // 2. The collection, with the splitter wired as the 5% royalty recipient.
-        MuseDogs nft = new MuseDogs(owner, voucherSigner, address(splitter));
+        MuseDogs nft = new MuseDogs(owner, voucherSigner, address(splitter), mdogToken);
 
         vm.stopBroadcast();
 
@@ -157,5 +157,9 @@ contract Deploy is Script {
         //      acceptOwnership() on each. Confirm owner() == multisig.
         //   6. Dry-run splitter.process() with a keeper call and confirm the
         //      buyback + liquidity legs execute against the real pools.
+        //   7. ON MINT DAY: the multisig calls setHolderThresholdMDOG with
+        //      the raw MDOG amount worth ~$10 at the live price. Until this
+        //      is set, the holder path is closed (fail-closed:
+        //      mintWithVoucher reverts HOLDER mints with HolderThresholdNotSet).
     }
 }

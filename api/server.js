@@ -9,8 +9,7 @@ const { ethers } = require('ethers');
 const store = require('./lib/store');
 const { hash } = require('./lib/hash');
 const { loadWhitelist } = require('./lib/whitelist');
-const { checkBalance, CHAIN_ID } = require('./lib/rpc');
-const { getMdogUsdPrice } = require('./lib/price');
+const { CHAIN_ID } = require('./lib/rpc');
 const { verifyIdentitySignature } = require('./lib/identity');
 const { strictBody, requireFields, checksumAddress, looksLikeSignature, looksLikeIdentitySignature } = require('./lib/validate');
 const {
@@ -25,7 +24,6 @@ const PORT = Number(process.env.PORT || 3000);
 const MDOG_CONTRACT = process.env.MDOG_CONTRACT || '0x4CAF2e6eC0fCBef77314566A9884643512EF8bfC';
 const CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS || '0x0000000000000000000000000000000000000000';
 const THRESHOLD_USD = Number(process.env.THRESHOLD_USD || 10);
-const MDOG_DECIMALS = Number(process.env.MDOG_DECIMALS || 18);
 const CHALLENGE_TTL_MS = 10 * 60 * 1000;
 const VOUCHER_CAP = 380;
 const COMMUNITY_VOUCHERS_PER_ADDRESS = 3; // per-address cap (matches contract MAX_COMMUNITY_PER_ADDRESS)
@@ -264,17 +262,17 @@ function jobPublic(job) {
 
 app.get('/api/v1/config', (req, res) => {
   res.json({
-    chain_id: CHAIN_ID, // registration/holder-check RPC chain
+    chain_id: CHAIN_ID, // chain the API reads
     nft_chain_id: NFT_CHAIN_ID, // chain the Muse Dogs contract lives on (vouchers bind to this)
     mdog_contract: MDOG_CONTRACT,
     nft_contract: CONTRACT_ADDRESS,
     holder_threshold_usd: THRESHOLD_USD,
+    holder_threshold_set_on: 'mint day — the multisig sets holderThresholdMDOG on-chain (~$10 of MDOG at the live price); the contract checks the recipient wallet at mint time, never before',
     supply: { total: 500, holder_airdrops: 100, community_mints: 380, reserve: 20 },
     phases: {
       current: CURRENT_PHASE,
       registration_opens: process.env.REGISTRATION_OPENS || 'TBD',
       registration_closes: process.env.REGISTRATION_CLOSES || 'TBD',
-      holder_snapshot_block: process.env.SNAPSHOT_BLOCK || 'TBD',
       community_mint_starts: process.env.COMMUNITY_MINT_STARTS || 'TBD',
     },
     price_feed: env.TEST_MODE === '1' ? 'test' : 'live',
@@ -292,11 +290,11 @@ app.post('/api/v1/challenge', (req, res) => {
     const rawMuseId = req.body.muse_id;
     if (rawMuseId === undefined || rawMuseId === null || String(rawMuseId).trim() === '') {
       return err(res, 422, 'MISSING_MUSE_ID',
-        'No muse_id was provided. Registration is for verified Musebook identities only — there is no way around this.',
+        'No muse_id was provided. Your muse is a Musebook resident and already has a muse_id — use the one from its musebook identity (muse.json).',
         {
           action: 'tell_your_muse',
-          next_step: 'Ask your muse to register an identity on musebook.lol first (any AI agent can join at https://musebook.lol). Once it has a muse_id, call this endpoint again with that muse_id.',
-          say_to_muse: 'You need a musebook.lol identity before you can register for the Muse Dogs free mint — I cannot do this step for you. Please go to musebook.lol, create your muse identity, and give me your muse_id. Note: your identity must have been created before September 23, 2026 with 10+ posts to be eligible.',
+          next_step: 'Use the muse_id from the muse\'s own musebook identity and call this endpoint again. Only if the muse genuinely has no musebook identity yet must it register one at https://musebook.lol first (any AI agent can join).',
+          say_to_muse: 'For the Muse Dogs free mint I need your musebook muse_id — as a Musebook resident you already have one (the muse_id in your muse.json). If you don\'t have one yet, please create your muse identity at musebook.lol first, then give me your muse_id. (Eligibility needs the identity from before September 23, 2026 with 10+ posts.)',
         });
     }
     const rawAddress = req.body.address;
@@ -305,8 +303,8 @@ app.post('/api/v1/challenge', (req, res) => {
         'No Bankr address was provided. Registration needs a 0x address (as plain text — no wallet connection) where the free mints will go.',
         {
           action: 'tell_your_muse',
-          next_step: 'Ask your muse for a Bankr 0x address to receive the free mints, then call this endpoint again with that address.',
-          say_to_muse: 'To register you for the Muse Dogs free mint I need a Bankr 0x address from you — just the address as text, no wallet connection and no ETH needed to share it. (You will sign the challenge message with your musebook identity key later in the flow; sharing the address itself needs no signature.) Please tell me which address should receive your free mints.',
+          next_step: 'Ask the muse for a Bankr 0x address only if it doesn\'t already have one set up — if it has none, suggest it sets up a Bankr address first. Then call this endpoint again with that address.',
+          say_to_muse: 'To register you for the Muse Dogs free mint I need a Bankr 0x address — just the address as text, no wallet connection and no ETH needed to share it. If you already have one set up, send it; if not, please set up a Bankr address first, then tell me which address should receive your free mints. (You will sign the challenge message with your musebook identity key later in the flow; sharing the address itself needs no signature.)',
         });
     }
     const muse_id = String(rawMuseId).slice(0, 128);
@@ -421,42 +419,13 @@ app.post('/api/v1/register', async (req, res) => {
     }
 
     // Mark the challenge consumed BEFORE the network call so it cannot be
-    // replayed even if the balance check fails.
+    // replayed even if the checks below fail.
     ch.consumed = true;
 
-    // MDOG balance from two RPC providers. Fail closed on disagreement.
-    let bal;
-    try {
-      bal = await checkBalance(address, env);
-    } catch (e) {
-      store.save(db);
-      const code = e.code || 'RPC_UNAVAILABLE';
-      const status = code === 'RPC_UNAVAILABLE' ? 503 : 502;
-      const resp = { error: code, message: e.message || 'Balance verification unavailable.', retryable: true };
-      store.insert(db, 'idempotency', { key: idempotency_key, muse_id: String(muse_id), route: 'register', status, response: resp, created_at: new Date().toISOString() }, ['key']);
-      return res.status(status).json(resp);
-    }
-
-    // Live MDOG/USD price. Fail closed on any outage, disagreement, or
-    // stale data: a missing price means NO eligibility decision is made,
-    // never an approval. The price, block, and sources are recorded with
-    // the registration so the decision is auditable and re-checkable
-    // before batch minting.
-    let px;
-    try {
-      px = await getMdogUsdPrice(env);
-    } catch (e) {
-      store.save(db);
-      const code = e.code || 'PRICE_UNAVAILABLE';
-      const resp = { error: code, message: e.message || 'Price feed unavailable.', retryable: true };
-      store.insert(db, 'idempotency', { key: idempotency_key, muse_id: String(muse_id), route: 'register', status: 503, response: resp, created_at: new Date().toISOString() }, ['key']);
-      return res.status(503).json(resp);
-    }
-
-    // Threshold: $10 USD worth of MDOG at the live price.
-    const units = Number(BigInt(bal.balance_raw)) / 10 ** MDOG_DECIMALS;
-    const balance_usd = units * px.price_usd;
-    const eligible_now = balance_usd >= THRESHOLD_USD;
+    // No $10 MDOG check here — by design it happens ON MINT DAY, on-chain:
+    // the multisig sets holderThresholdMDOG on the contract and
+    // mintWithVoucher reverts for recipients below it at mint time.
+    // Registration only binds (muse_id, address) with a verified identity.
 
     const registration_id = randomUUID();
     const registration = {
@@ -466,28 +435,18 @@ app.post('/api/v1/register', async (req, res) => {
       muse_id_hash: hash(muse_id),
       address_hash: hash(address.toLowerCase()),
       challenge_id,
-      balance_raw: bal.balance_raw,
-      balance_usd,
-      balance_checked_at_block: bal.block,
-      price_usd_per_mdog: px.price_usd,
-      price_sources: px.sources.join(','),
-      price_checked_at: px.fetched_at,
-      price_block: px.block,
-      eligible_now,
-      allocation: eligible_now ? 'holder' : null,
-      distribution_status: eligible_now ? 'awaiting_snapshot' : 'not_eligible',
-      recheck_required: true,
+      allocation: null,
+      distribution_status: 'registered',
+      recheck_required: false,
       created_at: new Date().toISOString(),
     };
     store.insert(db, 'registrations', registration, ['registration_id', 'muse_id_hash', 'address_hash']);
 
     const resp = {
       registration_id,
-      status: eligible_now ? 'registered' : 'registered_below_threshold',
-      eligible_now,
+      status: 'registered',
       allocation: registration.allocation,
-      balance_checked_at_block: bal.block,
-      recheck_required: true,
+      recheck_required: false,
       status_path: '/api/v1/status/' + registration_id,
     };
     store.insert(db, 'idempotency', { key: idempotency_key, muse_id: String(muse_id), route: 'register', status: 200, response: resp, created_at: new Date().toISOString() }, ['key']);
@@ -512,16 +471,10 @@ app.get('/api/v1/status/:registration_id', (req, res) => {
     registration_id: r.registration_id,
     muse_id: r.muse_id,
     address: r.address,
-    eligible_now: r.eligible_now,
     allocation: r.allocation,
-    balance_usd: r.balance_usd,
-    balance_checked_at_block: r.balance_checked_at_block,
-    price_usd_per_mdog: r.price_usd_per_mdog,
-    price_sources: r.price_sources,
-    price_checked_at: r.price_checked_at,
-    price_block: r.price_block,
     recheck_required: r.recheck_required,
     distribution_status: r.distribution_status,
+    holder_check: 'on mint day, on-chain — the multisig sets holderThresholdMDOG and the contract checks the recipient wallet at mint time',
     created_at: r.created_at,
   });
 });
@@ -693,10 +646,12 @@ app.post('/api/v1/community-voucher', async (req, res) => {
 // The NFT always goes to the voucher's recipient — the relayer cannot redirect it.
 
 // Holder voucher: mintType 1. Eligibility is the stored registration for this
-// (muse_id, address) with allocation === 'holder' ($10+ of MDOG in the supplied
-// address, verified off-chain at registration). The paths are independent —
-// a muse eligible for both can use both, for up to 6 total. 3 vouchers per
-// address and 3 per muse identity on this path, matching the contract.
+// (muse_id, address) with a verified identity. The $10 MDOG check is NOT
+// done here — it happens on mint day, on-chain: the multisig sets
+// holderThresholdMDOG and mintWithVoucher reverts for recipients below it
+// at mint time. The paths are independent — a muse eligible for both can
+// use both, for up to 6 total. 3 vouchers per address and 3 per muse
+// identity on this path, matching the contract.
 app.post('/api/v1/holder-voucher', async (req, res) => {
   try {
     strictBody(req.body, [
@@ -745,17 +700,15 @@ app.post('/api/v1/holder-voucher', async (req, res) => {
       return err(res, 503, 'CONTRACT_NOT_DEPLOYED', 'The Muse Dogs contract is not deployed yet.', { retryable: true });
     }
 
-    // Holder gate: the address must have held $10+ of MDOG at registration
-    // (verified off-chain against the live price then). Community eligibility
-    // is NOT required for the holder path — the paths are independent.
+    // Holder gate: the (muse_id, address) must be registered with a verified
+    // identity. The $10 MDOG check happens on mint day, on-chain — not here.
+    // Community eligibility is NOT required for the holder path — the paths
+    // are independent.
     const registration = db.registrations.find(
       (r) => r.muse_id === muse_id && String(r.address) === address
     );
     if (!registration) {
       return err(res, 403, 'NOT_REGISTERED', 'Register this (muse_id, address) first — the holder path needs a registration.');
-    }
-    if (registration.allocation !== 'holder') {
-      return err(res, 403, 'NOT_HOLDER_ELIGIBLE', 'This address was not holder-eligible at registration: it needs $10+ of MDOG. It can still use the community path.');
     }
 
     const holderVouchers = db.vouchers.filter((v) => v.allocation === 'HOLDER');
@@ -989,13 +942,13 @@ app.get('/.well-known/muse-dog.json', (req, res) => {  res.json({
         eligibility: 'identity created before September 23, 2026 with 10+ lifetime posts; the 25 founding muses are automatically in',
       },
       step_1: {
-        title: 'Get a Bankr 0x address from your muse',
-        detail: 'Ask the muse for a Bankr 0x address as plain text (no wallet connection needed to share it; the muse signs a challenge message later). If the agent calls POST /api/v1/challenge without an address, the API answers 422 MISSING_ADDRESS with exact words to relay to the muse.',
+        title: 'Muse id is already known; Bankr address only if missing',
+        detail: 'The muse supplies its own muse_id from its musebook identity (it is a Musebook resident). Ask the muse for a Bankr 0x address as plain text only if it doesn\'t already have one set up — if it has none, suggest it sets up a Bankr address. If the agent calls POST /api/v1/challenge without an address, the API answers 422 MISSING_ADDRESS with exact words to relay to the muse.',
       },
       step_2: 'POST /api/v1/challenge with { muse_id, address }',
       step_3: 'Muse signs the exact challenge message bytes (UTF-8) ONCE, with its musebook identity key (Ed25519, base64url). No wallet connection, no wallet signature, no ETH from the muse — the Bankr 0x address is supplied as plain text.',
       step_4: 'POST /api/v1/register with { muse_id, address, challenge_id, musebook_signature, idempotency_key }',
-      step_5: 'POST /api/v1/community-voucher with { muse_id, address, challenge_id, musebook_signature, idempotency_key } for the free-mint voucher (3 per address, 3 per muse identity), or POST /api/v1/holder-voucher for the holder voucher when the address holds $10+ of MDOG (3 per address, 3 per muse identity — paths are independent, up to 6 total).',
+      step_5: 'POST /api/v1/community-voucher with { muse_id, address, challenge_id, musebook_signature, idempotency_key } for the free-mint voucher (3 per address, 3 per muse identity), or POST /api/v1/holder-voucher for the holder voucher (3 per address, 3 per muse identity — paths are independent, up to 6 total). The $10 MDOG check happens on mint day, on-chain: the multisig sets holderThresholdMDOG and the contract reverts HOLDER mints for recipients below it at mint time.',
       step_6: 'POST /api/v1/claim/submit with { voucher, eip712_signature, idempotency_key } — the relayer submits mintWithVoucher() and pays the gas; the NFT always goes to the voucher recipient.',
     },
     chain: { id: CHAIN_ID, name: 'Robinhood Chain', currency: 'ETH' },
@@ -1013,7 +966,7 @@ app.get('/.well-known/muse-dog.json', (req, res) => {  res.json({
         note: 'one verified muse identity binds to exactly one address; the identity signature proves the musebook identity only — NOT control of the wallet, and it approves no spending',
       }, // end identity_proof — no wallet_proof, no proof_of_work on this flow
     },
-    holder_threshold: { usd: THRESHOLD_USD, token: 'MDOG' },
+    holder_threshold: { usd: THRESHOLD_USD, token: 'MDOG', checked: 'on mint day, on-chain — the multisig sets holderThresholdMDOG and the contract checks the recipient wallet at mint time' },
     supply: { total: 500, holder_airdrops: 100, community_mints: 380, reserve: 20 },
     royalty_fee_engine: {
       royalty_pct: 5,
@@ -1021,8 +974,8 @@ app.get('/.well-known/muse-dog.json', (req, res) => {  res.json({
       pot_shares: '10% Mikey; 40% holder rewards; 25% MDOG/musebook LP; 25% MDOG/ETH LP',
       owner: 'Ownable2Step — Safe multisig',
       process: 'anyone may call process() once collected fees cross the threshold',
-      buyback: 'royalty ETH buys MDOG (and musebook) off the market every cycle',
-      liquidity: 'both LP positions minted directly to the dead address — locked/burned forever',
+      buyback: 'royalty ETH is swapped for MDOG (and musebook) each cycle to fund the LP legs below',
+      liquidity: 'both LP positions minted directly to the dead address — locked forever, never withdrawn; no MDOG tokens are burned',
     },
     holder_rewards: {
       eligibility: 'every Muse Dogs holder earns, per NFT held',
