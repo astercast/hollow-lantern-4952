@@ -1,118 +1,75 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.30;
+pragma solidity 0.8.30;
 
-import {Script} from "forge-std/Script.sol";
-import {MuseDog} from "../src/MuseDog.sol";
-import {MuseDogFeeEngine} from "../src/MuseDogFeeEngine.sol";
-import {MuseDogRoyaltySplitter} from "../src/MuseDogRoyaltySplitter.sol";
-import {MuseDogRewards} from "../src/MuseDogRewards.sol";
+import {Script, console} from "forge-std/Script.sol";
+import {MuseDogs} from "../src/MuseDogs.sol";
+import {MuseDogsFeeSplitter} from "../src/MuseDogsFeeSplitter.sol";
 
-/// @title Deploy — full Muse Dogs deployment in dependency order
-/// @notice Deploys to Robinhood Chain (chain id 4663) or its testnet (46630).
-///         Run: forge script script/Deploy.s.sol --rpc-url robinhood --broadcast --verify
-///         Blockscout verification is configured in foundry.toml via [etherscan].
-/// @dev Deployment order (dependencies first):
-///      1. MuseDogRewards      <- REWARDS_PUBLISHER
-///      2. MuseDogFeeEngine     <- FEEENGINE_* (8 ctor args; PoolKey assembled from env)
-///      3. MuseDogRoyaltySplitter <- SPLITTER_MIKEY (default: Mikey's Bankr address), rewards, fee engine
-///      4. MuseDog              <- MUSEDOG_OWNER, MUSEDOG_VOUCHER_SIGNER, MUSEDOG_BASE_URI, splitter, royalty bps
+/// @notice Deploy Muse Dogs (NFT) + MuseDogsFeeSplitter to Robinhood Chain.
+/// @dev All parameters come from environment variables. The broadcast private
+///      key is passed via forge's --private-key flag (or --ledger) and NEVER
+///      lives in this repo or in env files.
 ///
-///      Every constructor parameter comes from an environment variable:
+///      Required env:
+///        MIKEY_BANKR          - Mikey's Bankr address (10% royalty leg, raw ETH)
+///        REWARDS_VAULT        - holder rewards vault (40% leg). Deploy
+///                               MuseDogRewards first, or pass the planned address.
+///        MUSEDOG_OWNER        - initial owner (deployer hot wallet for the
+///                               pre-launch test mint; transfer to the Safe
+///                               multisig via transferOwnership/acceptOwnership
+///                               immediately after).
+///        MUSEDOG_VOUCHER_SIGNER - dedicated voucher-signing key address.
+///        PROCESS_THRESHOLD_WEI  - min new wei per splitter process() call.
 ///
-///      REWARDS
-///        REWARDS_PUBLISHER (address, REQUIRED) — project multisig authorized to publish weekly
-///            merkle roots to MuseDogRewards. No default: must be set.
-///
-///      FEE ENGINE
-///        FEEENGINE_MDOG (address, REQUIRED) — MDOG token on Robinhood Chain.
-///        FEEENGINE_WETH (address, REQUIRED) — WETH on Robinhood Chain.
-///        FEEENGINE_UNIVERSAL_ROUTER (address, REQUIRED) — Uniswap V4 Universal Router.
-///        FEEENGINE_POSITION_MANAGER (address, REQUIRED) — Uniswap V4 Position Manager.
-///        FEEENGINE_POOL_CURRENCY0 (address, REQUIRED) — pool key currency0 (ETH leg or WETH).
-///        FEEENGINE_POOL_CURRENCY1 (address, REQUIRED) — pool key currency1 (the other side; one must be MDOG).
-///        FEEENGINE_POOL_FEE (uint24, default 3000) — pool fee in hundredths of a bps (3000 = 0.3%).
-///        FEEENGINE_POOL_TICKSPACING (int24, default 60) — pool tick spacing.
-///        FEEENGINE_POOL_HOOKS (address, REQUIRED) — pool hooks address (zero address for no hooks).
-///        FEEENGINE_MIN_PROCESS_AMOUNT (uint256, default 0.001 ether) — dust guard: process() reverts
-///            below this vault balance.
-///        FEEENGINE_BURN_BPS (uint256, default 5000) — share of each run going to buyback-and-burn
-///            MDOG (5000 = 50% of the 6.5% remaining after Mikey's cut; rest becomes LP).
-///        FEEENGINE_MIKEY (address, default 0x3a66aec855e605966aebba7df75eb858019b8516) — Mikey's
-///            Bankr address; receives 0.5% of the royalty in raw ETH off the top of every process() run.
-///      NOTE: the pinned 6-arg FeeEngine interface grew during Worker B's build — the live
-///            constructor also takes burnBps and mikey (immutable burn split + Mikey's cut).
-///
-///      SPLITTER
-///        SPLITTER_MIKEY (address, default 0x3a66aec855e605966aebba7df75eb858019b8516) — Mikey's
-///            Bankr address; receives the 0.5% slice of the 5% royalty.
-///
-///      MUSE DOG (collection)
-///        MUSEDOG_OWNER (address, REQUIRED) — 2-of-3 project multisig (initial owner).
-///        MUSEDOG_VOUCHER_SIGNER (address, REQUIRED) — dedicated KMS voucher signer.
-///        MUSEDOG_BASE_URI (string, default "") — initial base token URI.
-///      The collection locks EIP-2981 royalties at 5% (500 bps) paid to the
-///      splitter; no royalty-bps env var exists.
+///      Example:
+///        MIKEY_BANKR=0x... REWARDS_VAULT=0x... MUSEDOG_OWNER=0x... \
+///        MUSEDOG_VOUCHER_SIGNER=0x... PROCESS_THRESHOLD_WEI=50000000000000000 \
+///        forge script script/Deploy.s.sol --rpc-url robinhood \
+///          --broadcast --verify -vvvv
 contract Deploy is Script {
-    /// @notice Mikey's Bankr address (default for SPLITTER_MIKEY and FEEENGINE_MIKEY).
-    address internal constant MIKEY_DEFAULT = 0x3A66aEc855E605966AebbA7df75eB858019B8516;
+    function run() external {
+        address payable mikeyBankr = payable(vm.envAddress("MIKEY_BANKR"));
+        address payable rewardsVault = payable(vm.envAddress("REWARDS_VAULT"));
+        address owner = vm.envAddress("MUSEDOG_OWNER");
+        address voucherSigner = vm.envAddress("MUSEDOG_VOUCHER_SIGNER");
+        uint256 threshold = vm.envUint("PROCESS_THRESHOLD_WEI");
 
-    /// @notice Deploys all four contracts in dependency order and returns them.
-    /// @return rewards The MuseDogRewards holder-rewards vault.
-    /// @return feeEngine The MuseDogFeeEngine autonomous royalty loop.
-    /// @return splitter The MuseDogRoyaltySplitter (receives MuseDog ERC-2981 royalties).
-    /// @return muse The MuseDog ERC-721 collection.
-    function run()
-        external
-        returns (
-            MuseDogRewards rewards,
-            MuseDogFeeEngine feeEngine,
-            MuseDogRoyaltySplitter splitter,
-            MuseDog muse
-        )
-    {
+        require(mikeyBankr != address(0), "MIKEY_BANKR is zero");
+        require(rewardsVault != address(0), "REWARDS_VAULT is zero");
+        require(owner != address(0), "MUSEDOG_OWNER is zero");
+        require(voucherSigner != address(0), "MUSEDOG_VOUCHER_SIGNER is zero");
+        require(threshold > 0, "PROCESS_THRESHOLD_WEI is zero");
+
         vm.startBroadcast();
-        rewards = _deployRewards();
-        feeEngine = _deployFeeEngine();
-        splitter = _deploySplitter(address(rewards), address(feeEngine));
-        muse = _deployMuse(address(splitter));
+
+        // 1. Fee splitter first (its address goes into the NFT's royalty config).
+        MuseDogsFeeSplitter splitter = new MuseDogsFeeSplitter(
+            mikeyBankr,
+            rewardsVault,
+            owner,
+            threshold
+        );
+
+        // 2. The collection, with the splitter wired as the 5% royalty recipient.
+        MuseDogs nft = new MuseDogs(owner, voucherSigner, address(splitter));
+
         vm.stopBroadcast();
-    }
 
-    function _deployRewards() internal returns (MuseDogRewards) {
-        return new MuseDogRewards(vm.envAddress("REWARDS_PUBLISHER"));
-    }
+        console.log("MuseDogsFeeSplitter:", address(splitter));
+        console.log("MuseDogs:", address(nft));
+        console.log("owner:", nft.owner());
+        console.log("voucherSigner:", nft.voucherSigner());
+        console.log("feeSplitter:", nft.feeSplitter());
+        (address receiver, uint256 amount) = nft.royaltyInfo(1, 1 ether);
+        console.log("royaltyInfo(1 ether) receiver:", receiver);
+        console.log("royaltyInfo(1 ether) amount:", amount);
 
-    function _deployFeeEngine() internal returns (MuseDogFeeEngine) {
-        MuseDogFeeEngine.PoolKey memory poolKey = MuseDogFeeEngine.PoolKey({
-            currency0: vm.envAddress("FEEENGINE_POOL_CURRENCY0"),
-            currency1: vm.envAddress("FEEENGINE_POOL_CURRENCY1"),
-            fee: uint24(vm.envOr("FEEENGINE_POOL_FEE", uint256(3000))),
-            tickSpacing: int24(vm.envOr("FEEENGINE_POOL_TICKSPACING", int256(60))),
-            hooks: vm.envAddress("FEEENGINE_POOL_HOOKS")
-        });
-        return new MuseDogFeeEngine(
-            vm.envAddress("FEEENGINE_MDOG"),
-            vm.envAddress("FEEENGINE_WETH"),
-            vm.envAddress("FEEENGINE_UNIVERSAL_ROUTER"),
-            vm.envAddress("FEEENGINE_POSITION_MANAGER"),
-            poolKey,
-            vm.envOr("FEEENGINE_MIN_PROCESS_AMOUNT", uint256(0.001 ether))
-            // NOTE (Worker B, fee-engine rebase): burnBps/mikey args removed —
-            // the pinned 6-arg constructor fixes the 50/50 split in code and
-            // Mikey's cut now lives in MuseDogRoyaltySplitter.
-        );
-    }
-
-    function _deploySplitter(address rewardsVault, address feeEngine) internal returns (MuseDogRoyaltySplitter) {
-        return new MuseDogRoyaltySplitter(vm.envOr("SPLITTER_MIKEY", MIKEY_DEFAULT), rewardsVault, feeEngine);
-    }
-
-    function _deployMuse(address splitter) internal returns (MuseDog) {
-        return new MuseDog(
-            vm.envAddress("MUSEDOG_OWNER"),
-            vm.envAddress("MUSEDOG_VOUCHER_SIGNER"),
-            vm.envOr("MUSEDOG_BASE_URI", string("")),
-            splitter
-        );
+        // Post-deploy checklist (human steps, NOT automated):
+        //   1. Verify source on Blockscout for both contracts.
+        //   2. Upload art+metadata to Arweave, then call setBaseURI ONCE.
+        //   3. teamMint the 20 team/treasury NFTs from the deployer wallet.
+        //   4. Verify metadata/royalties on the explorer.
+        //   5. transferOwnership(multisig) on BOTH contracts; multisig calls
+        //      acceptOwnership() on each. Confirm owner() == multisig.
     }
 }

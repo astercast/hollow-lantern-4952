@@ -207,7 +207,7 @@ nav.main-nav a .hash { display: none; }
 .section-head h2 { font-size: 30px; margin: 0 0 8px; }
 .section-head p { color: var(--ink-soft); margin: 0; font-size: 17px; max-width: 680px; }
 
-/* ---- Gallery (placeholder tiles — art hidden until launch) ---- */
+/* ---- Gallery (collection preview) ---- */
 .gallery {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -220,23 +220,11 @@ nav.main-nav a .hash { display: none; }
   border-radius: var(--radius);
   overflow: hidden;
 }
-.tile-ph {
+.gallery figure img {
+  display: block;
+  width: 100%;
   aspect-ratio: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--bg);
-  border-bottom: 1px dashed var(--line-soft);
-}
-.tile-ph .n {
-  font-family: var(--serif);
-  font-size: 28px;
-  color: var(--ink-faint);
-}
-.gallery figcaption {
-  padding: 12px 14px;
-  font-size: 13.5px;
-  color: var(--ink-soft);
+  object-fit: cover;
 }
 .gallery-note { font-size: 14px; color: var(--ink-faint); margin-top: 16px; }
 

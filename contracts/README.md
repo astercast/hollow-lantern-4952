@@ -1,97 +1,103 @@
 # Muse Dogs — contracts
 
-Smart contracts for the Muse Dogs NFT collection: 500 ERC-721 tokens on
-Robinhood Chain (chain id 4663). Toolchain: Foundry (forge 1.8.x, solc 0.8.30).
+Smart contracts for the Muse Dogs NFT collection: **500 ERC-721 tokens** on
+Robinhood Chain (chain id 4663). Toolchain: Foundry (forge, solc 0.8.30
+pinned), OpenZeppelin Contracts v5.4.0 (pinned).
 
 **Name: `Muse Dogs`, symbol: `MUSEDOGS`** (locked 2026-09-18).
-Royalty: **10%** to the project multisig (the max most marketplaces honor;
-contract enforces a 1000 bps ceiling).
+Royalty: **5%** (500 bps, fixed forever) to the fee-splitter contract.
+Full design notes, trust assumptions, and the audit log: [`NOTES.md`](NOTES.md).
 
 ## Files
 
 | Path | What it is |
 |---|---|
-| `src/MuseDog.sol` | The collection contract (one file, ~430 lines) |
-| `test/MuseDog.t.sol` | Full test suite (caps, vouchers, pause, access control, royalties) |
-| `script/Deploy.s.sol` | Deploy script (reads constructor args from env) |
-| `foundry.toml` | Compiler config, RPC endpoints, Blockscout verification |
+| `src/MuseDogs.sol` | The collection (ERC-721, vouchers, team mint, metadata freeze, royalties) |
+| `src/MuseDogsFeeSplitter.sol` | Royalty splitter: 10/40/25/25 of every royalty payment |
+| `src/MuseDogRewards.sol` | Holder-rewards vault: weekly Merkle-distributed ETH (40% leg recipient) |
+| `test/MuseDogs.t.sol` | 37 tests — vouchers, caps, freeze, royalties, reentrancy |
+| `test/MuseDogsFeeSplitter.t.sol` | 19 tests — split math, accounting, fail-open, forwarding |
+| `test/MuseDogRewards.t.sol` | 14 pre-existing vault tests |
+| `script/Deploy.s.sol` | Deploy script (all params from env; key via `--private-key`) |
 
 ## The design, in plain words
 
-There is exactly one contract, and it can never make more than 500 NFTs.
-The 500 are split into three buckets the contract enforces on-chain:
+There are 500 NFTs, split into three buckets the contract enforces on-chain —
+380 + 100 + 20, and nothing can ever mint a 501st:
 
-1. **380 holder airdrops** — the project (a 2-of-3 multisig, not a person)
-   mints directly to verified MDOG-holder addresses in batches of up to 100.
-   Zero addresses are skipped instead of reverting, so one bad entry can't
-   brick a whole batch.
-2. **100 community free mints** — anyone with a signed voucher claims one
-   free NFT. The minter pays only Robinhood Chain gas (a few cents); the mint
-   price is zero and the function isn't payable. Each voucher is bound to one
-   address, one nonce, one expiry, this chain (4663), and this contract.
-   The contract remembers used nonces and which addresses already claimed,
-   so a voucher can't be replayed or double-claimed.
-3. **50 reserve** — waitlist refills, community prizes, collaborators
-   (Mikey gets 1). Every reserve mint emits an event so it's publicly visible.
+1. **380 community mints** — free and gasless. The backend signs an EIP-712
+   voucher (`recipient`, `mintType`, `nonce`, `expiry`); a relayer submits it
+   and pays the gas. The NFT can only ever go to the voucher's recipient
+   (max 3 per address). Nonces are single-use per recipient; vouchers expire.
+2. **100 holder-airdrop mints** — same voucher system with `mintType=1`
+   (max 1 per address). The backend checks the $10 MDOG holdings off-chain
+   before issuing the voucher; the contract trusts the voucher signer.
+3. **20 team/treasury mints** — owner-only batch mint. The deployer wallet
+   mints these pre-launch as the end-to-end test, then transfers ownership of
+   everything to the Safe multisig (two-step, so a typo can't brick it).
 
-Token IDs are sequential across all buckets: 0, 1, 2, … 999.
+Token IDs are sequential: 1, 2, 3, … 500.
+
+Every 5% resale royalty flows to the fee splitter, which divides it —
+10% to Mikey's Bankr address in raw ETH, 40% to the holder-rewards vault,
+25% escrowed for MDOG buyback-and-burn, 25% escrowed for MDOG/ETH liquidity
+to the dead address. The two DEX-dependent legs are forwarded by the
+multisig (no autonomous swaps ship — see `NOTES.md` §2 for why).
+
+Reveal is immediate: the base URI is set **exactly once** by the owner, then
+frozen forever in the same call. There is no unfreeze and no silent metadata
+change, ever.
 
 ## Security model (what each control is for)
 
-- **Non-upgradeable, no proxies, no selfdestruct.** The code that launches is
-  the code forever. No one can quietly swap in new rules later.
-- **Multisig owner.** Deployment transfers ownership to a 2-of-3 multisig.
-  No single hot wallet can mint, pause, or change anything.
-- **Voucher signer is separate from the owner.** Vouchers are signed by a
-  dedicated KMS key with no other powers. If it's ever compromised, the
-  owner pauses the contract, rotates the signer, and unpauses — rotation is
-  only allowed while paused, so it can never be a silent hot-swap. The
-  contract also caps the damage: even a stolen signer key can't exceed the
-  100-claim cap or mint outside the community bucket.
-- **Pausable minting, open transfers.** If something goes wrong, minting
-  stops but people can still move the NFTs they own. Nobody's assets get
-  frozen.
-- **One-way metadata freeze.** The base URI can be updated until launch, then
-  `freezeMetadata()` locks it forever. There's no unfreeze. (Reveal is
-  immediate: art is visible from the first mint — no placeholder/mystery phase.)
-- **Royalties bounded at 10%.** EIP-2981 royalties can be set, lowered, or
-  removed — never raised above 10%.
-- **No hidden mint paths.** There is no public mint without a voucher, no
-  owner free-mint beyond the caps, and the counters (`holderMinted`,
-  `communityMinted`, `reserveMinted`) are public so anyone can audit supply.
-- **Reentrancy guard on claims.** State is updated before the mint call, and
-  the claim function is `nonReentrant`, so a malicious recipient contract
-  can't re-enter to claim twice.
-- **Custom errors** (not strings) keep revert data cheap and machine-readable.
+- **Non-upgradeable, no proxies, no selfdestruct, no delegatecall.** The code
+  that launches is the code forever.
+- **Multisig owner, two-step transfer.** No single hot wallet controls
+  anything after the test mint; a mistyped address can't steal ownership.
+- **Voucher signer is separate from the owner.** A dedicated key with no
+  other powers. Rotation is instant and public (event); outstanding vouchers
+  from the old key die immediately. Blast radius of a compromise is bounded
+  by the on-chain bucket caps and short voucher expiries.
+- **No pause, by design.** Least privilege: minting can't be frozen by anyone,
+  and nobody's NFTs can be frozen either. (Accepted residual risk — see
+  `NOTES.md`.)
+- **One-shot metadata freeze.** `setBaseURI` freezes atomically; `tokenURI`
+  reverts until it's set, so broken metadata can never be served.
+- **Royalty pinned at 5%.** No setter for the rate; the receiver is settable
+  exactly once (and must be a contract, not an EOA typo).
+- **Reentrancy guards + checks-effects-interactions** on every payable and
+  external state-changing function. Failed ETH pushes fail *open* into
+  retryable escrow buckets — a reverting recipient can never lock funds.
+- **Custom errors** (no revert strings), events for every state change,
+  explicit zero-address checks everywhere.
 
 ## Commands
 
 ```bash
-# install deps (already done: OpenZeppelin v5.4.0, pinned tag)
-forge install
-
 # compile
 forge build
 
-# run tests
+# run tests (70 tests)
 forge test
 
-# run tests with gas report
-forge test --gas-report
-
-# deploy to Robinhood testnet (chain 46630) with verification
-MUSEDOG_OWNER=0x... MUSEDOG_VOUCHER_SIGNER=0x... \
-  forge script script/Deploy.s.sol --rpc-url robinhood_testnet \
+# deploy to Robinhood Chain with verification (Blockscout, no key needed)
+MIKEY_BANKR=0x... REWARDS_VAULT=0x... MUSEDOG_OWNER=0x... \
+MUSEDOG_VOUCHER_SIGNER=0x... PROCESS_THRESHOLD_WEI=50000000000000000 \
+forge script script/Deploy.s.sol --rpc-url robinhood \
   --broadcast --verify -vvvv
+# broadcast key via --private-key (or --ledger); NEVER in env files or the repo
 ```
 
 ## Before mainnet
 
-1. Finalize the collection name/symbol.
-2. Deploy the 2-of-3 multisig; it becomes `initialOwner`.
-3. Generate the voucher-signer key in KMS; fund nothing on it (it never sends txs).
-4. Deploy to testnet, run the full rehearsal (batches, vouchers, pause,
-   signer rotation, reveal, direct-contract claim), verify source on Blockscout.
-5. Independent Solidity review of this diff — no unresolved high/criticals.
-6. Deploy mainnet, verify source, transfer anything left to the multisig,
-   publish the canonical contract address from Mikey's verified Musebook identity.
+See the full checklist in [`NOTES.md`](NOTES.md). The short version:
+
+1. Update `site/api/v1/_voucher.js` to the new EIP-712 voucher type and
+   re-cross-verify it (old-type vouchers will all revert otherwise).
+2. Independent Solidity review — no unresolved high/criticals.
+3. Full rehearsal on the Robinhood testnet (chain 46630): deploy, setBaseURI,
+   teamMint 20, hand both contracts to the Safe, backend voucher + relayer
+   mint, royalty `process()`, one DEX-leg forward.
+4. Deploy mainnet, verify source, setBaseURI once, teamMint 20, transfer both
+   contracts to the multisig, publish the canonical addresses from a verified
+   channel.

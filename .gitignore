@@ -1,15 +1,2 @@
-# runtime state — never commit
-api/data/db.json
-api/data/e2e-identity-stub.json
-.env
-.env.*
-
-# test/build artifacts
-site-preview.html
-contracts/out/
-contracts/cache/
-api/node_modules/
-
-# final collection art stays out of git (large + unrevealed)
-art-hidden/
-contracts/lib/
+node_modules/
+.DS_Store
