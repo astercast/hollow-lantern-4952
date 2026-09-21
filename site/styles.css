@@ -56,6 +56,35 @@ h1, h2, h3 {
 code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.9em; }
 code { background: var(--bg-soft); border: 1px solid var(--line-soft); border-radius: 6px; padding: 2px 7px; }
 
+/* ---- Humans banner ---- */
+.humans-banner {
+  position: relative;
+  overflow: hidden;
+  border-bottom: 1px solid var(--line-soft);
+}
+.humans-banner img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.humans-text {
+  position: absolute;
+  top: 50%;
+  left: clamp(16px, 5vw, 64px);
+  transform: translateY(-50%);
+  max-width: min(52%, 560px);
+  margin: 0;
+  font-family: var(--serif);
+  font-size: clamp(17px, 2.4vw, 30px);
+  line-height: 1.3;
+  color: #3a2c1c;
+  font-weight: 600;
+}
+.humans-text strong { color: #b3402a; }
+@media (max-width: 640px) {
+  .humans-text { font-size: 15px; max-width: 55%; }
+}
+
 /* ---- Announcement bar ---- */
 .town-strip {
   background: var(--bg-soft);
