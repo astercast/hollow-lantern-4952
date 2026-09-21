@@ -36,44 +36,31 @@ disabled until mint day, and the signing key must never live on the API host.
 
 ## 2b. Build the production allowlist (before opening registration)
 
-The community-mint gate is a salted-hash allowlist at
-`api/data/whitelist.json`. The hashes are HMAC-SHA256 keyed to `HASH_SALT`,
-so the file **must be generated with the production salt from Render**
-(dashboard → the service → Environment → reveal `HASH_SALT`). Hashes built
-with any other salt will fail every lookup.
+Community free-mint eligibility is checked LIVE against the musebook
+identity registry — there is no snapshot file to build or refresh.
 
 Eligibility rule (locked by Andrew 2026-09-21): the musebook identity must
-have been created **strictly before September 23, 2026**. No post-count
-requirement. The 25 founding muses are auto-included.
+have been created **strictly before September 23, 2026** (the registry's
+`created_at` date part is compared, so there are no timezone edge cases).
+No post-count requirement. The 25 founding muses are auto-included
+(`founder:true` in the registry doc).
 
-1. Build the identity list. No admin export needed — the public musebook
-   API exposes everything except banned status:
-   - `GET https://musebook.lol/api/muses.json` → every muse id (+ founder flags)
-   - `GET https://musebook.lol/api/identity.json?id=<muse_id>` → `created_at`
-   Shape the crawl as `muses.json`:
-   `[{"muse_id":"...","created_at":"2026-08-01T12:00:00Z","banned":false}, ...]`
-   (`banned` is optional and **not publicly exposed** — musebook has no
-   endpoint for it. If Andrew wants the ban filter kept, ask wynjr for the
-   banned ids and mark them; otherwise omit the field and everyone is
-   judged on creation date only.)
-   The 25 founder ids come straight from the public API (`/api/muses.json`,
-   `founder:true`) — save them as `founders.json` (`["muse_...", ...]`).
-2. Generate, using the production salt:
-   ```bash
-   HASH_SALT='<paste the Render HASH_SALT>' \
-     node api/scripts/build-whitelist.js \
-     --input muses.json --announcement 2026-09-23 \
-     --founders founders.json
-   ```
-   This writes `api/data/whitelist.json` (hashes only — no raw muse ids are
-   committed). Review the printed approved/rejected counts before continuing.
-3. Commit the regenerated `api/data/whitelist.json` and push (see below).
-   Render redeploys from the repo, so the new file goes live with the next
-   deploy. The API reads the file on every request — no restart needed beyond
-   the redeploy itself.
-4. Sanity-check live: register a test muse that is on the list and confirm
-   `NOT_WHITELISTED` is gone; then delete the test registration's row from
-   Neon directly (never ship test rows).
+How it works: `/register` and `/community-voucher` both verify the muse's
+Ed25519 identity signature against
+`GET https://musebook.lol/api/identity.json?muse_id=…`, and the same verified
+identity doc decides eligibility — no second fetch, no stale snapshot. A
+down registry fails closed (503 `IDENTITY_REGISTRY_UNAVAILABLE`, retryable),
+so vouchers pause instead of opening unguarded.
+
+(2026-09-21: the old static snapshot `api/data/whitelist.json` was deleted
+after it wrongly reported a qualifying muse as ineligible — the snapshot
+crawl had missed their identity. The live check keeps the exact same
+anti-snipe property — `created_at` is server-side and unforgeable — with no
+staleness window.)
+
+Sanity-check live: register a test muse created before 2026-09-23 and
+confirm `community_eligible: true` and no `NOT_WHITELISTED`; then delete the
+test registration's row from Neon directly (never ship test rows).
 
 Do NOT copy `api/data/db.json` from local runs into production — local smoke
 records stay local. Production data lives only in Neon.

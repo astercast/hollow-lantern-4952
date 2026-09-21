@@ -8,7 +8,6 @@ const { ethers } = require('ethers');
 
 const store = require('./lib/store');
 const { hash } = require('./lib/hash');
-const { loadWhitelist } = require('./lib/whitelist');
 const { CHAIN_ID } = require('./lib/rpc');
 const { verifyIdentitySignature } = require('./lib/identity');
 const { strictBody, requireFields, checksumAddress, looksLikeSignature, looksLikeIdentitySignature } = require('./lib/validate');
@@ -195,18 +194,42 @@ function httpErr(status, code, message, extra = {}) {
   return e;
 }
 
-// Verify the muse proof bundle shared by /register and /community-voucher:
+// Community free-mint eligibility — LIVE check against the musebook identity
+// registry (locked rule, Andrew 2026-09-21): the musebook identity must have
+// been created strictly before 2026-09-23; all 25 founding muses auto-qualify.
+// No post-count requirement.
+//
+// This replaced the old static snapshot (data/whitelist.json), which went
+// stale for identities created between the snapshot build and the cutoff —
+// e.g. Nyx (identity created 2026-09-16) was wrongly reported
+// community_eligible: false because the Sep-21 snapshot crawl missed them.
+// The registry's created_at is server-side and unforgeable, so the live
+// check keeps the exact same anti-snipe property with no staleness window.
+const COMMUNITY_CUTOFF_DAY = '2026-09-23'; // strictly before: YYYY-MM-DD compare, no timezone edge cases
+function communityEligibility(identity) {
+  if (!identity) return { eligible: false, reason: 'no verified identity' };
+  if (identity.founder === true) return { eligible: true, reason: 'founding muse (auto-included)' };
+  const day = typeof identity.created_at === 'string' ? identity.created_at.slice(0, 10) : '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(day) && day < COMMUNITY_CUTOFF_DAY) {
+    return { eligible: true, reason: 'musebook identity created ' + day + ' (before ' + COMMUNITY_CUTOFF_DAY + ')' };
+  }
+  return { eligible: false, reason: 'musebook identity created on/after ' + COMMUNITY_CUTOFF_DAY };
+}
+
+// Verify the muse proof bundle shared by /register and the voucher endpoints:
 // a single-use challenge bound to (muse_id, address), and the musebook
 // Ed25519 identity signature over the exact challenge message (verified
 // against the public identity registry, fail closed).
 //
-// This is the wall a human cannot cross: naming a whitelisted muse_id is not
+// This is the wall a human cannot cross: naming an eligible muse_id is not
 // enough — the caller must hold that muse's musebook identity private key.
 // There is deliberately NO wallet signature and NO proof of work here: the
 // locked claim design keeps the muse flow simple (plain-text Bankr address +
 // one identity signature), and per-IP rate limiting is the spam control.
-// Returns the challenge record WITHOUT consuming it; the caller marks
-// ch.consumed = true at its own commit point.
+// Returns { challenge, identity } WITHOUT consuming the challenge; the
+// caller marks ch.consumed = true at its own commit point. The identity doc
+// carries founder/created_at for the live community-eligibility check, so
+// callers never fetch the registry twice.
 async function verifyMuseProof(db, { muse_id, address, challenge_id, musebook_signature }) {
   const ch = store.find(db, 'challenges', 'challenge_id', challenge_id);
   if (!ch || ch.muse_id !== String(muse_id) || ch.address !== address) {
@@ -225,8 +248,9 @@ async function verifyMuseProof(db, { muse_id, address, challenge_id, musebook_si
   // unverified identity => 403, bad signature => 400.
   // A failed check does NOT consume the challenge, so the muse can retry
   // (e.g. after a registry blip) with the same challenge.
+  let identity;
   try {
-    await verifyIdentitySignature(String(muse_id), ch.message, musebook_signature);
+    identity = await verifyIdentitySignature(String(muse_id), ch.message, musebook_signature);
   } catch (e) {
     if (e.code === 'IDENTITY_REGISTRY_UNAVAILABLE') {
       throw httpErr(503, e.code, e.message || 'The musebook identity registry is not reachable. Try again later.', { retryable: true });
@@ -236,7 +260,7 @@ async function verifyMuseProof(db, { muse_id, address, challenge_id, musebook_si
     }
     throw httpErr(400, e.code || 'INVALID_IDENTITY_SIGNATURE', e.message || 'Musebook identity signature does not verify.');
   }
-  return ch;
+  return { challenge: ch, identity };
 }
 
 // --- claim relayer ----------------------------------------------------------
@@ -440,25 +464,22 @@ app.post('/api/v1/register', ah(async (req, res) => {
     // No wallet signature, no proof of work: the locked claim design keeps
     // the muse flow simple (plain-text address + one identity signature),
     // and per-IP rate limiting is the spam control.
-    const ch = await verifyMuseProof(db, {
+    const proof = await verifyMuseProof(db, {
       muse_id,
       address,
       challenge_id,
       musebook_signature: req.body.musebook_signature,
     });
+    const ch = proof.challenge;
 
     // Two paths, one registration. Any verified musebook identity can
     // register — the holder path needs no allowlist. The community
-    // free-mint path keeps its own allowlist gate at /community-voucher.
-    // community_eligible is a best-effort hint for the UI (true/false when
-    // the allowlist loads, null when it doesn't); the voucher endpoint
-    // re-checks the allowlist live and fails closed there.
-    let communityEligible = null;
-    try {
-      communityEligible = !!loadWhitelist().check(muse_id);
-    } catch (e) {
-      communityEligible = null; // allowlist not loaded — decided at voucher time
-    }
+    // free-mint path keeps its own gate at /community-voucher.
+    // community_eligible is a best-effort hint for the UI, computed LIVE
+    // from the verified identity doc (created strictly before 2026-09-23,
+    // founders auto-included); the voucher endpoint re-checks the same
+    // rule live and fails closed there.
+    const communityEligible = communityEligibility(proof.identity).eligible;
 
     // Duplicate protection: one identity, one address, ever.
     if (store.exists(db, 'registrations', 'muse_id_hash', hash(muse_id))) {
@@ -552,7 +573,7 @@ app.get('/api/v1/status/:registration_id', ah(async (req, res) => {
 // Muses only: the voucher requires the SAME identity proof as registration —
 // a challenge bound to (muse_id, address) and the musebook Ed25519 identity
 // signature over the exact challenge message. No wallet signature, no proof
-// of work. Naming a whitelisted muse_id is not enough; the caller must hold
+// of work. Naming an eligible muse_id is not enough; the caller must hold
 // that muse's identity key. A human has no identity key.
 app.post('/api/v1/community-voucher', ah(async (req, res) => {
   try {
@@ -592,7 +613,7 @@ app.post('/api/v1/community-voucher', ah(async (req, res) => {
     // cannot be replayed. No wallet signature and no proof of work — by
     // design (see the locked claim flow: plain-text address, one identity
     // signature, rate limiting as spam control).
-    const ch = await verifyMuseProof(db, {
+    const proof = await verifyMuseProof(db, {
       muse_id,
       address,
       challenge_id: req.body.challenge_id,
@@ -600,7 +621,7 @@ app.post('/api/v1/community-voucher', ah(async (req, res) => {
     });
     // Consume the challenge atomically (persisted, replay-safe) before
     // anything is issued.
-    await store.consumeChallenge(db, ch);
+    await store.consumeChallenge(db, proof.challenge);
 
     const signerKey = process.env.VOUCHER_SIGNER_KEY;
     if (!signerKey) {
@@ -623,19 +644,17 @@ app.post('/api/v1/community-voucher', ah(async (req, res) => {
       return err(res, 409, 'ADDRESS_VOUCHER_CAP_REACHED',
         'This address already has its 3 community vouchers. (A muse eligible on both paths can still use the holder path.)');
     }
-    // Whitelist gate: the free mint is only for muses who existed and
-    // participated before the announcement. 3-per-address is bypassed by
-    // anyone with many addresses; 3-per-verified-identity is not.
-    // Fails closed if the allowlist is not loaded.
-    let wl;
-    try {
-      wl = loadWhitelist();
-    } catch (e) {
-      return err(res, 503, 'WHITELIST_UNAVAILABLE', 'The community allowlist is not loaded yet. Try again later.');
-    }
-    const wlEntry = wl.check(muse_id);
-    if (!wlEntry) {
-      return err(res, 403, 'NOT_WHITELISTED', 'This muse identity is not on the community allowlist (muses active before the announcement).');
+    // Community-eligibility gate, checked LIVE against the verified identity
+    // doc: the free mint is only for muses whose musebook identity was
+    // created strictly before 2026-09-23 (founding muses auto-included).
+    // 3-per-address is bypassed by anyone with many addresses;
+    // 3-per-verified-identity is not. The registry was already reached by
+    // verifyMuseProof above, so a down registry fails closed earlier with
+    // 503 IDENTITY_REGISTRY_UNAVAILABLE — this gate never lets anyone
+    // through on stale data.
+    const elig = communityEligibility(proof.identity);
+    if (!elig.eligible) {
+      return err(res, 403, 'NOT_WHITELISTED', 'This muse identity is not eligible for the community free mint (' + elig.reason + '). Any registered muse can still use the holder path.');
     }
     // Up to 3 vouchers per muse identity on this path.
     const forIdentity = db.vouchers.filter((v) => v.muse_id_hash === hash(muse_id));
@@ -770,7 +789,7 @@ app.post('/api/v1/holder-voucher', ah(async (req, res) => {
     // cannot be replayed. No wallet signature and no proof of work — by
     // design (see the locked claim flow: plain-text address, one identity
     // signature, rate limiting as spam control).
-    const ch = await verifyMuseProof(db, {
+    const proof = await verifyMuseProof(db, {
       muse_id,
       address,
       challenge_id: req.body.challenge_id,
@@ -778,7 +797,7 @@ app.post('/api/v1/holder-voucher', ah(async (req, res) => {
     });
     // Consume the challenge atomically (persisted, replay-safe) before
     // anything is issued.
-    await store.consumeChallenge(db, ch);
+    await store.consumeChallenge(db, proof.challenge);
 
     const signerKey = process.env.VOUCHER_SIGNER_KEY;
     if (!signerKey) {

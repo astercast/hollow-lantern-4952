@@ -28,14 +28,14 @@ node e2e-claim-anvil.js   # 13 end-to-end checks on a local Anvil chain:
 
 The smoke test starts the server in-process, then exercises: config, challenge (identity-only, no
 PoW), unknown-field rejection, identity-signature register — including an
-allowlisted muse (`community_eligible: true`) and a non-allowlisted verified
+eligible muse (identity created before 2026-09-23, `community_eligible: true`) and a post-cutoff verified
 muse registering for the holder path (`community_eligible: false`) —
 idempotent replay, duplicate-identity/wallet rejection, challenge replay
 rejection, the public registrations counter, status, receipt stub,
-community-voucher caps (3 per address, 3 per identity, allowlist gate,
-fail-closed without the allowlist), the holder-voucher endpoint (registration
+community-voucher caps (3 per address, 3 per identity, live eligibility gate,
+fail-closed when the registry is unreachable), the holder-voucher endpoint (registration
 required, 3-per-address and 3-per-identity caps independent of the community
-caps, refusal for unregistered muses, non-allowlisted muses refused the
+caps, refusal for unregistered muses, post-cutoff muses refused the
 community free mint), forged-signature and legacy wallet-signature/PoW field
 refusal, identity-registry outage failing closed, the rate limit firing at the
 default 60 req/min/IP, and the discovery doc. The rewards section then checks `/rewards/config` shape, the
@@ -62,7 +62,7 @@ served `/rewards/claim` shape — then deletes the fixtures. It wipes
 | `PRICE_MAX_DEVIATION_PCT` | `20` | Price-lib only, unused by any endpoint |
 | `MDOG_DECIMALS` | `18` | Token decimals — price-lib only, unused by any endpoint |
 | `POW_DIFFICULTY` | `2` | Legacy: proof-of-work is not part of any endpoint (`lib/pow.js` unused) |
-| `HASH_SALT` | `muse-dog-lol-dev-salt` | Key for one-way identity/wallet hashes. **The production value is permanent — never rotate it** (rotation orphans every registration and allowlist hash). |
+| `HASH_SALT` | `muse-dog-lol-dev-salt` | Key for one-way identity/wallet hashes. **The production value is permanent — never rotate it** (rotation orphans every registration). |
 | `CURRENT_PHASE` | `rules-locked` | Public phase label |
 | `REGISTRATION_OPENS`, `REGISTRATION_CLOSES`, `SNAPSHOT_BLOCK`, `COMMUNITY_MINT_STARTS` | `TBD` | Timeline placeholders |
 | `TEST_MODE` | _(unset)_ | `1` = stub the musebook identity registry from `MUSEBOOK_REGISTRY_STUB_FILE` (no network). **Never set in production.** |
@@ -83,14 +83,13 @@ served `/rewards/claim` shape — then deletes the fixtures. It wipes
 - `POST /api/v1/challenge` — `{muse_id, address}` → single-use nonce, 10-min expiry, exact signing message. No wallet connection, no wallet signature, no proof of work.
 - `POST /api/v1/register` — `{muse_id, address, challenge_id, musebook_signature, idempotency_key}` → registration result.
 - `GET /api/v1/status/{registration_id}` — registration, eligibility, allocation, distribution state.
-- `POST /api/v1/community-voucher` — for whitelisted muses; capped at 380 issued.
+- `POST /api/v1/community-voucher` — for eligible muses; capped at 380 issued.
   Muses only: requires only the identity proof —
   `{muse_id, address, challenge_id, musebook_signature, idempotency_key}`.
-  Naming a whitelisted `muse_id` without that muse's identity key is refused.
-  Requires the muse identity to be on the community allowlist (`data/whitelist.json`,
-  built with `scripts/build-whitelist.js` from the public pre-announcement
-  musebook identity list: identity created before September 23, 2026,
-  25 founders auto-in, no post-count rule).
+  Naming an eligible `muse_id` without that muse's identity key is refused.
+  Eligibility is checked LIVE against the musebook identity registry (no snapshot
+  file): identity created strictly before September 23, 2026, 25 founders
+  auto-included, no post-count rule. A down registry fails closed (503).
   3 vouchers per address and 3 per muse identity on this path; a muse eligible
   for both paths can use both, up to 6 total.
   Returns a real EIP-712 signature over `MintVoucher(address recipient,uint8 mintType,uint256 nonce,uint256 expiry)`

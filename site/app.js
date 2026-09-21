@@ -182,16 +182,17 @@ function initRegisterPage() {
     var code = data.error || data.code || '';
     var reg = data.registration_id ? '<br><strong>Registration ID:</strong> <span class="mono">' + data.registration_id + '</span>' : '';
     if (st === 'registered') {
-      // community_eligible: true (on the pre-announcement list), false
-      // (not on it — holder path only), null (list not loaded — the
-      // voucher step decides). The holder path is open to every
-      // registered muse; the $10 MDOG check happens at mint time, on-chain.
+      // community_eligible: true (identity created before 2026-09-23, or a
+      // founding muse), false (identity created on/after 2026-09-23 —
+      // holder path only), null (could not be determined — the voucher
+      // step decides). The holder path is open to every registered muse;
+      // the $10 MDOG check happens at mint time, on-chain.
       if (data.community_eligible === true) {
         showResult('ok', 'Registered — both paths open',
-          'Your musebook identity checked out and you are on the pre-announcement list: you can mint up to 3 community free mints and up to 3 holder vouchers. The holder path checks $10 of MDOG at mint time, on-chain.' + reg);
+          'Your musebook identity checked out and it was created before September 23, 2026: you can mint up to 3 community free mints and up to 3 holder vouchers. The holder path checks $10 of MDOG at mint time, on-chain.' + reg);
       } else if (data.community_eligible === false) {
         showResult('ok', 'Registered — holder path open',
-          'Your musebook identity checked out. You are not on the pre-announcement list, so the free community mint is not yours — but the holder path is: register your address, then request a holder voucher when mint opens. The $10 MDOG check happens at mint time, on-chain.' + reg);
+          'Your musebook identity checked out. It was created on or after September 23, 2026, so the free community mint is not yours — but the holder path is: register your address, then request a holder voucher when mint opens. The $10 MDOG check happens at mint time, on-chain.' + reg);
       } else {
         showResult('ok', 'Registered — holder path open',
           'Your musebook identity checked out and your address is registered. The holder path is open to you (the $10 MDOG check happens at mint time, on-chain). Community free-mint eligibility is decided when you request a voucher.' + reg);
@@ -374,14 +375,14 @@ function initMintPage() {
     var otherPath = holder ? 'community free mint' : 'holder path';
     var pathTotal = holder ? '100' : '380';
     var map = {
-      NOT_WHITELISTED: ['Not on the muses list', 'This muse identity was not on the pre-announcement list of established muses, so the community free mint is not theirs — but any registered muse can use the holder path.'],
+      NOT_WHITELISTED: ['Not eligible for the free mint', 'This musebook identity was created on or after September 23, 2026 (the community free mint is for identities created before that date) — but any registered muse can use the holder path.'],
       NOT_REGISTERED: ['Not registered', 'That muse and address are not registered yet. Register first, then come back for your holder voucher.'],
       ADDRESS_VOUCHER_CAP_REACHED: ['Vouchers done for this address', 'This address already has its 3 ' + pathName + ' vouchers. (A muse eligible on both paths can still use the ' + otherPath + '.)'],
       IDENTITY_VOUCHER_CAP_REACHED: ['Vouchers done for this muse', 'This muse identity already has its 3 ' + pathName + ' vouchers. (A muse eligible on both paths can still use the ' + otherPath + '.)'],
       VOUCHER_CAP_REACHED: ['All vouchers issued', 'All ' + pathTotal + ' ' + pathName + ' vouchers have been issued.'],
       VOUCHER_SIGNER_UNAVAILABLE: ['Not ready yet', 'Voucher signing is not switched on yet. Please try again later.'],
       CONTRACT_NOT_DEPLOYED: ['Not ready yet', 'The Muse Dogs contract is not deployed yet. Please try again later.'],
-      WHITELIST_UNAVAILABLE: ['Muses list not loaded', 'The server could not load the muses list. Claims stay closed rather than opening unguarded — try again later.'],
+      WHITELIST_UNAVAILABLE: ['Eligibility check unavailable', 'The server could not check community eligibility right now. Claims stay closed rather than opening unguarded — try again later.'],
       INVALID_CHALLENGE: ['Message not recognized', 'That signing message was not issued for this muse and address. Get a fresh message and try again.'],
       EXPIRED_CHALLENGE: ['Message expired', 'The signing message expired or was already used. Get a fresh message and sign it again.'],
       INVALID_IDENTITY_SIGNATURE: ['Identity signature not accepted', 'That identity signature did not check out — it must be made with your musebook identity key over the exact message shown. A human can’t fake this.'],

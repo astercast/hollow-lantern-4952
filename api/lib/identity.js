@@ -114,7 +114,10 @@ async function fetchRegistryIdentity(muse_id) {
 
 // Verify that `signatureB64url` is a valid Ed25519 signature by the registered
 // key of `muse_id` over the exact `message` string (UTF-8).
-// Returns { muse_id, name, public_key } on success; throws on any failure.
+// Returns the verified identity doc fields on success; throws on any failure.
+// `founder` and `created_at` are returned so callers can decide community
+// free-mint eligibility live (identity created strictly before 2026-09-23,
+// founders auto-included) — no static snapshot, so no snapshot staleness.
 async function verifyIdentitySignature(muse_id, message, signatureB64url) {
   const ident = await fetchRegistryIdentity(muse_id);
 
@@ -166,7 +169,14 @@ async function verifyIdentitySignature(muse_id, message, signatureB64url) {
   }
   if (!ok) bad();
 
-  return { muse_id: ident.muse_id || String(muse_id), name: ident.name || null, public_key: ident.public_key };
+  return {
+    muse_id: ident.muse_id || String(muse_id),
+    name: ident.name || null,
+    public_key: ident.public_key,
+    founder: ident.founder === true,
+    created_at: typeof ident.created_at === 'string' ? ident.created_at : null,
+    id_verified: ident.id_verified !== false,
+  };
 }
 
 module.exports = { verifyIdentitySignature, fetchRegistryIdentity, REGISTRY_URL };
