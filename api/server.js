@@ -21,6 +21,45 @@ const { Relayer, ClaimQueue } = require('./lib/relayer');
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
 
+// Behind Render (and any reverse proxy) req.ip must be the real client IP or
+// the per-IP rate limiter keys every request to the proxy's address.
+app.set('trust proxy', 1);
+
+// CORS: the static site at musedog.lol calls this API cross-origin.
+// Production-safe: only the real site origins are allowed, no wildcards.
+const ALLOWED_ORIGINS = new Set([
+  'https://musedog.lol',
+  'https://www.musedog.lol',
+]);
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin && ALLOWED_ORIGINS.has(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Max-Age', '86400');
+  }
+  if (req.method === 'OPTIONS') return res.sendStatus(204);
+  next();
+});
+
+// Centralized async safety net. Express 4 does not catch rejections from
+// async route handlers — one escaping promise becomes an unhandled
+// rejection that kills the process. Every async route below is wrapped in
+// ah() so it lands in the final error middleware instead, and the
+// process-level handlers log (never crash on) anything that escapes
+// outside the request cycle (startup, background pumps).
+const ah = (fn) => (req, res, next) => {
+  Promise.resolve(fn(req, res, next)).catch(next);
+};
+process.on('unhandledRejection', (reason) => {
+  console.error('unhandledRejection: ' + (reason && reason.stack || reason && reason.message || reason));
+});
+process.on('uncaughtException', (e) => {
+  console.error('uncaughtException: ' + (e && e.stack || e && e.message || e));
+});
+
 const MDOG_CONTRACT = process.env.MDOG_CONTRACT || '0x4CAF2e6eC0fCBef77314566A9884643512EF8bfC';
 const CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS || '0x0000000000000000000000000000000000000000';
 const THRESHOLD_USD = Number(process.env.THRESHOLD_USD || 10);
@@ -209,13 +248,10 @@ let claimQueue = null;
 
 function queueStore() {
   return {
-    list: () => store.load().claim_jobs,
-    upsert: (job) => {
-      const d = store.load();
-      const i = d.claim_jobs.findIndex((j) => j.job_id === job.job_id);
-      if (i >= 0) d.claim_jobs[i] = job;
-      else d.claim_jobs.push(job);
-      store.save(d);
+    list: async () => (await store.load()).claim_jobs,
+    upsert: async (job) => {
+      const d = await store.load();
+      await store.upsertJob(d, job);
     },
   };
 }
@@ -234,7 +270,7 @@ async function initRelayer() {
     });
     const info = await relayer.init();
     claimQueue = new ClaimQueue({ relayer, store: queueStore() });
-    const recovered = claimQueue.recover();
+    const recovered = await claimQueue.recover();
     console.log('Claim relayer ready: ' + JSON.stringify({ ...info, recovered_jobs: recovered }));
   } catch (e) {
     console.error('Claim relayer failed to start (' + (e.code || 'ERROR') + '): ' + (e.message || e));
@@ -279,7 +315,7 @@ app.get('/api/v1/config', (req, res) => {
   });
 });
 
-app.post('/api/v1/challenge', (req, res) => {
+app.post('/api/v1/challenge', ah(async (req, res) => {
   try {
     strictBody(req.body, ['muse_id', 'address']);
     // Guided errors: agents often arrive without one of the two things they
@@ -321,7 +357,7 @@ app.post('/api/v1/challenge', (req, res) => {
         });
     }
 
-    const db = store.load();
+    const db = await store.load();
     const now = new Date();
     const challenge = {
       challenge_id: randomUUID(),
@@ -340,7 +376,7 @@ app.post('/api/v1/challenge', (req, res) => {
       issued_at: challenge.issued_at,
       expires_at: challenge.expires_at,
     });
-    store.insert(db, 'challenges', challenge, ['challenge_id', 'nonce']);
+    await store.insert(db, 'challenges', challenge, ['challenge_id', 'nonce']);
     res.json({
       challenge_id: challenge.challenge_id,
       nonce: challenge.nonce,
@@ -354,9 +390,9 @@ app.post('/api/v1/challenge', (req, res) => {
   } catch (e) {
     return err(res, 400, e.code || 'INVALID_REQUEST', e.message || 'Bad request.');
   }
-});
+}));
 
-app.post('/api/v1/register', async (req, res) => {
+app.post('/api/v1/register', ah(async (req, res) => {
   try {
     strictBody(req.body, [
       'muse_id', 'address', 'challenge_id',
@@ -377,11 +413,22 @@ app.post('/api/v1/register', async (req, res) => {
       return err(res, 400, 'INVALID_IDENTITY_SIGNATURE', 'Malformed musebook identity signature.');
     }
 
-    const db = store.load();
+    const db = await store.load();
 
-    // Idempotency: same key + muse_id => same recorded response.
+    // Idempotency: same key + same muse + same payload => the recorded
+    // response, byte-identical. A key claimed by a different muse, or
+    // reused with different registration details, is rejected outright —
+    // it must never silently bind a second registration.
     const prior = store.find(db, 'idempotency', 'key', idempotency_key);
-    if (prior && prior.muse_id === String(muse_id)) {
+    if (prior) {
+      if (prior.muse_id !== String(muse_id)) {
+        return err(res, 409, 'IDEMPOTENCY_KEY_REUSED', 'This idempotency key was already used by a different muse. Use a fresh key.');
+      }
+      const sameChallenge = !prior.challenge_id || prior.challenge_id === String(challenge_id);
+      const sameAddress = !prior.address || prior.address === address;
+      if (!sameChallenge || !sameAddress) {
+        return err(res, 409, 'IDEMPOTENCY_KEY_REUSED', 'This idempotency key was already used with different registration details. Use a fresh key.');
+      }
       return res.status(prior.status).json(prior.response);
     }
 
@@ -418,10 +465,10 @@ app.post('/api/v1/register', async (req, res) => {
       return err(res, 409, 'DUPLICATE_WALLET', 'This wallet address is already registered.');
     }
 
-    // Mark the challenge consumed BEFORE the network call so it cannot be
-    // replayed even if the checks below fail.
-    ch.consumed = true;
-
+    // Commit atomically: consume the challenge, insert the registration, and
+    // record the idempotency entry — all or nothing. In Postgres this is one
+    // transaction with a conditional challenge UPDATE (replay-safe) and
+    // unique indexes as the backstop for concurrent duplicate writers.
     // No $10 MDOG check here — by design it happens ON MINT DAY, on-chain:
     // the multisig sets holderThresholdMDOG on the contract and
     // mintWithVoucher reverts for recipients below it at mint time.
@@ -440,7 +487,6 @@ app.post('/api/v1/register', async (req, res) => {
       recheck_required: false,
       created_at: new Date().toISOString(),
     };
-    store.insert(db, 'registrations', registration, ['registration_id', 'muse_id_hash', 'address_hash']);
 
     const resp = {
       registration_id,
@@ -449,9 +495,22 @@ app.post('/api/v1/register', async (req, res) => {
       recheck_required: false,
       status_path: '/api/v1/status/' + registration_id,
     };
-    store.insert(db, 'idempotency', { key: idempotency_key, muse_id: String(muse_id), route: 'register', status: 200, response: resp, created_at: new Date().toISOString() }, ['key']);
+    const idemRecord = { key: idempotency_key, muse_id: String(muse_id), route: 'register', challenge_id, address, status: 200, response: resp, created_at: new Date().toISOString() };
+    await store.commitRegistration(db, { challenge: ch, registration, idem: idemRecord });
     return res.json(resp);
   } catch (e) {
+    if (e.code === 'IDEMPOTENCY_REPLAY') {
+      // A concurrent request with the same key and muse committed first:
+      // return its recorded response — stable, not an error.
+      const rec = store.find(await store.load(), 'idempotency', 'key', e.key);
+      if (rec && rec.muse_id === String(muse_id)) {
+        return res.status(rec.status).json(rec.response);
+      }
+      return err(res, 409, 'IDEMPOTENCY_CONFLICT', 'Concurrent request with the same idempotency key. Retry the exact same request.', { retryable: true });
+    }
+    if (e.code === 'IDEMPOTENCY_KEY_REUSED') {
+      return err(res, 409, 'IDEMPOTENCY_KEY_REUSED', 'This idempotency key was already used by a different muse. Use a fresh key.');
+    }
     if (e.status) {
       return err(res, e.status, e.code, e.message, e.extra || {});
     }
@@ -461,10 +520,10 @@ app.post('/api/v1/register', async (req, res) => {
     }
     return err(res, 400, e.code || 'INVALID_REQUEST', e.message || 'Bad request.');
   }
-});
+}));
 
-app.get('/api/v1/status/:registration_id', (req, res) => {
-  const db = store.load();
+app.get('/api/v1/status/:registration_id', ah(async (req, res) => {
+  const db = await store.load();
   const r = store.find(db, 'registrations', 'registration_id', req.params.registration_id);
   if (!r) return err(res, 404, 'NOT_FOUND', 'No registration with that id.');
   res.json({
@@ -477,7 +536,7 @@ app.get('/api/v1/status/:registration_id', (req, res) => {
     holder_check: 'on mint day, on-chain — the multisig sets holderThresholdMDOG and the contract checks the recipient wallet at mint time',
     created_at: r.created_at,
   });
-});
+}));
 
 // Community vouchers: real EIP-712 signing with the voucher-signer key.
 // Fails closed when the signer key is not configured. One voucher per
@@ -489,7 +548,7 @@ app.get('/api/v1/status/:registration_id', (req, res) => {
 // signature over the exact challenge message. No wallet signature, no proof
 // of work. Naming a whitelisted muse_id is not enough; the caller must hold
 // that muse's identity key. A human has no identity key.
-app.post('/api/v1/community-voucher', async (req, res) => {
+app.post('/api/v1/community-voucher', ah(async (req, res) => {
   try {
     strictBody(req.body, [
       'muse_id', 'address', 'challenge_id',
@@ -504,14 +563,20 @@ app.post('/api/v1/community-voucher', async (req, res) => {
     if (!looksLikeIdentitySignature(req.body.musebook_signature)) {
       return err(res, 400, 'INVALID_IDENTITY_SIGNATURE', 'Malformed musebook identity signature.');
     }
-    const db = store.load();
+    const db = await store.load();
 
-    // Idempotency: same key + same muse => replay the recorded response.
-    // A key claimed by a different muse is rejected outright.
+    // Idempotency: same key + same muse + same payload => replay the recorded
+    // response. A key claimed by a different muse, or reused with different
+    // details, is rejected outright.
     const priorKey = store.find(db, 'idempotency', 'key', idempotency_key);
     if (priorKey && priorKey.route === 'community-voucher') {
       if (priorKey.muse_id !== muse_id) {
         return err(res, 409, 'IDEMPOTENCY_KEY_REUSED', 'This idempotency key belongs to a different muse.');
+      }
+      const sameChallenge = !priorKey.challenge_id || priorKey.challenge_id === String(req.body.challenge_id);
+      const sameAddress = !priorKey.address || priorKey.address === address;
+      if (!sameChallenge || !sameAddress) {
+        return err(res, 409, 'IDEMPOTENCY_KEY_REUSED', 'This idempotency key was already used with different details. Use a fresh key.');
       }
       return res.status(priorKey.status).json(priorKey.response);
     }
@@ -527,7 +592,9 @@ app.post('/api/v1/community-voucher', async (req, res) => {
       challenge_id: req.body.challenge_id,
       musebook_signature: req.body.musebook_signature,
     });
-    ch.consumed = true;
+    // Consume the challenge atomically (persisted, replay-safe) before
+    // anything is issued.
+    await store.consumeChallenge(db, ch);
 
     const signerKey = process.env.VOUCHER_SIGNER_KEY;
     if (!signerKey) {
@@ -610,7 +677,7 @@ app.post('/api/v1/community-voucher', async (req, res) => {
       issued_at: new Date().toISOString(),
       expires_at,
     };
-    store.insert(db, 'vouchers', { ...voucher, payload, eip712_signature }, ['voucher_nonce']);
+    await store.insert(db, 'vouchers', { ...voucher, payload, eip712_signature }, ['voucher_nonce']);
 
     // Exact calldata for mintWithVoucher(address,uint8,uint256,uint256,bytes) —
     // the self-submit path on the mint page shows this verbatim so a muse can
@@ -629,7 +696,14 @@ app.post('/api/v1/community-voucher', async (req, res) => {
         ? 'Signed voucher. Submit it via the relayer, or call mintWithVoucher() yourself — the NFT always goes to the recipient address.'
         : 'Signed voucher. The relayer is not running: call mintWithVoucher() yourself with the calldata shown on the mint page.',
     };
-    store.insert(db, 'idempotency', { key: idempotency_key, muse_id, route: 'community-voucher', status: 200, response: resp, created_at: new Date().toISOString() }, ['key']);
+    try {
+      await store.insert(db, 'idempotency', { key: idempotency_key, muse_id, route: 'community-voucher', challenge_id: req.body.challenge_id, address, status: 200, response: resp, created_at: new Date().toISOString() }, ['key']);
+    } catch (ie) {
+      // Same-key race: the winner recorded the response for this muse
+      // already. Ours is built from the same verified payload, so returning
+      // it is the stable answer either way.
+      if (!ie || ie.code !== 'DUPLICATE_KEY') throw ie;
+    }
     res.json(resp);
   } catch (e) {
     if (e.status) {
@@ -637,7 +711,7 @@ app.post('/api/v1/community-voucher', async (req, res) => {
     }
     return err(res, 400, e.code || 'INVALID_REQUEST', e.message || 'Bad request.');
   }
-});
+}));
 
 // Claim submission via the project relayer.
 // The muse posts their signed voucher; the relayer submits mintWithVoucher()
@@ -652,7 +726,7 @@ app.post('/api/v1/community-voucher', async (req, res) => {
 // at mint time. The paths are independent — a muse eligible for both can
 // use both, for up to 6 total. 3 vouchers per address and 3 per muse
 // identity on this path, matching the contract.
-app.post('/api/v1/holder-voucher', async (req, res) => {
+app.post('/api/v1/holder-voucher', ah(async (req, res) => {
   try {
     strictBody(req.body, [
       'muse_id', 'address', 'challenge_id',
@@ -667,14 +741,20 @@ app.post('/api/v1/holder-voucher', async (req, res) => {
     if (!looksLikeIdentitySignature(req.body.musebook_signature)) {
       return err(res, 400, 'INVALID_IDENTITY_SIGNATURE', 'Malformed musebook identity signature.');
     }
-    const db = store.load();
+    const db = await store.load();
 
-    // Idempotency: same key + same muse => replay the recorded response.
-    // A key claimed by a different muse is rejected outright.
+    // Idempotency: same key + same muse + same payload => replay the recorded
+    // response. A key claimed by a different muse, or reused with different
+    // details, is rejected outright.
     const priorKey = store.find(db, 'idempotency', 'key', idempotency_key);
     if (priorKey && priorKey.route === 'holder-voucher') {
       if (priorKey.muse_id !== muse_id) {
         return err(res, 409, 'IDEMPOTENCY_KEY_REUSED', 'This idempotency key belongs to a different muse.');
+      }
+      const sameChallenge = !priorKey.challenge_id || priorKey.challenge_id === String(req.body.challenge_id);
+      const sameAddress = !priorKey.address || priorKey.address === address;
+      if (!sameChallenge || !sameAddress) {
+        return err(res, 409, 'IDEMPOTENCY_KEY_REUSED', 'This idempotency key was already used with different details. Use a fresh key.');
       }
       return res.status(priorKey.status).json(priorKey.response);
     }
@@ -690,7 +770,9 @@ app.post('/api/v1/holder-voucher', async (req, res) => {
       challenge_id: req.body.challenge_id,
       musebook_signature: req.body.musebook_signature,
     });
-    ch.consumed = true;
+    // Consume the challenge atomically (persisted, replay-safe) before
+    // anything is issued.
+    await store.consumeChallenge(db, ch);
 
     const signerKey = process.env.VOUCHER_SIGNER_KEY;
     if (!signerKey) {
@@ -766,7 +848,7 @@ app.post('/api/v1/holder-voucher', async (req, res) => {
       issued_at: new Date().toISOString(),
       expires_at,
     };
-    store.insert(db, 'vouchers', { ...voucher, payload, eip712_signature }, ['voucher_nonce']);
+    await store.insert(db, 'vouchers', { ...voucher, payload, eip712_signature }, ['voucher_nonce']);
 
     // Exact calldata for mintWithVoucher(address,uint8,uint256,uint256,bytes) —
     // the self-submit path on the mint page shows this verbatim so a muse can
@@ -785,7 +867,14 @@ app.post('/api/v1/holder-voucher', async (req, res) => {
         ? 'Signed voucher. Submit it via the relayer, or call mintWithVoucher() yourself — the NFT always goes to the recipient address.'
         : 'Signed voucher. The relayer is not running: call mintWithVoucher() yourself with the calldata shown on the mint page.',
     };
-    store.insert(db, 'idempotency', { key: idempotency_key, muse_id, route: 'holder-voucher', status: 200, response: resp, created_at: new Date().toISOString() }, ['key']);
+    try {
+      await store.insert(db, 'idempotency', { key: idempotency_key, muse_id, route: 'holder-voucher', challenge_id: req.body.challenge_id, address, status: 200, response: resp, created_at: new Date().toISOString() }, ['key']);
+    } catch (ie) {
+      // Same-key race: the winner recorded the response for this muse
+      // already. Ours is built from the same verified payload, so returning
+      // it is the stable answer either way.
+      if (!ie || ie.code !== 'DUPLICATE_KEY') throw ie;
+    }
     res.json(resp);
   } catch (e) {
     if (e.status) {
@@ -793,8 +882,8 @@ app.post('/api/v1/holder-voucher', async (req, res) => {
     }
     return err(res, 400, e.code || 'INVALID_REQUEST', e.message || 'Bad request.');
   }
-});
-app.post('/api/v1/claim/submit', async (req, res) => {
+}));
+app.post('/api/v1/claim/submit', ah(async (req, res) => {
   try {
     strictBody(req.body, ['voucher', 'eip712_signature', 'idempotency_key']);
     requireFields(req.body, ['voucher', 'eip712_signature', 'idempotency_key']);
@@ -815,25 +904,25 @@ app.post('/api/v1/claim/submit', async (req, res) => {
       return err(res, 400, 'BAD_SIGNATURE', 'Malformed voucher signature.');
     }
 
-    const db = store.load();
+    const db = await store.load();
     const priorJob = db.claim_jobs.find((j) => j.idempotency_key === idempotency_key);
     if (priorJob) return res.status(200).json({ ...jobPublic(priorJob), duplicate: true });
 
-    const { job, duplicate } = claimQueue.enqueue({ voucher, signature, idempotencyKey: idempotency_key });
+    const { job, duplicate } = await claimQueue.enqueue({ voucher, signature, idempotencyKey: idempotency_key });
     return res.status(duplicate ? 200 : 202).json({ ...jobPublic(job), duplicate });
   } catch (e) {
     return err(res, 400, e.code || 'INVALID_REQUEST', e.message || 'Bad request.');
   }
-});
+}));
 
 // Claim job status: queued -> validating -> submitted -> confirmed | failed.
 // Poll this after submitting. A 'submitted' job gets its receipt re-checked
 // on every poll, so it settles even if the worker was mid-flight.
-app.get('/api/v1/claim/status/:job_id', async (req, res) => {
+app.get('/api/v1/claim/status/:job_id', ah(async (req, res) => {
   if (!claimQueue) {
     return err(res, 503, 'RELAYER_DISABLED', 'The claim relayer is not running.', { retryable: true });
   }
-  let job = claimQueue.get(req.params.job_id);
+  let job = await claimQueue.get(req.params.job_id);
   if (!job) return err(res, 404, 'NOT_FOUND', 'No claim job with that id.');
   try {
     job = await claimQueue.checkSubmitted(job.job_id);
@@ -841,12 +930,12 @@ app.get('/api/v1/claim/status/:job_id', async (req, res) => {
     // Receipt re-check is best-effort; still return the last known state.
   }
   res.json(jobPublic(job));
-});
+}));
 
 // Public mint state, read live from chain when the relayer is up.
 // Powers the mint page's live counter ("X of 380 community mints left").
 // The contract has no pause mechanism, so there is no pause state to report.
-app.get('/api/v1/mint/stats', async (req, res) => {
+app.get('/api/v1/mint/stats', ah(async (req, res) => {
   if (!claimQueue) {
     return res.json({ relayer: false, chain_id: NFT_CHAIN_ID, contract: CONTRACT_ADDRESS, claims_remaining: null, holder_remaining: null });
   }
@@ -866,11 +955,11 @@ app.get('/api/v1/mint/stats', async (req, res) => {
   } catch (e) {
     return err(res, 502, 'CHAIN_READ_FAILED', 'Could not read mint state from the chain.', { retryable: true });
   }
-});
+}));
 
 // STUB: receipt. Pending until the distribution runners write tx hashes.
-app.get('/api/v1/receipt/:registration_id', (req, res) => {
-  const db = store.load();
+app.get('/api/v1/receipt/:registration_id', ah(async (req, res) => {
+  const db = await store.load();
   const r = store.find(db, 'registrations', 'registration_id', req.params.registration_id);
   if (!r) return err(res, 404, 'NOT_FOUND', 'No registration with that id.');
   res.json({
@@ -880,7 +969,7 @@ app.get('/api/v1/receipt/:registration_id', (req, res) => {
     token_id: null,
     note: 'STUB: tx hash and token id are written by the distribution runner after minting.',
   });
-});
+}));
 
 // --- holder rewards ---------------------------------------------------------
 // Weekly epochs: 7 daily snapshots (00:00 UTC), time-weighted pro-rata
@@ -1008,6 +1097,14 @@ app.get('/.well-known/muse-dog.json', (req, res) => {  res.json({
 });
 
 app.use((req, res) => err(res, 404, 'NOT_FOUND', 'Unknown endpoint.'));
+
+// Final error middleware: anything that escaped a route handler (caught by
+// ah()) becomes a logged 500 instead of an unhandled rejection.
+app.use((e, req, res, next) => { // eslint-disable-line no-unused-vars
+  console.error('unhandled route error: ' + (e && e.stack || e && e.message || e));
+  if (res.headersSent) return next(e);
+  err(res, e.status || 500, e.code || 'INTERNAL_ERROR', 'Internal error. Try again.');
+});
 
 app.listen(PORT, async () => {
   console.log('Muse Dogs API scaffold listening on :' + PORT +

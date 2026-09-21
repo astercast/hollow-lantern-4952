@@ -144,6 +144,26 @@ async function waitForServer() {
   });
   log(r.status === 200 && r.json.registration_id === regId, 'register: idempotent replay');
 
+  // 5c. same idempotency key claimed by a DIFFERENT muse is rejected outright
+  const c5c = await api('POST', '/api/v1/challenge', { muse_id: 'muse_smoke_9', address: wallet.address });
+  r = await api('POST', '/api/v1/register', {
+    muse_id: 'muse_smoke_9', address: wallet.address, challenge_id: c5c.json.challenge_id,
+    musebook_signature: identitySig(identities.muse_smoke_9, c5c.json.message),
+    idempotency_key: idem,
+  });
+  log(r.status === 409 && r.json.error === 'IDEMPOTENCY_KEY_REUSED', 'register: idempotency key of another muse rejected');
+
+  // 5d. same key + same muse but DIFFERENT payload is rejected (must use a fresh key)
+  const w5d = ethers.Wallet.createRandom();
+  const c5d = await api('POST', '/api/v1/challenge', { muse_id: 'muse_smoke_1', address: w5d.address });
+  r = await api('POST', '/api/v1/register', {
+    muse_id: 'muse_smoke_1', address: w5d.address, challenge_id: c5d.json.challenge_id,
+    musebook_signature: identitySig(identities.muse_smoke_1, c5d.json.message),
+    idempotency_key: idem,
+  });
+  log(r.status === 409 && r.json.error === 'IDEMPOTENCY_KEY_REUSED', 'register: idempotency key with different payload rejected');
+
+
   // 5b. the legacy proof bundle (wallet signature + proof of work) is REJECTED:
   // strictBody allows only the locked fields.
   r = await api('POST', '/api/v1/register', {
@@ -164,6 +184,16 @@ async function waitForServer() {
   });
   log(r.status === 409 && r.json.error === 'DUPLICATE_IDENTITY', 'register: duplicate identity rejected');
 
+  // 6b. duplicate wallet: a different whitelisted muse cannot reuse the address.
+  // Reuses the (muse_smoke_9, wallet.address) challenge from 5c — it was never
+  // consumed because the idempotency check rejected that request first.
+  r = await api('POST', '/api/v1/register', {
+    muse_id: 'muse_smoke_9', address: wallet.address, challenge_id: c5c.json.challenge_id,
+    musebook_signature: identitySig(identities.muse_smoke_9, c5c.json.message),
+    idempotency_key: 'smoke-key-dup-wallet',
+  });
+  log(r.status === 409 && r.json.error === 'DUPLICATE_WALLET', 'register: duplicate wallet rejected');
+
   // 7. challenge single-use: reuse of consumed challenge
   const w3re = ethers.Wallet.createRandom();
   r = await api('POST', '/api/v1/register', {
@@ -173,6 +203,16 @@ async function waitForServer() {
     idempotency_key: 'smoke-key-reuse',
   });
   log(r.status === 400 && r.json.error === 'INVALID_CHALLENGE', 'register: wrong muse on challenge rejected');
+
+  // 7a. consumed challenge: the original registration (test 4) consumed
+  // `challenge`; replaying it with a fresh idempotency key is refused.
+  r = await api('POST', '/api/v1/register', {
+    muse_id: 'muse_smoke_1', address: wallet.address,
+    challenge_id: challenge.challenge_id,
+    musebook_signature: identitySig(identities.muse_smoke_1, challenge.message),
+    idempotency_key: 'smoke-key-consumed',
+  });
+  log(r.status === 400 && r.json.error === 'EXPIRED_CHALLENGE', 'register: consumed challenge rejected');
 
   // 7b. muses only: non-whitelisted identity is refused on the holder path too
   const w_nh = ethers.Wallet.createRandom();

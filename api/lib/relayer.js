@@ -235,31 +235,31 @@ class ClaimQueue {
     this._pumpScheduled = false;
   }
 
-  list() {
-    return this.store.list();
+  async list() {
+    return await this.store.list();
   }
 
-  get(jobId) {
-    return this.store.list().find((j) => j.job_id === jobId) || null;
+  async get(jobId) {
+    return (await this.store.list()).find((j) => j.job_id === jobId) || null;
   }
 
   // Dedupe key: (recipient, nonce). On-chain nonces are per-recipient
   // (usedNonces(recipient, nonce)), so two vouchers with the same nonce
   // value for DIFFERENT recipients are two separate jobs, not duplicates.
-  byRecipientNonce(recipient, nonce) {
+  async byRecipientNonce(recipient, nonce) {
     const r = ethers.getAddress(recipient).toLowerCase();
     const n = BigInt(nonce).toString(10);
-    return this.store.list().find(
+    return (await this.store.list()).find(
       (j) => ethers.getAddress(j.voucher.recipient).toLowerCase() === r &&
              BigInt(j.voucher.nonce).toString(10) === n
     ) || null;
   }
 
-  enqueue({ voucher, signature, idempotencyKey }) {
+  async enqueue({ voucher, signature, idempotencyKey }) {
     if (!this.relayer) {
       throw verr('RELAYER_DISABLED', 'The claim relayer is not enabled.');
     }
-    const existing = this.byRecipientNonce(voucher.recipient, voucher.nonce);
+    const existing = await this.byRecipientNonce(voucher.recipient, voucher.nonce);
     if (existing) return { job: existing, duplicate: true };
     const now = new Date().toISOString();
     const job = {
@@ -283,20 +283,20 @@ class ClaimQueue {
       created_at: now,
       updated_at: now,
     };
-    this.store.upsert(job);
+    await this.store.upsert(job);
     this._schedule();
     return { job, duplicate: false };
   }
 
   // Crash recovery: requeue anything that never reached a terminal state.
   // 'submitted' jobs get their receipt re-checked instead of re-sent.
-  recover() {
+  async recover() {
     let recovered = 0;
-    for (const job of this.store.list()) {
+    for (const job of await this.store.list()) {
       if (['queued', 'validating'].includes(job.status)) {
         job.status = 'queued';
         job.updated_at = new Date().toISOString();
-        this.store.upsert(job);
+        await this.store.upsert(job);
         recovered++;
       }
     }
@@ -307,11 +307,11 @@ class ClaimQueue {
   // Public: re-check the receipt for a job stuck in 'submitted'.
   // Called on status polls so a job never sits unknown forever.
   async checkSubmitted(jobId) {
-    const job = this.get(jobId);
+    const job = await this.get(jobId);
     if (job && job.status === 'submitted' && job.tx_hash) {
       await this._settleSubmitted(job);
     }
-    return this.get(jobId);
+    return await this.get(jobId);
   }
 
   _schedule() {
@@ -330,12 +330,12 @@ class ClaimQueue {
     this.running = true;
     try {
       for (;;) {
-        const next = this.store.list().find((j) => j.status === 'queued');
+        const next = (await this.store.list()).find((j) => j.status === 'queued');
         if (!next) break;
         await this._process(next);
       }
       // Re-check receipts for jobs stuck in 'submitted' (e.g. after a restart).
-      for (const job of this.store.list().filter((j) => j.status === 'submitted' && j.tx_hash)) {
+      for (const job of (await this.store.list()).filter((j) => j.status === 'submitted' && j.tx_hash)) {
         await this._settleSubmitted(job);
       }
     } finally {
@@ -343,21 +343,21 @@ class ClaimQueue {
     }
   }
 
-  _update(job, patch) {
+  async _update(job, patch) {
     Object.assign(job, patch, { updated_at: new Date().toISOString() });
-    this.store.upsert(job);
+    await this.store.upsert(job);
   }
 
-  _fail(job, code, message) {
-    this._update(job, { status: 'failed', error: { code, message } });
+  async _fail(job, code, message) {
+    await this._update(job, { status: 'failed', error: { code, message } });
   }
 
   async _process(job) {
-    this._update(job, { status: 'validating' });
+    await this._update(job, { status: 'validating' });
     job.attempts += 1;
     try {
       const { hash } = await this.relayer.submit(job.voucher, job.signature);
-      this._update(job, { status: 'submitted', tx_hash: hash, error: null });
+      await this._update(job, { status: 'submitted', tx_hash: hash, error: null });
       await this._settleSubmitted(job);
     } catch (e) {
       const code = e.code || 'SUBMIT_FAILED';
@@ -370,11 +370,11 @@ class ClaimQueue {
       ].includes(code);
       if (!terminal && job.attempts < MAX_ATTEMPTS) {
         const backoffMs = 2000 * job.attempts;
-        this._update(job, { status: 'queued', error: { code, message, retry_in_ms: backoffMs } });
+        await this._update(job, { status: 'queued', error: { code, message, retry_in_ms: backoffMs } });
         await new Promise((r) => setTimeout(r, backoffMs));
         this._schedule();
       } else {
-        this._fail(job, code, e.message || 'Receipt check failed.');
+        await this._fail(job, code, e.message || 'Receipt check failed.');
       }
     }
   }
@@ -382,7 +382,7 @@ class ClaimQueue {
   async _settleSubmitted(job) {
     try {
       const receipt = await this.relayer.waitForReceipt(job.tx_hash);
-      this._update(job, {
+      await this._update(job, {
         status: 'confirmed',
         token_id: receipt.tokenId,
         block_number: receipt.blockNumber,
@@ -393,9 +393,9 @@ class ClaimQueue {
       if (code === 'RECEIPT_TIMEOUT') {
         // Still unknown — leave as submitted; the next recover() pass or a
         // status poll will retry the receipt check.
-        this._update(job, { error: { code, message: e.message } });
+        await this._update(job, { error: { code, message: e.message } });
       } else {
-        this._fail(job, code, e.message || 'Receipt check failed.');
+        await this._fail(job, code, e.message || 'Receipt check failed.');
       }
     }
   }

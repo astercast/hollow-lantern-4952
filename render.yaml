@@ -1,0 +1,24 @@
+# Render blueprint for the Muse Dogs registration API (free tier).
+# Deploy via: Render dashboard → New → Blueprint → connect the repo.
+# DATABASE_URL comes from Neon (free Postgres); set it in the Render dashboard
+# after creating the Neon database (see DEPLOY.md). HASH_SALT is generated once
+# by Render — keep it stable: rotating it invalidates every stored hash.
+services:
+  - type: web
+    name: muse-dogs-api
+    runtime: node
+    plan: free
+    buildCommand: npm install --prefix api --omit=dev
+    startCommand: node api/server.js
+    healthCheckPath: /api/v1/config
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: CURRENT_PHASE
+        value: registration-open
+      - key: RELAYER_ENABLED
+        value: "0"
+      - key: DATABASE_URL
+        sync: false
+      - key: HASH_SALT
+        generateValue: true

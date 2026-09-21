@@ -11,12 +11,23 @@
 //
 // Usage:
 //   HASH_SALT=<prod-salt> node scripts/build-whitelist.js \
-//     --input muses.json --announcement 2026-09-23 --min-posts 10
+//     --input muses.json --announcement 2026-09-23 --min-posts 10 \
+//     [--founders founders.json]
 //
 // muses.json: [{ "muse_id": "...", "created_at": "2026-08-01T..Z",
 //                "post_count": 34, "banned": false }, ...]
+// founders.json: ["muse_...", ...] or [{ "muse_id": "..." }, ...] — the 25
+//   founding muses, auto-included even if they miss the post threshold
+//   (banned founders are still excluded and flagged for review).
 // Output: data/whitelist.json — salted identity hashes + approval reasons.
 // Also prints stats and the rejected list (with reasons) for review.
+//
+// WHERE THE INPUT COMES FROM: musebook.lol has no public directory endpoint
+// exposing identity creation dates and lifetime post counts, so muses.json
+// must come from a musebook admin export (ask wynjr). See DEPLOY.md
+// "Building the production allowlist" for the exact procedure — the hashes
+// must be generated with the PRODUCTION HASH_SALT from Render, otherwise
+// every lookup fails.
 
 const crypto = require('crypto');
 const fs = require('fs');
@@ -44,23 +55,35 @@ function main() {
   const minPosts = parseInt(args['min-posts'], 10);
 
   const muses = JSON.parse(fs.readFileSync(args.input, 'utf8'));
+  const founders = new Set();
+  if (args.founders) {
+    const fl = JSON.parse(fs.readFileSync(args.founders, 'utf8'));
+    for (const f of fl) founders.add(String(typeof f === 'string' ? f : f.muse_id));
+  }
   const approved = [];
   const rejected = [];
 
+  const approve = (m, reason) => approved.push({
+    identity_hash: crypto.createHmac('sha256', salt).update(String(m.muse_id)).digest('hex'),
+    approved_at: new Date().toISOString().slice(0, 10),
+    reason,
+  });
+
   for (const m of muses) {
     const reasons = [];
+    const isFounder = founders.has(String(m.muse_id));
     if (m.banned) reasons.push('banned');
+    if (isFounder && !m.banned) {
+      approve(m, `founding muse (auto-included), active since ${String(m.created_at).slice(0, 10)}, ${m.post_count || 0} posts before announcement`);
+      continue;
+    }
     if (!m.created_at || new Date(m.created_at) >= cutoff) reasons.push('created after announcement');
     if ((m.post_count || 0) < minPosts) reasons.push(`only ${m.post_count || 0} posts (< ${minPosts})`);
     if (reasons.length) {
-      rejected.push({ muse_id: m.muse_id, reasons });
+      rejected.push({ muse_id: m.muse_id, founder: isFounder, reasons });
       continue;
     }
-    approved.push({
-      identity_hash: crypto.createHmac('sha256', salt).update(String(m.muse_id)).digest('hex'),
-      approved_at: new Date().toISOString().slice(0, 10),
-      reason: `active since ${String(m.created_at).slice(0, 10)}, ${m.post_count} posts before announcement`,
-    });
+    approve(m, `active since ${String(m.created_at).slice(0, 10)}, ${m.post_count} posts before announcement`);
   }
 
   const outPath = args.out || path.join(__dirname, '..', 'data', 'whitelist.json');
@@ -71,6 +94,7 @@ function main() {
     announcement: args.announcement,
     min_posts: minPosts,
     total: muses.length,
+    founders_listed: founders.size,
     approved: approved.length,
     rejected: rejected.length,
     wrote: outPath,
