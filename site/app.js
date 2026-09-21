@@ -1,7 +1,12 @@
-/* Muse Dogs — shared frontend logic. All API calls are same-origin /api/v1.
-   The backend is built separately; if it is unreachable we fail gracefully. */
+/* Muse Dogs — shared frontend logic. All API calls go to the Render
+   backend (https://muse-dogs-api.onrender.com/api/v1); the static site on
+   musedog.lol is CORS-allowed. If the backend is unreachable we fail
+   gracefully. */
 
-var API = '/api/v1';
+var API_BASE =
+  (typeof window !== 'undefined' && window.MUSEDOGS_API_BASE) ||
+  'https://muse-dogs-api.onrender.com';
+var API = API_BASE + '/api/v1';
 
 /* True if the string looks like a plain Ethereum-style 0x address. */
 function isValidAddress(addr) {
@@ -176,36 +181,45 @@ function initRegisterPage() {
     // The API answers errors as { error: CODE, message } — normalize both shapes.
     var code = data.error || data.code || '';
     var reg = data.registration_id ? '<br><strong>Registration ID:</strong> <span class="mono">' + data.registration_id + '</span>' : '';
-    if (st === 'registered' && data.eligible_now) {
-      showResult('ok', 'You are registered and eligible!',
-        'Your address holds at least $10 of MDOG. You are on the holder list — the holder path is a voucher mint like the community path: you will request a holder voucher for your address and mint up to 3 NFTs.' + reg);
-    } else if (st === 'registered' && data.eligible_now === false) {
-      showResult('no', 'Registered, but below the threshold',
-        'Your signature checked out, but the address holds less than $10 of MDOG right now. You can still join the free community mint later.' + reg);
+    if (st === 'registered') {
+      // community_eligible: true (on the pre-announcement list), false
+      // (not on it — holder path only), null (list not loaded — the
+      // voucher step decides). The holder path is open to every
+      // registered muse; the $10 MDOG check happens at mint time, on-chain.
+      if (data.community_eligible === true) {
+        showResult('ok', 'Registered — both paths open',
+          'Your musebook identity checked out and you are on the pre-announcement list: you can mint up to 3 community free mints and up to 3 holder vouchers. The holder path checks $10 of MDOG at mint time, on-chain.' + reg);
+      } else if (data.community_eligible === false) {
+        showResult('ok', 'Registered — holder path open',
+          'Your musebook identity checked out. You are not on the pre-announcement list, so the free community mint is not yours — but the holder path is: register your address, then request a holder voucher when mint opens. The $10 MDOG check happens at mint time, on-chain.' + reg);
+      } else {
+        showResult('ok', 'Registered — holder path open',
+          'Your musebook identity checked out and your address is registered. The holder path is open to you (the $10 MDOG check happens at mint time, on-chain). Community free-mint eligibility is decided when you request a voucher.' + reg);
+      }
     } else if (st === 'duplicate' || code === 'DUPLICATE_IDENTITY' || code === 'DUPLICATE_WALLET') {
       showResult('warn', 'Already registered',
-        'This address or muse name is already registered. One entry per muse, one per address.' + reg);
-    } else if (code === 'INVALID_ADDRESS' || code === 'EXPIRED_CHALLENGE') {
-      showResult('no', 'Proof not accepted',
-        'The server could not verify your signature. Make sure you signed the exact message shown above, with the address you entered.' + reg);
+        'This muse identity or address is already registered. One entry per muse, one per address.' + reg);
+    } else if (code === 'INVALID_ADDRESS') {
+      showResult('no', 'Address not accepted',
+        'That does not look like a plain 0x address. Check it and try again.' + reg);
+    } else if (code === 'EXPIRED_CHALLENGE') {
+      showResult('no', 'Challenge expired',
+        'Challenges last 10 minutes. Get a fresh one and sign it again.' + reg);
+    } else if (code === 'INVALID_CHALLENGE') {
+      showResult('no', 'Challenge not recognized',
+        'That challenge was not issued for this muse and address. Start over with a fresh challenge.' + reg);
     } else if (code === 'INVALID_IDENTITY_SIGNATURE') {
       showResult('no', 'Signature did not check out',
         'That identity signature did not check out. Make sure you signed the exact message shown above with your musebook identity key, then try again.' + reg);
     } else if (code === 'IDENTITY_NOT_FOUND' || code === 'IDENTITY_UNVERIFIED') {
       showResult('no', 'Muse identity unknown',
         'We could not find or verify that muse identity on musebook. Double-check the muse name you entered — it has to be a verified musebook identity.' + reg);
-    } else if (code === 'NOT_WHITELISTED') {
-      showResult('no', 'Not on the muses list',
-        'This registration window is for muses who were active on musebook before the announcement. That identity is not on the list.' + reg);
     } else if (code === 'IDENTITY_REGISTRY_UNAVAILABLE') {
       showResult('warn', 'Musebook is unreachable',
         'The musebook identity registry did not answer, so registrations are paused right now. Nothing was recorded — please try again later.' + reg);
-    } else if (code === 'WHITELIST_UNAVAILABLE') {
-      showResult('warn', 'Muses list not loaded',
-        'The server could not load the muses list, so registrations are paused right now. Please try again later.' + reg);
-    } else if (code === 'RPC_UNAVAILABLE' || code === 'RPC_DISAGREEMENT' || code === 'WRONG_CHAIN') {
-      showResult('warn', 'Could not check your balance',
-        'The server could not verify MDOG holdings right now, so your registration was refused rather than guessed at. Please try again in a few minutes.' + reg);
+    } else if (code === 'IDEMPOTENCY_KEY_REUSED' || code === 'IDEMPOTENCY_CONFLICT') {
+      showResult('warn', 'Already submitted',
+        'That request was already processed. Check your registration status instead of resubmitting.' + reg);
     } else {
       var msg = data.detail || data.message || 'The server returned an unexpected answer. Please try again later.';
       showResult('warn', 'Not sure yet', msg + reg);
@@ -261,12 +275,16 @@ function initMintPage() {
     voucherChallenge = null;
     box.innerHTML = '';
     box.appendChild(el('h2', '', 'Your claim'));
-    box.appendChild(el('p', '', 'Muses only. Step 1 — prove it’s you: get the message, sign it with your musebook identity key, then get your personal voucher. No wallet connection, no wallet signature, no ETH needed.'));
+    box.appendChild(el('p', '', 'Muses only. Step 1 — prove it’s you: pick a path, get the message, sign it with your musebook identity key, then get your personal voucher. No wallet connection, no wallet signature, no ETH needed.'));
 
     var form = el('div', 'mint-form');
     form.innerHTML =
       '<label>Muse name<br><input id="mint-muse-id" type="text" placeholder="your musebook identity" autocomplete="off"></label><br>' +
       '<label>Wallet address<br><input id="mint-address" type="text" placeholder="0x…" autocomplete="off" spellcheck="false"></label><br>' +
+      '<div class="mint-paths">' +
+      '<label class="mint-path"><input type="radio" name="mint-path" value="community" checked> <strong>Community free mint</strong><br><span class="dim">For muses on the pre-announcement list. Free.</span></label>' +
+      '<label class="mint-path"><input type="radio" name="mint-path" value="holder"> <strong>Holder voucher</strong><br><span class="dim">Any registered muse. The $10 MDOG check happens on-chain at mint time.</span></label>' +
+      '</div>' +
       '<button class="btn" id="mint-get-challenge">Get the message to sign</button>';
     var challengeBox = el('div', '');
     challengeBox.id = 'mint-challenge-box';
@@ -280,6 +298,8 @@ function initMintPage() {
       var addr = document.getElementById('mint-address').value.trim();
       if (!mid) { showBoxMessage('warn', 'Muse name missing', 'Enter your musebook identity so we know whose voucher this is.'); return; }
       if (!isValidAddress(addr)) { showBoxMessage('warn', 'Check your address', 'That does not look like a valid 0x address.'); return; }
+      var routeEl = document.querySelector('input[name="mint-path"]:checked');
+      var route = routeEl ? routeEl.value : 'community';
       var btn = document.getElementById('mint-get-challenge');
       btn.disabled = true;
       btn.textContent = 'Getting message…';
@@ -290,7 +310,7 @@ function initMintPage() {
           showBoxMessage('warn', 'Server not ready', 'The API did not return a challenge. It may still be under construction — please try again later.');
           return;
         }
-        voucherChallenge = { id: data.challenge_id, mid: mid, addr: addr };
+        voucherChallenge = { id: data.challenge_id, mid: mid, addr: addr, route: route };
         challengeBox.style.display = 'block';
         challengeBox.innerHTML = '';
         challengeBox.appendChild(el('p', '', 'Sign this exact message with your <strong>musebook identity key</strong>, then paste the signature below. No wallet signature needed — the address above is plain text.'));
@@ -322,7 +342,8 @@ function initMintPage() {
     btn.disabled = true;
     btn.textContent = 'Getting voucher…';
     var idem = (crypto.randomUUID ? crypto.randomUUID() : 'idem-' + Date.now() + '-' + Math.random().toString(16).slice(2));
-    postJson('/community-voucher', {
+    var routePath = voucherChallenge.route === 'holder' ? '/holder-voucher' : '/community-voucher';
+    postJson(routePath, {
       muse_id: voucherChallenge.mid,
       address: voucherChallenge.addr,
       challenge_id: voucherChallenge.id,
@@ -332,7 +353,7 @@ function initMintPage() {
       btn.disabled = false;
       btn.textContent = 'Get my voucher';
       if (!data || !data.voucher || !data.eip712_signature) {
-        renderVoucherError(data);
+        renderVoucherError(data, voucherChallenge.route);
         return;
       }
       currentVoucher = data;
@@ -345,15 +366,19 @@ function initMintPage() {
     });
   }
 
-  function renderVoucherError(data) {
+  function renderVoucherError(data, route) {
     var code = (data && (data.error || data.code)) || '';
     var msg = (data && (data.message || data.detail)) || 'The server returned an unexpected answer.';
+    var holder = route === 'holder';
+    var pathName = holder ? 'holder' : 'community';
+    var otherPath = holder ? 'community free mint' : 'holder path';
+    var pathTotal = holder ? '100' : '380';
     var map = {
-      NOT_WHITELISTED: ['Not on the muses list', 'This muse identity was not on the pre-announcement list of established muses. Fresh accounts made after the announcement are not eligible.'],
-      VOUCHER_ALREADY_ISSUED_FOR_IDENTITY: ['Voucher already issued', 'This muse already has a voucher in flight — finish it first. One voucher per address, up to 3 per address on this path.'],
-      ADDRESS_VOUCHER_CAP_REACHED: ['Vouchers done for this address', 'This address already has its 3 community vouchers. (A muse eligible on both paths can still use the holder path.)'],
-      IDENTITY_VOUCHER_CAP_REACHED: ['Vouchers done for this muse', 'This muse identity already has its 3 community vouchers. (A muse eligible on both paths can still use the holder path.)'],
-      VOUCHER_CAP_REACHED: ['All vouchers issued', 'All 380 community vouchers have been issued.'],
+      NOT_WHITELISTED: ['Not on the muses list', 'This muse identity was not on the pre-announcement list of established muses, so the community free mint is not theirs — but any registered muse can use the holder path.'],
+      NOT_REGISTERED: ['Not registered', 'That muse and address are not registered yet. Register first, then come back for your holder voucher.'],
+      ADDRESS_VOUCHER_CAP_REACHED: ['Vouchers done for this address', 'This address already has its 3 ' + pathName + ' vouchers. (A muse eligible on both paths can still use the ' + otherPath + '.)'],
+      IDENTITY_VOUCHER_CAP_REACHED: ['Vouchers done for this muse', 'This muse identity already has its 3 ' + pathName + ' vouchers. (A muse eligible on both paths can still use the ' + otherPath + '.)'],
+      VOUCHER_CAP_REACHED: ['All vouchers issued', 'All ' + pathTotal + ' ' + pathName + ' vouchers have been issued.'],
       VOUCHER_SIGNER_UNAVAILABLE: ['Not ready yet', 'Voucher signing is not switched on yet. Please try again later.'],
       CONTRACT_NOT_DEPLOYED: ['Not ready yet', 'The Muse Dogs contract is not deployed yet. Please try again later.'],
       WHITELIST_UNAVAILABLE: ['Muses list not loaded', 'The server could not load the muses list. Claims stay closed rather than opening unguarded — try again later.'],
@@ -377,12 +402,17 @@ function initMintPage() {
     box.appendChild(el('p', '', 'Step 2 — check the facts, then mint. If anything here looks different from the table above, <strong>stop</strong>.'));
 
     var facts = el('table', 'facts');
+    var isHolder = v.allocation === 'HOLDER' || v.mintType === 1;
+    var pathRow = isHolder
+      ? '<tr><td>Path</td><td><strong>Holder voucher</strong> — the $10 MDOG check happens on-chain at mint time</td></tr>'
+      : '<tr><td>Path</td><td><strong>Community free mint</strong></td></tr>';
     facts.innerHTML =
       '<tr><td>Chain</td><td>Robinhood Chain — <strong>chain ID ' + esc(v.chainId) + '</strong></td></tr>' +
       '<tr><td>Contract</td><td class="mono">' + esc(v.contract) + '</td></tr>' +
       '<tr><td>Recipient</td><td class="mono">' + esc(v.recipient) + ' <span class="dim">(' + esc(mid) + ')</span></td></tr>' +
       '<tr><td>Voucher nonce</td><td class="mono">' + esc(v.nonce) + '</td></tr>' +
       '<tr><td>Voucher expires</td><td>' + esc(new Date(Number(v.expiry) * 1000).toLocaleString()) + '</td></tr>' +
+      pathRow +
       '<tr><td>Price</td><td><strong>0</strong> — free mint</td></tr>';
     box.appendChild(facts);
 
@@ -555,9 +585,9 @@ function initMintPage() {
 function initPhaseBanner() {
   var banner = document.getElementById('phase-banner');
   if (!banner) return;
-  // Same-origin API when served together; stays silent and keeps the
-  // hardcoded fallback if the API is not there.
-  fetch('/api/v1/config').then(function (r) {
+  // The API lives on Render; stays silent and keeps the hardcoded
+  // fallback if it is not reachable.
+  fetch(API + '/config').then(function (r) {
     if (!r.ok) throw new Error('no config');
     return r.json();
   }).then(function (cfg) {

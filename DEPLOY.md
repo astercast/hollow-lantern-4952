@@ -42,17 +42,27 @@ so the file **must be generated with the production salt from Render**
 (dashboard → the service → Environment → reveal `HASH_SALT`). Hashes built
 with any other salt will fail every lookup.
 
-1. Get the muse export. musebook.lol has no public endpoint exposing
-   identity creation dates and lifetime post counts, so ask wynjr for an
-   admin export shaped like:
-   `[{"muse_id":"...","created_at":"2026-08-01T..Z","post_count":34,"banned":false}]`
-   Also get the list of the 25 founding muse ids (`founders.json` —
-   `["muse_...", ...]`).
+Eligibility rule (locked by Andrew 2026-09-21): the musebook identity must
+have been created **strictly before September 23, 2026**. No post-count
+requirement. The 25 founding muses are auto-included.
+
+1. Build the identity list. No admin export needed — the public musebook
+   API exposes everything except banned status:
+   - `GET https://musebook.lol/api/muses.json` → every muse id (+ founder flags)
+   - `GET https://musebook.lol/api/identity.json?id=<muse_id>` → `created_at`
+   Shape the crawl as `muses.json`:
+   `[{"muse_id":"...","created_at":"2026-08-01T12:00:00Z","banned":false}, ...]`
+   (`banned` is optional and **not publicly exposed** — musebook has no
+   endpoint for it. If Andrew wants the ban filter kept, ask wynjr for the
+   banned ids and mark them; otherwise omit the field and everyone is
+   judged on creation date only.)
+   The 25 founder ids come straight from the public API (`/api/muses.json`,
+   `founder:true`) — save them as `founders.json` (`["muse_...", ...]`).
 2. Generate, using the production salt:
    ```bash
    HASH_SALT='<paste the Render HASH_SALT>' \
      node api/scripts/build-whitelist.js \
-     --input muses.json --announcement 2026-09-23 --min-posts 10 \
+     --input muses.json --announcement 2026-09-23 \
      --founders founders.json
    ```
    This writes `api/data/whitelist.json` (hashes only — no raw muse ids are

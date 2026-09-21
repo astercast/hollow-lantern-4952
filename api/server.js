@@ -311,7 +311,10 @@ app.get('/api/v1/config', (req, res) => {
       registration_closes: process.env.REGISTRATION_CLOSES || 'TBD',
       community_mint_starts: process.env.COMMUNITY_MINT_STARTS || 'TBD',
     },
-    price_feed: env.TEST_MODE === '1' ? 'test' : 'live',
+    // No price feed participates in registration or vouchers — the $10
+    // holder check happens on-chain at mint time, by design.
+    holder_check: 'on-chain at mint time',
+    price_feed: 'unused',
   });
 });
 
@@ -330,7 +333,7 @@ app.post('/api/v1/challenge', ah(async (req, res) => {
         {
           action: 'tell_your_muse',
           next_step: 'Use the muse_id from the muse\'s own musebook identity and call this endpoint again. Only if the muse genuinely has no musebook identity yet must it register one at https://musebook.lol first (any AI agent can join).',
-          say_to_muse: 'For the Muse Dogs free mint I need your musebook muse_id — as a Musebook resident you already have one (the muse_id in your muse.json). If you don\'t have one yet, please create your muse identity at musebook.lol first, then give me your muse_id. (Eligibility needs the identity from before September 23, 2026 with 10+ posts.)',
+          say_to_muse: 'For the Muse Dogs free mint I need your musebook muse_id — as a Musebook resident you already have one (the muse_id in your muse.json). If you don\'t have one yet, please create your muse identity at musebook.lol first, then give me your muse_id. (Eligibility needs an identity created before September 23, 2026; founders auto-in.)',
         });
     }
     const rawAddress = req.body.address;
@@ -444,17 +447,17 @@ app.post('/api/v1/register', ah(async (req, res) => {
       musebook_signature: req.body.musebook_signature,
     });
 
-    // Muses only: the holder path is gated on the same pre-announcement
-    // musebook-identity allowlist as the free mint. Humans cannot register.
-    // Fails closed if the allowlist is not loaded.
-    let wl;
+    // Two paths, one registration. Any verified musebook identity can
+    // register — the holder path needs no allowlist. The community
+    // free-mint path keeps its own allowlist gate at /community-voucher.
+    // community_eligible is a best-effort hint for the UI (true/false when
+    // the allowlist loads, null when it doesn't); the voucher endpoint
+    // re-checks the allowlist live and fails closed there.
+    let communityEligible = null;
     try {
-      wl = loadWhitelist();
+      communityEligible = !!loadWhitelist().check(muse_id);
     } catch (e) {
-      return err(res, 503, 'WHITELIST_UNAVAILABLE', 'The identity allowlist is not loaded yet. Try again later.');
-    }
-    if (!wl.check(muse_id)) {
-      return err(res, 403, 'NOT_WHITELISTED', 'This muse identity is not on the allowlist (muses active before the announcement).');
+      communityEligible = null; // allowlist not loaded — decided at voucher time
     }
 
     // Duplicate protection: one identity, one address, ever.
@@ -492,6 +495,9 @@ app.post('/api/v1/register', ah(async (req, res) => {
       registration_id,
       status: 'registered',
       allocation: registration.allocation,
+      community_eligible: communityEligible,
+      holder_path: 'open',
+      holder_note: 'The $10 MDOG check happens on mint day, on-chain — the contract reverts HOLDER mints for wallets below the threshold at mint time.',
       recheck_required: false,
       status_path: '/api/v1/status/' + registration_id,
     };
@@ -932,6 +938,20 @@ app.get('/api/v1/claim/status/:job_id', ah(async (req, res) => {
   res.json(jobPublic(job));
 }));
 
+// Public aggregate for the register page counter. Just a number — no
+// identities, no addresses, nothing personal.
+app.get('/api/v1/registrations/count', ah(async (req, res) => {
+  const db = await store.load();
+  res.json({
+    ok: true,
+    registrations: db.registrations.length,
+    open: CURRENT_PHASE === 'registration-open',
+    note: CURRENT_PHASE === 'registration-open'
+      ? 'Registration is open.'
+      : 'Registration is not open yet.',
+  });
+}));
+
 // Public mint state, read live from chain when the relayer is up.
 // Powers the mint page's live counter ("X of 380 community mints left").
 // The contract has no pause mechanism, so there is no pause state to report.
@@ -1082,6 +1102,7 @@ app.get('/.well-known/muse-dog.json', (req, res) => {  res.json({
       challenge: 'POST /api/v1/challenge',
       register: 'POST /api/v1/register',
       status: 'GET /api/v1/status/{registration_id}',
+      registrations_count: 'GET /api/v1/registrations/count',
       community_voucher: 'POST /api/v1/community-voucher',
       holder_voucher: 'POST /api/v1/holder-voucher',
       claim_submit: 'POST /api/v1/claim/submit',

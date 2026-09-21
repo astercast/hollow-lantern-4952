@@ -134,6 +134,7 @@ async function waitForServer() {
   });
   log(r.status === 200 && r.json.status === 'registered' && r.json.allocation === null, 'register: muse registered (no balance check at registration — the $10 MDOG check happens on mint day, on-chain)');
   log(r.json.recheck_required === false && !!r.json.status_path, 'register: response shape from plan');
+  log(r.json.community_eligible === true && r.json.holder_path === 'open', 'register: allowlisted muse sees community_eligible true, holder path open');
   const regId = r.json.registration_id;
 
   // 5. idempotency: same key replays the same response
@@ -214,7 +215,9 @@ async function waitForServer() {
   });
   log(r.status === 400 && r.json.error === 'EXPIRED_CHALLENGE', 'register: consumed challenge rejected');
 
-  // 7b. muses only: non-whitelisted identity is refused on the holder path too
+  // 7b. holder path open: a verified musebook identity NOT on the
+  // community allowlist registers fine. The holder path needs no allowlist —
+  // any verified muse gets in; the response says which paths are open.
   const w_nh = ethers.Wallet.createRandom();
   const cnh = await api('POST', '/api/v1/challenge', { muse_id: 'muse_smoke_7', address: w_nh.address });
   r = await api('POST', '/api/v1/register', {
@@ -222,7 +225,8 @@ async function waitForServer() {
     musebook_signature: identitySig(identities.muse_smoke_7, cnh.json.message),
     idempotency_key: 'smoke-key-nh',
   });
-  log(r.status === 403 && r.json.error === 'NOT_WHITELISTED', 'register: non-whitelisted identity refused (muses only)');
+  log(r.status === 200 && r.json.status === 'registered' && r.json.community_eligible === false && r.json.holder_path === 'open',
+    'register: non-allowlisted verified muse registers (holder path open, community_eligible false)');
 
   // 8. status
   r = await api('GET', '/api/v1/status/' + regId);
@@ -301,6 +305,12 @@ async function waitForServer() {
   const w6 = ethers.Wallet.createRandom();
   r = await attemptVoucher('muse_smoke_9', w6, identities.muse_smoke_9, 'smoke-v11');
   log(r.status === 503 && r.json.error === 'WHITELIST_UNAVAILABLE', 'voucher: fails closed without allowlist');
+  // Re-seed for the tests below (register calls need the allowlist present
+  // to report community_eligible accurately).
+  fs.writeFileSync(WL_PATH, JSON.stringify([
+    { identity_hash: hash('muse_smoke_9'), approved_at: '2026-09-18', reason: 'smoke test allowlist' },
+    { identity_hash: hash('muse_smoke_1'), approved_at: '2026-09-18', reason: 'smoke test allowlist' },
+  ], null, 2));
 
   // 11h. holder vouchers: the holder path needs only a registration with a
   // verified identity. The $10 MDOG check is NOT done here — it happens on
@@ -352,24 +362,26 @@ async function waitForServer() {
   r = await attemptHolderVoucher('muse_smoke_3', w11, identities.muse_smoke_3, 'smoke-h7');
   log(r.status === 403 && r.json.error === 'NOT_REGISTERED', 'holder-voucher: unregistered muse refused');
 
-  // 11k2. holder path: a registered muse gets a holder voucher even with no
-  // MDOG — the $10 check happens on mint day, on-chain, not here.
+  // 11k2. holder path: a muse NOT on the community allowlist registers
+  // through the real API (no fixture) and gets a holder voucher. No balance
+  // check here — the $10 MDOG check happens on mint day, on-chain.
   const w11b = ethers.Wallet.createRandom();
   {
-    const db = JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
-    db.registrations.push({
-      registration_id: 'reg-smoke-h-poor',
-      muse_id: 'muse_smoke_3',
-      address: ethers.getAddress(w11b.address),
-      muse_id_hash: hash('muse_smoke_3'),
-      address_hash: hash(w11b.address.toLowerCase()),
-      allocation: null,
-      created_at: new Date().toISOString(),
+    const c = await api('POST', '/api/v1/challenge', { muse_id: 'muse_smoke_3', address: w11b.address });
+    const rr = await api('POST', '/api/v1/register', {
+      muse_id: 'muse_smoke_3', address: w11b.address, challenge_id: c.json.challenge_id,
+      musebook_signature: identitySig(identities.muse_smoke_3, c.json.message),
+      idempotency_key: 'smoke-h7b-reg',
     });
-    fs.writeFileSync(DB_PATH, JSON.stringify(db, null, 2));
+    log(rr.status === 200 && rr.json.status === 'registered' && rr.json.community_eligible === false,
+      'register: non-allowlisted muse registers via the API for the holder path');
   }
   r = await attemptHolderVoucher('muse_smoke_3', w11b, identities.muse_smoke_3, 'smoke-h7b');
-  log(r.status === 200 && r.json.voucher.mintType === 1, 'holder-voucher: registered muse gets holder voucher without a balance check (check is on mint day)');
+  log(r.status === 200 && r.json.voucher.mintType === 1, 'holder-voucher: registered non-allowlisted muse gets holder voucher (check is on mint day)');
+
+  // 11k3. the same non-allowlisted muse CANNOT take the community free mint.
+  r = await attemptVoucher('muse_smoke_3', w11b, identities.muse_smoke_3, 'smoke-h7c');
+  log(r.status === 403 && r.json.error === 'NOT_WHITELISTED', 'community-voucher: non-allowlisted holder-path muse refused the free mint');
 
   // 11l. holder path: forged identity signature rejected.
   const w12 = ethers.Wallet.createRandom();
@@ -392,11 +404,8 @@ async function waitForServer() {
   log(!r.json.registration.wallet_proof && !r.json.registration.proof_of_work, 'well-known: no wallet/PoW proof blocks');
 
   // ---- identity verification tests — added 2026-09-18 ----
-  // Test 11d deleted the allowlist; re-seed it for the register calls below.
-  fs.writeFileSync(WL_PATH, JSON.stringify([
-    { identity_hash: hash('muse_smoke_9'), approved_at: '2026-09-18', reason: 'smoke test allowlist' },
-    { identity_hash: hash('muse_smoke_1'), approved_at: '2026-09-18', reason: 'smoke test allowlist' },
-  ], null, 2));
+  // (The allowlist was re-seeded right after test 11d for the register
+  // calls below.)
   // Helper: full registration attempt for a muse with a chosen identity key.
   // Identity proof only: challenge + musebook Ed25519 identity signature.
   async function attemptRegister(muse_id, idemKey, idKey, idKeyFor) {
@@ -417,6 +426,7 @@ async function waitForServer() {
   // 13. happy path: real Ed25519 identity signature verifies against the registry
   r = await attemptRegister('muse_smoke_9', 'smoke-id-13a', identities.muse_smoke_9);
   log(r.status === 200 && r.json.status === 'registered', 'identity: valid Ed25519 signature registers');
+  log(r.json.community_eligible === true, 'identity: allowlisted muse sees community_eligible true');
 
   // 14. forged signature (signed with a key NOT registered for this identity)
   r = await attemptRegister('muse_smoke_9', 'smoke-id-14', identities.muse_forged);
@@ -465,9 +475,10 @@ async function waitForServer() {
   // ---- price feed tests — added 2026-09-18 ----
   const { getMdogUsdPrice, _agreeOnPrice, _clearCache } = require('./lib/price');
 
-  // P1. config reports the feed mode (test stub under TEST_MODE)
+  // P1. config is honest: no price feed participates in registration or
+  // vouchers; the holder check happens on-chain at mint time, by design.
   r = await api('GET', '/api/v1/config');
-  log(r.json.price_feed === 'test', 'price: config reports feed mode');
+  log(r.json.holder_check === 'on-chain at mint time' && r.json.price_feed === 'unused', 'price: config reports the on-chain holder check, no live feed');
 
   // P2. TEST_MODE stub returns the mocked price with provenance fields
   _clearCache();
