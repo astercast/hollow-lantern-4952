@@ -16,7 +16,7 @@ function isValidAddress(addr) {
 function apiError(action) {
   return {
     status: 'api_unreachable',
-    detail: 'Could not reach the server while ' + action + '. The registration API is still being built — please try again later.'
+    detail: 'Could not reach the server while ' + action + '. Please try again later.'
   };
 }
 
