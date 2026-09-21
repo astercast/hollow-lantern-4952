@@ -339,6 +339,15 @@ nav.main-nav a .hash { display: none; }
   display: block;
   margin: 0 auto;
 }
+/* Town-dog hero image: keep it small — it was dominating the page */
+.fees-section.town-dog .fees-art {
+  max-width: 220px;
+}
+@media (max-width: 720px) {
+  .fees-section.town-dog .fees-art {
+    max-width: 150px;
+  }
+}
 @media (max-width: 720px) {
   .fees-section .fees-wrap { padding: 24px; gap: 22px; }
 }
