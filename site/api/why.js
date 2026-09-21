@@ -1,15 +1,13 @@
-// GET /api/why — the Why MuseDog page, behind the same passcode gate as the
-// other inner pages.
+// GET /api/why — the Why MuseDog page.
 //
-// Why a dedicated endpoint: the www Vercel project's edge routing does not
-// apply the /why.html rewrite from vercel.json, so /why.html would otherwise
-// be served statically (ungated). This endpoint serves the page through the
-// gate function instead, so the page is locked on every deployment with no
-// routing dependency. The static why.html file lives at api/_gated/why.html
-// and is never served directly.
-const gate = require("./gate.js");
+// Serves the page HTML directly. (It used to route through the passcode
+// gate; the gate was removed when the site unlocked, and the stale
+// require("./gate.js") was crashing this function with
+// FUNCTION_INVOCATION_FAILED.)
+const whyPage = require("./_why-content.js");
 
 module.exports = (req, res) => {
-  req.query = Object.assign({}, req.query, { file: "why.html" });
-  return gate(req, res);
+  res.setHeader("Content-Type", "text/html; charset=utf-8");
+  res.setHeader("Cache-Control", "public, max-age=300");
+  res.status(200).send(whyPage.content);
 };
