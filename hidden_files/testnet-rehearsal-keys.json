@@ -1,0 +1,26 @@
+{
+  "deployer": {
+    "address": "0xdb1D6B6A8579b214a48BeFA554BB17AE390C5cC5",
+    "private_key": "0xf93a90d40287422791e423e99686add799d1521810964d9983a3d1a3384ab330"
+  },
+  "voucher_signer": {
+    "address": "0x471BdF9677dA9da86d2a5647FD6E05305aEFFfcF",
+    "private_key": "0x0fabab8d54eb70c67bcc3c075a19d554ae6bedfc169465a7233d44c5412c1909"
+  },
+  "safe": {
+    "address": "0xC6E96bf34b0417696d4263c268a369982edEAE77",
+    "private_key": "0x29a5b843c198a0017eb21f8719a6e24c20351e53c40685e439c8c1d200f50ec6"
+  },
+  "recipient": {
+    "address": "0xFC348C4d467e7172e72bf23fe6EfC4f45E7feEB3",
+    "private_key": "0x36e343d39370f6c36a2199756a237200aead70e43266057c08ab691b32b86896"
+  },
+  "mikey": {
+    "address": "0x43103da849b4c8Eb8bF4f0D874AfC520443B0962",
+    "private_key": "0xc7323dd0c68ae39c6b93215310480b40e63a6ef4bb4f1abd7c8fa708d05f9860"
+  },
+  "rewards": {
+    "address": "0x56F16a162A86B6db2E887Ac6cB97D0c1aCD34De4",
+    "private_key": "0xb9096f312dd843aaa7888ea74b894ec7a37089363700787b1b1948711ff7f24f"
+  }
+}
