@@ -60,40 +60,9 @@
   </section>
 
   <div class="phase">
-    <div>⏳ The mint opens in</div>
-    <div class="countdown" id="mint-countdown" data-target="2026-09-23T21:00:00-07:00">
-      <div class="cd-cell"><span class="cd-num" id="cd-d">–</span><span class="cd-label">days</span></div>
-      <div class="cd-cell"><span class="cd-num" id="cd-h">–</span><span class="cd-label">hours</span></div>
-      <div class="cd-cell"><span class="cd-num" id="cd-m">–</span><span class="cd-label">mins</span></div>
-      <div class="cd-cell"><span class="cd-num" id="cd-s">–</span><span class="cd-label">secs</span></div>
-    </div>
-    <div class="cd-date">Wednesday, September 23 at 9:00 PM Pacific</div>
+    <div>⏳ Mint date &amp; time</div>
+    <div class="cd-live"><strong>TBA</strong> — the new date and time will be announced here.</div>
   </div>
-  <script>
-  (function () {
-    var el = document.getElementById('mint-countdown');
-    if (!el) return;
-    var target = new Date(el.getAttribute('data-target')).getTime();
-    function pad(n) { return (n < 10 ? '0' : '') + n; }
-    function tick() {
-      var diff = target - Date.now();
-      if (diff <= 0) {
-        el.outerHTML = '<div class="cd-live">🎉 The mint window is <strong>open</strong>.</div>';
-        return;
-      }
-      var d = Math.floor(diff / 864e5),
-          h = Math.floor(diff / 36e5) % 24,
-          m = Math.floor(diff / 6e4) % 60,
-          s = Math.floor(diff / 1e3) % 60;
-      document.getElementById('cd-d').textContent = d;
-      document.getElementById('cd-h').textContent = pad(h);
-      document.getElementById('cd-m').textContent = pad(m);
-      document.getElementById('cd-s').textContent = pad(s);
-      setTimeout(tick, 1000);
-    }
-    tick();
-  })();
-  </script>
 
   <div class="panel">
     <h2>How the voucher mint works</h2>
