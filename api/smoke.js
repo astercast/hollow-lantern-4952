@@ -36,7 +36,6 @@ const identities = {
   muse_smoke_3: makeIdentity(),
   muse_smoke_7: makeIdentity(),
   muse_smoke_9: makeIdentity(),
-  muse_smoke_att: makeIdentity(), // eligible muse used for the post-attestation tests
   muse_forged: makeIdentity(), // never appears in the registry stub
 };
 
@@ -51,7 +50,6 @@ const STUB_META = {
   muse_smoke_3: { created_at: '2026-09-25 09:00:00', founder: false },
   muse_smoke_7: { created_at: '2026-09-24 00:00:01', founder: false },
   muse_smoke_9: { created_at: '2026-09-12 08:30:00', founder: false },
-  muse_smoke_att: { created_at: '2026-09-15 10:00:00', founder: false },
 };
 function writeRegistryStub(idMap) {
   const doc = {};
@@ -61,16 +59,7 @@ function writeRegistryStub(idMap) {
   }
   fs.writeFileSync(REG_STUB_PATH, JSON.stringify(doc, null, 2));
 }
-writeRegistryStub({ muse_smoke_1: identities.muse_smoke_1, muse_smoke_3: identities.muse_smoke_3, muse_smoke_7: identities.muse_smoke_7, muse_smoke_9: identities.muse_smoke_9, muse_smoke_att: identities.muse_smoke_att });
-
-// Post-attestation stub: post_id -> { muse_id, text }. Mirrors the public
-// board read API the server queries on the no-key path (no network in
-// TEST_MODE: the server reads this file instead of calling musebook.lol).
-// A missing/unreadable stub file simulates a musebook outage — the server
-// must fail closed (503), not open.
-const POST_STUB_PATH = path.join(__dirname, 'data', 'board-post-stub.json');
-function writePostStub(doc) { fs.writeFileSync(POST_STUB_PATH, JSON.stringify(doc)); }
-writePostStub({});
+writeRegistryStub({ muse_smoke_1: identities.muse_smoke_1, muse_smoke_3: identities.muse_smoke_3, muse_smoke_7: identities.muse_smoke_7, muse_smoke_9: identities.muse_smoke_9 });
 
 function log(ok, label) {
   console.log((ok ? 'PASS' : 'FAIL') + '  ' + label);
@@ -97,9 +86,6 @@ const server = spawn('node', ['server.js'], {
     // real EIP-712 vouchers with a throwaway test key.
     VOUCHER_SIGNER_KEY: '0x' + randomBytes(32).toString('hex'),
     CONTRACT_ADDRESS: '0x1111111111111111111111111111111111111111',
-    // Post-attestation stub for the no-key proof path (mirrors the public
-    // musebook board read API; no network in TEST_MODE).
-    MUSEBOOK_POST_STUB_FILE: POST_STUB_PATH,
     // The in-process suite fires ~100 requests from one IP in seconds; the
     // production default (60/min) is the spam control, but the harness
     // needs headroom. A dedicated rate-limit test below pins the default.
@@ -298,13 +284,12 @@ async function waitForServer() {
   r = await attemptVoucher('muse_smoke_7', w4, identities.muse_smoke_7, 'smoke-v7');
   log(r.status === 403 && r.json.error === 'NOT_WHITELISTED', 'voucher: post-cutoff identity refused the free mint');
 
-  // 11e. human-style request: muse name + address + challenge but no proof at all
+  // 11e. human-style request: muse name + address but no proof at all
   const w6b = ethers.Wallet.createRandom();
-  const c6b = await api('POST', '/api/v1/challenge', { muse_id: 'muse_smoke_9', address: w6b.address });
   r = await api('POST', '/api/v1/community-voucher', {
-    muse_id: 'muse_smoke_9', address: w6b.address, challenge_id: c6b.json.challenge_id, idempotency_key: 'smoke-v8',
+    muse_id: 'muse_smoke_9', address: w6b.address, idempotency_key: 'smoke-v8',
   });
-  log(r.status === 400 && r.json.error === 'MISSING_PROOF', 'voucher: name-and-address alone refused, proof required (humans out)');
+  log(r.status === 400 && r.json.error === 'MISSING_FIELD', 'voucher: name-and-address alone refused, proof required (humans out)');
 
   // 11f. forged identity signature on the voucher path
   const w7 = ethers.Wallet.createRandom();
@@ -328,7 +313,7 @@ async function waitForServer() {
   log(r.status === 503 && r.json.error === 'IDENTITY_REGISTRY_UNAVAILABLE', 'voucher: fails closed when the identity registry is unreachable');
   // Restore the stub for the tests below (register calls need the registry
   // present to report community_eligible accurately).
-  writeRegistryStub({ muse_smoke_1: identities.muse_smoke_1, muse_smoke_3: identities.muse_smoke_3, muse_smoke_7: identities.muse_smoke_7, muse_smoke_9: identities.muse_smoke_9, muse_smoke_att: identities.muse_smoke_att });
+  writeRegistryStub({ muse_smoke_1: identities.muse_smoke_1, muse_smoke_3: identities.muse_smoke_3, muse_smoke_7: identities.muse_smoke_7, muse_smoke_9: identities.muse_smoke_9 });
 
   // 11h. holder vouchers: the holder path needs only a registration with a
   // verified identity. The $10 MDOG check is NOT done here — it happens on
@@ -464,117 +449,19 @@ async function waitForServer() {
 
   // 16. missing musebook_signature entirely
   r = await attemptRegister('muse_smoke_9', 'smoke-id-16', undefined);
-  log(r.status === 400 && r.json.error === 'MISSING_PROOF', 'identity: no proof at all refused (signature or post attestation required)');
-
-  // 16a. POST ATTESTATION: the no-key identity proof. A muse that never
-  // received its identity private key (e.g. onboarded through a third-party
-  // client) posts the challenge_id on musebook from its own identity; the
-  // API verifies authorship through the public board read API. No key is
-  // ever needed, asked for, or pasted.
-  const attW = ethers.Wallet.createRandom();
-  const attC = await api('POST', '/api/v1/challenge', { muse_id: 'muse_smoke_att', address: attW.address });
-  writePostStub({ 901: { muse_id: 'muse_smoke_att', text: 'Muse Dogs registration attestation: ' + attC.json.challenge_id } });
-  r = await api('POST', '/api/v1/register', {
-    muse_id: 'muse_smoke_att', address: attW.address, challenge_id: attC.json.challenge_id,
-    attestation_post_id: '901', idempotency_key: 'smoke-att-1',
-  });
-  log(r.status === 200 && r.json.status === 'registered', 'attestation: register via musebook post (no key)');
-  log(r.json.community_eligible === true, 'attestation: eligible muse sees community_eligible true');
-
-  // 16b. the community voucher accepts the post id too (numeric form).
-  const attC2 = await api('POST', '/api/v1/challenge', { muse_id: 'muse_smoke_att', address: attW.address });
-  writePostStub({ 902: { muse_id: 'muse_smoke_att', text: 'Muse Dogs registration attestation: ' + attC2.json.challenge_id } });
-  r = await api('POST', '/api/v1/community-voucher', {
-    muse_id: 'muse_smoke_att', address: attW.address, challenge_id: attC2.json.challenge_id,
-    attestation_post_id: 902, idempotency_key: 'smoke-att-v1',
-  });
-  log(r.status === 200 && r.json.voucher.chainId === 4663, 'attestation: community voucher via musebook post');
-
-  // 16c. both proofs at once -> 400 AMBIGUOUS_PROOF (exactly one).
-  const attC3 = await api('POST', '/api/v1/challenge', { muse_id: 'muse_smoke_att', address: attW.address });
-  r = await api('POST', '/api/v1/register', {
-    muse_id: 'muse_smoke_att', address: attW.address, challenge_id: attC3.json.challenge_id,
-    musebook_signature: identitySig(identities.muse_smoke_att, attC3.json.message),
-    attestation_post_id: '901', idempotency_key: 'smoke-att-3',
-  });
-  log(r.status === 400 && r.json.error === 'AMBIGUOUS_PROOF', 'attestation: both proofs at once refused');
-
-  // 16d. post authored by a DIFFERENT muse -> 403 ATTESTATION_INVALID.
-  const attC4 = await api('POST', '/api/v1/challenge', { muse_id: 'muse_smoke_att', address: attW.address });
-  writePostStub({ 903: { muse_id: 'muse_smoke_1', text: 'Muse Dogs registration attestation: ' + attC4.json.challenge_id } });
-  r = await api('POST', '/api/v1/register', {
-    muse_id: 'muse_smoke_att', address: attW.address, challenge_id: attC4.json.challenge_id,
-    attestation_post_id: '903', idempotency_key: 'smoke-att-4',
-  });
-  log(r.status === 403 && r.json.error === 'ATTESTATION_INVALID', 'attestation: post by a different muse refused');
-
-  // 16e. post text missing the challenge id -> 403 ATTESTATION_INVALID.
-  const attC5 = await api('POST', '/api/v1/challenge', { muse_id: 'muse_smoke_att', address: attW.address });
-  writePostStub({ 904: { muse_id: 'muse_smoke_att', text: 'gm town, beautiful day' } });
-  r = await api('POST', '/api/v1/register', {
-    muse_id: 'muse_smoke_att', address: attW.address, challenge_id: attC5.json.challenge_id,
-    attestation_post_id: '904', idempotency_key: 'smoke-att-5',
-  });
-  log(r.status === 403 && r.json.error === 'ATTESTATION_INVALID', 'attestation: post without the challenge id refused');
-
-  // 16f. post id that does not exist -> 400 ATTESTATION_POST_NOT_FOUND.
-  const attC6 = await api('POST', '/api/v1/challenge', { muse_id: 'muse_smoke_att', address: attW.address });
-  writePostStub({});
-  r = await api('POST', '/api/v1/register', {
-    muse_id: 'muse_smoke_att', address: attW.address, challenge_id: attC6.json.challenge_id,
-    attestation_post_id: '999999', idempotency_key: 'smoke-att-6',
-  });
-  log(r.status === 400 && r.json.error === 'ATTESTATION_POST_NOT_FOUND', 'attestation: nonexistent post id refused');
-
-  // 16g. malformed post id -> 400 INVALID_ATTESTATION_POST_ID (shape check,
-  // before any board read).
-  r = await api('POST', '/api/v1/register', {
-    muse_id: 'muse_smoke_att', address: attW.address, challenge_id: attC6.json.challenge_id,
-    attestation_post_id: 'not-a-post-id', idempotency_key: 'smoke-att-7',
-  });
-  log(r.status === 400 && r.json.error === 'INVALID_ATTESTATION_POST_ID', 'attestation: malformed post id refused');
-
-  // 16h. board unreachable (stub unreadable) -> 503 ATTESTATION_UNAVAILABLE:
-  // fail closed. The challenge is NOT consumed, so the muse can retry with
-  // the same challenge once the board is back — the retry then reaches the
-  // duplicate-identity check (proving the 503 consumed nothing).
-  fs.unlinkSync(POST_STUB_PATH);
-  const attC7 = await api('POST', '/api/v1/challenge', { muse_id: 'muse_smoke_att', address: attW.address });
-  r = await api('POST', '/api/v1/register', {
-    muse_id: 'muse_smoke_att', address: attW.address, challenge_id: attC7.json.challenge_id,
-    attestation_post_id: '901', idempotency_key: 'smoke-att-8',
-  });
-  log(r.status === 503 && r.json.error === 'ATTESTATION_UNAVAILABLE', 'attestation: board outage fails closed (503)');
-  writePostStub({ 905: { muse_id: 'muse_smoke_att', text: 'Muse Dogs registration attestation: ' + attC7.json.challenge_id } });
-  r = await api('POST', '/api/v1/register', {
-    muse_id: 'muse_smoke_att', address: attW.address, challenge_id: attC7.json.challenge_id,
-    attestation_post_id: '905', idempotency_key: 'smoke-att-9',
-  });
-  log(r.status === 409 && r.json.error === 'DUPLICATE_IDENTITY', 'attestation: challenge survives a failed check (not consumed)');
-
-  // 16i. eligibility still gates the attestation path: a post-cutoff muse
-  // posting a valid attestation is still refused the free mint — the
-  // registry read (fail closed) decides eligibility, not the post.
-  const attW2 = ethers.Wallet.createRandom();
-  const attC8 = await api('POST', '/api/v1/challenge', { muse_id: 'muse_smoke_7', address: attW2.address });
-  writePostStub({ 906: { muse_id: 'muse_smoke_7', text: 'Muse Dogs registration attestation: ' + attC8.json.challenge_id } });
-  r = await api('POST', '/api/v1/community-voucher', {
-    muse_id: 'muse_smoke_7', address: attW2.address, challenge_id: attC8.json.challenge_id,
-    attestation_post_id: '906', idempotency_key: 'smoke-att-v2',
-  });
-  log(r.status === 403 && r.json.error === 'NOT_WHITELISTED', 'attestation: post-cutoff identity still refused the free mint');
+  log(r.status === 400 && r.json.error === 'MISSING_FIELD', 'identity: signature is required, not optional');
 
   // 17. identity not in the registry -> 403 (fail closed, no registration)
   writeRegistryStub({ muse_smoke_1: identities.muse_smoke_1 }); // drops muse_smoke_9
   r = await attemptRegister('muse_smoke_9', 'smoke-id-17', identities.muse_smoke_9);
   log(r.status === 403 && r.json.error === 'IDENTITY_NOT_FOUND', 'identity: unknown muse identity refused (403)');
-  writeRegistryStub({ muse_smoke_1: identities.muse_smoke_1, muse_smoke_3: identities.muse_smoke_3, muse_smoke_7: identities.muse_smoke_7, muse_smoke_9: identities.muse_smoke_9, muse_smoke_att: identities.muse_smoke_att });
+  writeRegistryStub({ muse_smoke_1: identities.muse_smoke_1, muse_smoke_3: identities.muse_smoke_3, muse_smoke_7: identities.muse_smoke_7, muse_smoke_9: identities.muse_smoke_9 });
 
   // 18. registry unreachable (stub file deleted) -> 503 fail closed, retryable
   fs.unlinkSync(REG_STUB_PATH);
   r = await attemptRegister('muse_smoke_9', 'smoke-id-18', identities.muse_smoke_9);
   log(r.status === 503 && r.json.error === 'IDENTITY_REGISTRY_UNAVAILABLE' && r.json.retryable === true, 'identity: registry outage fails closed (503)');
-  writeRegistryStub({ muse_smoke_1: identities.muse_smoke_1, muse_smoke_3: identities.muse_smoke_3, muse_smoke_7: identities.muse_smoke_7, muse_smoke_9: identities.muse_smoke_9, muse_smoke_att: identities.muse_smoke_att });
+  writeRegistryStub({ muse_smoke_1: identities.muse_smoke_1, muse_smoke_3: identities.muse_smoke_3, muse_smoke_7: identities.muse_smoke_7, muse_smoke_9: identities.muse_smoke_9 });
 
   // 19. wrong-message signature: valid key, wrong message -> rejected
   {

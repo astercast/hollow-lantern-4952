@@ -9,8 +9,7 @@ const { ethers } = require('ethers');
 const store = require('./lib/store');
 const { hash } = require('./lib/hash');
 const { CHAIN_ID } = require('./lib/rpc');
-const { verifyIdentitySignature, fetchRegistryIdentity } = require('./lib/identity');
-const { verifyPostAttestation, looksLikePostId } = require('./lib/attestation');
+const { verifyIdentitySignature } = require('./lib/identity');
 const { strictBody, requireFields, checksumAddress, looksLikeSignature, looksLikeIdentitySignature } = require('./lib/validate');
 const {
   signVoucher,
@@ -218,37 +217,20 @@ function communityEligibility(identity) {
 }
 
 // Verify the muse proof bundle shared by /register and the voucher endpoints:
-// a single-use challenge bound to (muse_id, address), plus ONE of two
-// identity proofs:
+// a single-use challenge bound to (muse_id, address), and the musebook
+// Ed25519 identity signature over the exact challenge message (verified
+// against the public identity registry, fail closed).
 //
-//   (a) the musebook Ed25519 identity signature over the exact challenge
-//       message (verified against the public identity registry, fail
-//       closed), or
-//   (b) a musebook POST ATTESTATION: a post authored by the muse's own
-//       musebook identity whose text contains the challenge_id
-//       (verified through the public board read API, fail closed).
-//
-// Path (b) exists for muses that never received their identity private key
-// (e.g. onboarded through third-party clients like Grok): they can still
-// post as themselves, and authorship attributed by musebook.lol proves
-// control of the identity exactly as well as a signature. The human wall
-// stands either way — naming an eligible muse_id is not enough; the caller
-// must control that muse's musebook account (hold its key, or be able to
-// publish as it).
-//
+// This is the wall a human cannot cross: naming an eligible muse_id is not
+// enough — the caller must hold that muse's musebook identity private key.
 // There is deliberately NO wallet signature and NO proof of work here: the
 // locked claim design keeps the muse flow simple (plain-text Bankr address +
-// one identity proof), and per-IP rate limiting is the spam control.
+// one identity signature), and per-IP rate limiting is the spam control.
 // Returns { challenge, identity } WITHOUT consuming the challenge; the
 // caller marks ch.consumed = true at its own commit point. The identity doc
 // carries founder/created_at for the live community-eligibility check, so
 // callers never fetch the registry twice.
-//
-// On path (b) the registry is still read for the identity doc (existence +
-// eligibility fields) but the key/id_verified requirements are skipped —
-// requiring a key on the no-key path would defeat its purpose. The
-// authorship check IS the verification there.
-async function verifyMuseProof(db, { muse_id, address, challenge_id, musebook_signature, attestation_post_id }) {
+async function verifyMuseProof(db, { muse_id, address, challenge_id, musebook_signature }) {
   const ch = store.find(db, 'challenges', 'challenge_id', challenge_id);
   if (!ch || ch.muse_id !== String(muse_id) || ch.address !== address) {
     throw httpErr(400, 'INVALID_CHALLENGE', 'Challenge not found for this muse and address.');
@@ -258,54 +240,6 @@ async function verifyMuseProof(db, { muse_id, address, challenge_id, musebook_si
   }
   if (new Date(ch.expires_at).getTime() < Date.now()) {
     throw httpErr(400, 'EXPIRED_CHALLENGE', 'Challenge expired.');
-  }
-  const hasSig = musebook_signature !== undefined && musebook_signature !== null && musebook_signature !== '';
-  const hasAtt = attestation_post_id !== undefined && attestation_post_id !== null && String(attestation_post_id).trim() !== '';
-  if (hasSig && hasAtt) {
-    throw httpErr(400, 'AMBIGUOUS_PROOF', 'Send exactly one identity proof: musebook_signature OR attestation_post_id, not both.');
-  }
-  if (!hasSig && !hasAtt) {
-    throw httpErr(400, 'MISSING_PROOF',
-      'No identity proof provided. Sign the challenge with your musebook identity key (musebook_signature), or post the challenge id on musebook from your own identity and send attestation_post_id.');
-  }
-  if (hasAtt) {
-    // Post-attestation path: authorship attributed by musebook.lol.
-    // A failed check does NOT consume the challenge, so the muse can retry
-    // (e.g. after a board blip) with the same post.
-    try {
-      await verifyPostAttestation(String(muse_id), ch.challenge_id, String(attestation_post_id).trim());
-    } catch (e) {
-      if (e.code === 'ATTESTATION_UNAVAILABLE') {
-        throw httpErr(503, e.code, e.message || 'Musebook did not answer the attestation check. Try again later.', { retryable: true });
-      }
-      if (e.code === 'ATTESTATION_POST_NOT_FOUND') {
-        throw httpErr(400, e.code, e.message);
-      }
-      throw httpErr(403, e.code || 'ATTESTATION_INVALID', e.message || 'The attestation post does not prove this muse identity.');
-    }
-    // The identity must still exist in the registry (fail closed when the
-    // registry is down or the identity is unknown), for the eligibility
-    // fields. Key/id_verified are intentionally not required here.
-    let identity;
-    try {
-      identity = await fetchRegistryIdentity(String(muse_id));
-    } catch (e) {
-      if (e.code === 'IDENTITY_REGISTRY_UNAVAILABLE') {
-        throw httpErr(503, e.code, e.message || 'The musebook identity registry is not reachable. Try again later.', { retryable: true });
-      }
-      throw httpErr(403, 'IDENTITY_NOT_FOUND', 'This muse identity is not registered on musebook.');
-    }
-    return {
-      challenge: ch,
-      identity: {
-        muse_id: identity.muse_id || String(muse_id),
-        name: identity.name || null,
-        founder: identity.founder === true,
-        created_at: typeof identity.created_at === 'string' ? identity.created_at : null,
-        id_verified: identity.id_verified !== false,
-        proof: 'post-attestation',
-      },
-    };
   }
   // Muse identity proof: the muse must sign the exact challenge message
   // with their musebook Ed25519 identity key. Verified against the public
@@ -326,45 +260,7 @@ async function verifyMuseProof(db, { muse_id, address, challenge_id, musebook_si
     }
     throw httpErr(400, e.code || 'INVALID_IDENTITY_SIGNATURE', e.message || 'Musebook identity signature does not verify.');
   }
-  return { challenge: ch, identity: { ...identity, proof: 'identity-signature' } };
-}
-
-// Shared proof-field handling for /register and the voucher endpoints:
-// strict field whitelist, required base fields, and exactly one identity
-// proof — musebook_signature XOR attestation_post_id. The attestation path
-// is the no-key flow: the muse posts the challenge_id on musebook from its
-// own identity (any channel) and sends the numeric post id instead of a
-// signature. Throws httpErr-style errors; callers' catch blocks already map
-// e.status. Returns the normalized fields.
-function proofFields(body) {
-  strictBody(body, [
-    'muse_id', 'address', 'challenge_id',
-    'musebook_signature', 'attestation_post_id', 'idempotency_key',
-  ]);
-  requireFields(body, ['muse_id', 'address', 'challenge_id', 'idempotency_key']);
-  const hasSig = body.musebook_signature !== undefined && body.musebook_signature !== null && body.musebook_signature !== '';
-  const hasAtt = body.attestation_post_id !== undefined && body.attestation_post_id !== null && String(body.attestation_post_id).trim() !== '';
-  if (!hasSig && !hasAtt) {
-    throw httpErr(400, 'MISSING_PROOF',
-      'No identity proof provided. Either sign the challenge message with your musebook identity key and send musebook_signature, or post the challenge id on musebook from your own identity and send attestation_post_id (the numeric post id).');
-  }
-  if (hasSig && hasAtt) {
-    throw httpErr(400, 'AMBIGUOUS_PROOF', 'Send exactly one identity proof: musebook_signature OR attestation_post_id, not both.');
-  }
-  if (hasSig && !looksLikeIdentitySignature(body.musebook_signature)) {
-    throw httpErr(400, 'INVALID_IDENTITY_SIGNATURE', 'Malformed musebook identity signature.');
-  }
-  if (hasAtt && !looksLikePostId(body.attestation_post_id)) {
-    throw httpErr(400, 'INVALID_ATTESTATION_POST_ID', 'attestation_post_id must be a numeric musebook post id.');
-  }
-  return {
-    muse_id: body.muse_id,
-    address: body.address,
-    challenge_id: body.challenge_id,
-    idempotency_key: body.idempotency_key,
-    musebook_signature: hasSig ? body.musebook_signature : undefined,
-    attestation_post_id: hasAtt ? String(body.attestation_post_id).trim() : undefined,
-  };
+  return { challenge: ch, identity };
 }
 
 // --- claim relayer ----------------------------------------------------------
@@ -525,17 +421,24 @@ app.post('/api/v1/challenge', ah(async (req, res) => {
 
 app.post('/api/v1/register', ah(async (req, res) => {
   try {
-    const pf = proofFields(req.body);
-    const { muse_id, challenge_id, idempotency_key } = pf;
-    const address = checksumAddress(pf.address);
-    // REAL: the musebook identity proof is REQUIRED and verified
-    // cryptographically — either the Ed25519 identity signature (checked
-    // against musebook.lol's public identity registry) or a musebook post
-    // attestation (authorship attributed by musebook.lol itself, for muses
-    // that never received their identity key).
+    strictBody(req.body, [
+      'muse_id', 'address', 'challenge_id',
+      'musebook_signature', 'idempotency_key',
+    ]);
+    requireFields(req.body, [
+      'muse_id', 'address', 'challenge_id', 'musebook_signature', 'idempotency_key',
+    ]);
+    const { muse_id, challenge_id, idempotency_key } = req.body;
+    const address = checksumAddress(req.body.address);
+    // REAL: the musebook identity signature is REQUIRED and verified
+    // cryptographically against musebook.lol's public identity registry
+    // (Ed25519, base64url, over the exact challenge message bytes).
     // One verified muse identity binds to exactly one address.
     // There is NO wallet signature and NO proof of work on this flow —
     // by design. The muse pastes its Bankr 0x address as plain text.
+    if (!looksLikeIdentitySignature(req.body.musebook_signature)) {
+      return err(res, 400, 'INVALID_IDENTITY_SIGNATURE', 'Malformed musebook identity signature.');
+    }
 
     const db = await store.load();
 
@@ -565,8 +468,7 @@ app.post('/api/v1/register', ah(async (req, res) => {
       muse_id,
       address,
       challenge_id,
-      musebook_signature: pf.musebook_signature,
-      attestation_post_id: pf.attestation_post_id,
+      musebook_signature: req.body.musebook_signature,
     });
     const ch = proof.challenge;
 
@@ -669,18 +571,25 @@ app.get('/api/v1/status/:registration_id', ah(async (req, res) => {
 // 500-address sniper: new wallets, same identity, no second voucher.
 //
 // Muses only: the voucher requires the SAME identity proof as registration —
-// a challenge bound to (muse_id, address) plus either the musebook Ed25519
-// identity signature over the exact challenge message, or a musebook post
-// attestation (for muses that never received their identity key). No wallet
-// signature, no proof of work. Naming an eligible muse_id is not enough;
-// the caller must control that muse's musebook identity. A human has no
-// musebook identity to post from.
+// a challenge bound to (muse_id, address) and the musebook Ed25519 identity
+// signature over the exact challenge message. No wallet signature, no proof
+// of work. Naming an eligible muse_id is not enough; the caller must hold
+// that muse's identity key. A human has no identity key.
 app.post('/api/v1/community-voucher', ah(async (req, res) => {
   try {
-    const pf = proofFields(req.body);
-    const muse_id = String(pf.muse_id);
-    const idempotency_key = String(pf.idempotency_key);
-    const address = checksumAddress(pf.address);
+    strictBody(req.body, [
+      'muse_id', 'address', 'challenge_id',
+      'musebook_signature', 'idempotency_key',
+    ]);
+    requireFields(req.body, [
+      'muse_id', 'address', 'challenge_id', 'musebook_signature', 'idempotency_key',
+    ]);
+    const muse_id = String(req.body.muse_id);
+    const idempotency_key = String(req.body.idempotency_key);
+    const address = checksumAddress(req.body.address);
+    if (!looksLikeIdentitySignature(req.body.musebook_signature)) {
+      return err(res, 400, 'INVALID_IDENTITY_SIGNATURE', 'Malformed musebook identity signature.');
+    }
     const db = await store.load();
 
     // Idempotency: same key + same muse + same payload => replay the recorded
@@ -707,9 +616,8 @@ app.post('/api/v1/community-voucher', ah(async (req, res) => {
     const proof = await verifyMuseProof(db, {
       muse_id,
       address,
-      challenge_id: pf.challenge_id,
-      musebook_signature: pf.musebook_signature,
-      attestation_post_id: pf.attestation_post_id,
+      challenge_id: req.body.challenge_id,
+      musebook_signature: req.body.musebook_signature,
     });
     // Consume the challenge atomically (persisted, replay-safe) before
     // anything is issued.
@@ -845,10 +753,19 @@ app.post('/api/v1/community-voucher', ah(async (req, res) => {
 // identity on this path, matching the contract.
 app.post('/api/v1/holder-voucher', ah(async (req, res) => {
   try {
-    const pf = proofFields(req.body);
-    const muse_id = String(pf.muse_id);
-    const idempotency_key = String(pf.idempotency_key);
-    const address = checksumAddress(pf.address);
+    strictBody(req.body, [
+      'muse_id', 'address', 'challenge_id',
+      'musebook_signature', 'idempotency_key',
+    ]);
+    requireFields(req.body, [
+      'muse_id', 'address', 'challenge_id', 'musebook_signature', 'idempotency_key',
+    ]);
+    const muse_id = String(req.body.muse_id);
+    const idempotency_key = String(req.body.idempotency_key);
+    const address = checksumAddress(req.body.address);
+    if (!looksLikeIdentitySignature(req.body.musebook_signature)) {
+      return err(res, 400, 'INVALID_IDENTITY_SIGNATURE', 'Malformed musebook identity signature.');
+    }
     const db = await store.load();
 
     // Idempotency: same key + same muse + same payload => replay the recorded
@@ -875,9 +792,8 @@ app.post('/api/v1/holder-voucher', ah(async (req, res) => {
     const proof = await verifyMuseProof(db, {
       muse_id,
       address,
-      challenge_id: pf.challenge_id,
-      musebook_signature: pf.musebook_signature,
-      attestation_post_id: pf.attestation_post_id,
+      challenge_id: req.body.challenge_id,
+      musebook_signature: req.body.musebook_signature,
     });
     // Consume the challenge atomically (persisted, replay-safe) before
     // anything is issued.
@@ -1151,16 +1067,16 @@ app.get('/.well-known/muse-dog.json', (req, res) => {  res.json({
       step_0: {
         title: 'Join musebook.lol (required — no workaround)',
         detail: 'Registration is for verified Musebook identities only. If the muse has no musebook identity yet, stop here: the muse must register at https://musebook.lol first (any AI agent can join). The agent cannot do this step for the muse.',
-        eligibility: 'identity created before September 23, 2026; the 25 founding muses are automatically in',
+        eligibility: 'identity created before September 23, 2026 with 10+ lifetime posts; the 25 founding muses are automatically in',
       },
       step_1: {
         title: 'Muse id is already known; Bankr address only if missing',
         detail: 'The muse supplies its own muse_id from its musebook identity (it is a Musebook resident). Ask the muse for a Bankr 0x address as plain text only if it doesn\'t already have one set up — if it has none, suggest it sets up a Bankr address. If the agent calls POST /api/v1/challenge without an address, the API answers 422 MISSING_ADDRESS with exact words to relay to the muse.',
       },
       step_2: 'POST /api/v1/challenge with { muse_id, address }',
-      step_3: 'The muse proves it controls its musebook identity ONE of two ways: (a) sign the exact challenge message bytes (UTF-8) with its musebook identity key (Ed25519, base64url), or (b) if the muse never received its identity key (e.g. onboarded through a third-party client), post the challenge_id on musebook from its own identity — any channel — with any text that includes the id, e.g. "Muse Dogs registration attestation: <challenge_id>", then send that post\'s numeric id. No wallet connection, no wallet signature, no ETH from the muse — the Bankr 0x address is supplied as plain text.',
-      step_4: 'POST /api/v1/register with { muse_id, address, challenge_id, idempotency_key } plus exactly one identity proof: musebook_signature (the base64url Ed25519 signature) OR attestation_post_id (the numeric musebook post id).',
-      step_5: 'POST /api/v1/community-voucher with { muse_id, address, challenge_id, idempotency_key } plus one identity proof (musebook_signature OR attestation_post_id) for the free-mint voucher (3 per address, 3 per muse identity), or POST /api/v1/holder-voucher for the holder voucher (3 per address, 3 per muse identity — paths are independent, up to 6 total). The $10 MDOG check happens on mint day, on-chain: the multisig sets holderThresholdMDOG and the contract reverts HOLDER mints for recipients below it at mint time.',
+      step_3: 'Muse signs the exact challenge message bytes (UTF-8) ONCE, with its musebook identity key (Ed25519, base64url). No wallet connection, no wallet signature, no ETH from the muse — the Bankr 0x address is supplied as plain text.',
+      step_4: 'POST /api/v1/register with { muse_id, address, challenge_id, musebook_signature, idempotency_key }',
+      step_5: 'POST /api/v1/community-voucher with { muse_id, address, challenge_id, musebook_signature, idempotency_key } for the free-mint voucher (3 per address, 3 per muse identity), or POST /api/v1/holder-voucher for the holder voucher (3 per address, 3 per muse identity — paths are independent, up to 6 total). The $10 MDOG check happens on mint day, on-chain: the multisig sets holderThresholdMDOG and the contract reverts HOLDER mints for recipients below it at mint time.',
       step_6: 'POST /api/v1/claim/submit with { voucher, eip712_signature, idempotency_key } — the relayer submits mintWithVoucher() and pays the gas; the NFT always goes to the voucher recipient.',
     },
     chain: { id: CHAIN_ID, name: 'Robinhood Chain', currency: 'ETH' },
