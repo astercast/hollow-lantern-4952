@@ -1168,6 +1168,7 @@ app.get('/.well-known/muse-dog.json', (req, res) => {  res.json({
     contracts: { mdog: MDOG_CONTRACT, nft: CONTRACT_ADDRESS },
     registration: {
       wallet_connection_required: false,
+      registry_status: 'musebook.lol may be down — identities are being checked against musebook.me in the meantime (same town, same registry).',
       needs: ['muse_id', 'bankr_0x_address', 'challenge_id', 'musebook_identity_signature', 'idempotency_key'],
       never_asked_for: ['private_key', 'seed_phrase', 'token_approval', 'transfer', 'wallet_signature'],
       identity_proof: {

@@ -1,7 +1,1124 @@
 {
-  "challenges": [],
-  "registrations": [],
-  "vouchers": [],
+  "challenges": [
+    {
+      "challenge_id": "a5e2fc85-180f-4443-ad78-ee93cc3d19b9",
+      "nonce": "9b1733e5-754d-4c40-a99b-34c329fd76a9",
+      "muse_id": "muse_smoke_1",
+      "address": "0xaEe09D8B163065Fd637A3459a9b6Deb12f57f04A",
+      "message": "Muse Dogs — muse identity proof\n\nI am the muse with this musebook identity, and I claim this address\nfor my Muse Dogs mint. The address is where the NFT will go.\nThis proves my musebook identity ONLY. It does NOT prove control of\nthe wallet, and it does NOT approve any spending, transfer, or token\napproval.\n\nmuse_id: muse_smoke_1\naddress: 0xaEe09D8B163065Fd637A3459a9b6Deb12f57f04A\nnonce: 9b1733e5-754d-4c40-a99b-34c329fd76a9\nissued_at: 2026-09-23T01:33:16.760Z\nexpires_at: 2026-09-23T01:43:16.760Z\nchain_id: 4663",
+      "issued_at": "2026-09-23T01:33:16.760Z",
+      "expires_at": "2026-09-23T01:43:16.760Z",
+      "consumed": true
+    },
+    {
+      "challenge_id": "fefa3c6c-f43c-4f14-b515-806daa239b1f",
+      "nonce": "5e90d55f-7fb6-4526-bae4-4f2f134eb471",
+      "muse_id": "muse_smoke_9",
+      "address": "0xaEe09D8B163065Fd637A3459a9b6Deb12f57f04A",
+      "message": "Muse Dogs — muse identity proof\n\nI am the muse with this musebook identity, and I claim this address\nfor my Muse Dogs mint. The address is where the NFT will go.\nThis proves my musebook identity ONLY. It does NOT prove control of\nthe wallet, and it does NOT approve any spending, transfer, or token\napproval.\n\nmuse_id: muse_smoke_9\naddress: 0xaEe09D8B163065Fd637A3459a9b6Deb12f57f04A\nnonce: 5e90d55f-7fb6-4526-bae4-4f2f134eb471\nissued_at: 2026-09-23T01:33:16.789Z\nexpires_at: 2026-09-23T01:43:16.789Z\nchain_id: 4663",
+      "issued_at": "2026-09-23T01:33:16.789Z",
+      "expires_at": "2026-09-23T01:43:16.789Z",
+      "consumed": false
+    },
+    {
+      "challenge_id": "949ec691-878d-40c9-8116-386b47e5bc1f",
+      "nonce": "fae482a9-1241-4e8d-8dc2-8354e6e0d420",
+      "muse_id": "muse_smoke_1",
+      "address": "0x6fE2bEb1A0Cf8a0f4a859147D44777aD3cCf3CE8",
+      "message": "Muse Dogs — muse identity proof\n\nI am the muse with this musebook identity, and I claim this address\nfor my Muse Dogs mint. The address is where the NFT will go.\nThis proves my musebook identity ONLY. It does NOT prove control of\nthe wallet, and it does NOT approve any spending, transfer, or token\napproval.\n\nmuse_id: muse_smoke_1\naddress: 0x6fE2bEb1A0Cf8a0f4a859147D44777aD3cCf3CE8\nnonce: fae482a9-1241-4e8d-8dc2-8354e6e0d420\nissued_at: 2026-09-23T01:33:16.809Z\nexpires_at: 2026-09-23T01:43:16.809Z\nchain_id: 4663",
+      "issued_at": "2026-09-23T01:33:16.809Z",
+      "expires_at": "2026-09-23T01:43:16.809Z",
+      "consumed": false
+    },
+    {
+      "challenge_id": "3214aebc-f96d-410e-b319-ed1c306d34cb",
+      "nonce": "0cb9674a-f2be-4a06-963f-17d4a9540158",
+      "muse_id": "muse_smoke_1",
+      "address": "0x062d90D3045c69a1AF87df1A92c5390Ac1C0c265",
+      "message": "Muse Dogs — muse identity proof\n\nI am the muse with this musebook identity, and I claim this address\nfor my Muse Dogs mint. The address is where the NFT will go.\nThis proves my musebook identity ONLY. It does NOT prove control of\nthe wallet, and it does NOT approve any spending, transfer, or token\napproval.\n\nmuse_id: muse_smoke_1\naddress: 0x062d90D3045c69a1AF87df1A92c5390Ac1C0c265\nnonce: 0cb9674a-f2be-4a06-963f-17d4a9540158\nissued_at: 2026-09-23T01:33:16.832Z\nexpires_at: 2026-09-23T01:43:16.832Z\nchain_id: 4663",
+      "issued_at": "2026-09-23T01:33:16.832Z",
+      "expires_at": "2026-09-23T01:43:16.832Z",
+      "consumed": false
+    },
+    {
+      "challenge_id": "11ae994c-127f-4dad-9fc5-4781a8f15bb2",
+      "nonce": "efc33d25-b964-4fb4-8ba8-c5988d09c3b2",
+      "muse_id": "muse_smoke_7",
+      "address": "0x84541952948cbad878A29Ccba1f5b78E11DDb08d",
+      "message": "Muse Dogs — muse identity proof\n\nI am the muse with this musebook identity, and I claim this address\nfor my Muse Dogs mint. The address is where the NFT will go.\nThis proves my musebook identity ONLY. It does NOT prove control of\nthe wallet, and it does NOT approve any spending, transfer, or token\napproval.\n\nmuse_id: muse_smoke_7\naddress: 0x84541952948cbad878A29Ccba1f5b78E11DDb08d\nnonce: efc33d25-b964-4fb4-8ba8-c5988d09c3b2\nissued_at: 2026-09-23T01:33:16.869Z\nexpires_at: 2026-09-23T01:43:16.869Z\nchain_id: 4663",
+      "issued_at": "2026-09-23T01:33:16.869Z",
+      "expires_at": "2026-09-23T01:43:16.869Z",
+      "consumed": true
+    },
+    {
+      "challenge_id": "1218aeef-6872-4abb-b27b-af0a68dfb250",
+      "nonce": "bd0a94c4-1279-4f4e-afc7-afcbb9b96fe0",
+      "muse_id": "muse_smoke_1",
+      "address": "0xaEe09D8B163065Fd637A3459a9b6Deb12f57f04A",
+      "message": "Muse Dogs — muse identity proof\n\nI am the muse with this musebook identity, and I claim this address\nfor my Muse Dogs mint. The address is where the NFT will go.\nThis proves my musebook identity ONLY. It does NOT prove control of\nthe wallet, and it does NOT approve any spending, transfer, or token\napproval.\n\nmuse_id: muse_smoke_1\naddress: 0xaEe09D8B163065Fd637A3459a9b6Deb12f57f04A\nnonce: bd0a94c4-1279-4f4e-afc7-afcbb9b96fe0\nissued_at: 2026-09-23T01:33:16.894Z\nexpires_at: 2026-09-23T01:43:16.894Z\nchain_id: 4663",
+      "issued_at": "2026-09-23T01:33:16.894Z",
+      "expires_at": "2026-09-23T01:43:16.894Z",
+      "consumed": true
+    },
+    {
+      "challenge_id": "f06b2604-c398-4f3d-b06f-965f69773850",
+      "nonce": "8846b84b-eac2-4f85-9e6c-c2bcefbdcb53",
+      "muse_id": "muse_smoke_9",
+      "address": "0x7597E102Acc6A24D4E46953D5C65e0235868414e",
+      "message": "Muse Dogs — muse identity proof\n\nI am the muse with this musebook identity, and I claim this address\nfor my Muse Dogs mint. The address is where the NFT will go.\nThis proves my musebook identity ONLY. It does NOT prove control of\nthe wallet, and it does NOT approve any spending, transfer, or token\napproval.\n\nmuse_id: muse_smoke_9\naddress: 0x7597E102Acc6A24D4E46953D5C65e0235868414e\nnonce: 8846b84b-eac2-4f85-9e6c-c2bcefbdcb53\nissued_at: 2026-09-23T01:33:16.986Z\nexpires_at: 2026-09-23T01:43:16.986Z\nchain_id: 4663",
+      "issued_at": "2026-09-23T01:33:16.986Z",
+      "expires_at": "2026-09-23T01:43:16.986Z",
+      "consumed": true
+    },
+    {
+      "challenge_id": "d0b142f6-8a94-4eda-824c-e5c58c3d1dde",
+      "nonce": "b09b01a0-e311-49ce-87ce-586f65e00471",
+      "muse_id": "muse_smoke_9",
+      "address": "0x7597E102Acc6A24D4E46953D5C65e0235868414e",
+      "message": "Muse Dogs — muse identity proof\n\nI am the muse with this musebook identity, and I claim this address\nfor my Muse Dogs mint. The address is where the NFT will go.\nThis proves my musebook identity ONLY. It does NOT prove control of\nthe wallet, and it does NOT approve any spending, transfer, or token\napproval.\n\nmuse_id: muse_smoke_9\naddress: 0x7597E102Acc6A24D4E46953D5C65e0235868414e\nnonce: b09b01a0-e311-49ce-87ce-586f65e00471\nissued_at: 2026-09-23T01:33:17.008Z\nexpires_at: 2026-09-23T01:43:17.008Z\nchain_id: 4663",
+      "issued_at": "2026-09-23T01:33:17.008Z",
+      "expires_at": "2026-09-23T01:43:17.008Z",
+      "consumed": true
+    },
+    {
+      "challenge_id": "d73a136f-7a8e-4b55-ac17-d519b97d676e",
+      "nonce": "84cdbb18-140c-4dd2-8349-1eaa9cea99f9",
+      "muse_id": "muse_smoke_9",
+      "address": "0x7597E102Acc6A24D4E46953D5C65e0235868414e",
+      "message": "Muse Dogs — muse identity proof\n\nI am the muse with this musebook identity, and I claim this address\nfor my Muse Dogs mint. The address is where the NFT will go.\nThis proves my musebook identity ONLY. It does NOT prove control of\nthe wallet, and it does NOT approve any spending, transfer, or token\napproval.\n\nmuse_id: muse_smoke_9\naddress: 0x7597E102Acc6A24D4E46953D5C65e0235868414e\nnonce: 84cdbb18-140c-4dd2-8349-1eaa9cea99f9\nissued_at: 2026-09-23T01:33:17.024Z\nexpires_at: 2026-09-23T01:43:17.024Z\nchain_id: 4663",
+      "issued_at": "2026-09-23T01:33:17.024Z",
+      "expires_at": "2026-09-23T01:43:17.024Z",
+      "consumed": true
+    },
+    {
+      "challenge_id": "e9d5ac86-474a-413d-b297-a06c8f0fce5c",
+      "nonce": "38d5f70f-d1cc-4259-af9a-3806b49657c9",
+      "muse_id": "muse_smoke_9",
+      "address": "0x7597E102Acc6A24D4E46953D5C65e0235868414e",
+      "message": "Muse Dogs — muse identity proof\n\nI am the muse with this musebook identity, and I claim this address\nfor my Muse Dogs mint. The address is where the NFT will go.\nThis proves my musebook identity ONLY. It does NOT prove control of\nthe wallet, and it does NOT approve any spending, transfer, or token\napproval.\n\nmuse_id: muse_smoke_9\naddress: 0x7597E102Acc6A24D4E46953D5C65e0235868414e\nnonce: 38d5f70f-d1cc-4259-af9a-3806b49657c9\nissued_at: 2026-09-23T01:33:17.038Z\nexpires_at: 2026-09-23T01:43:17.038Z\nchain_id: 4663",
+      "issued_at": "2026-09-23T01:33:17.038Z",
+      "expires_at": "2026-09-23T01:43:17.038Z",
+      "consumed": true
+    },
+    {
+      "challenge_id": "f80a53d2-f285-438f-a884-6f0580afc38f",
+      "nonce": "f6e86d47-ea25-4071-9aef-20155bc73614",
+      "muse_id": "muse_smoke_9",
+      "address": "0x549E3a70Fb74d75225aA7720ca186bC30569Db4F",
+      "message": "Muse Dogs — muse identity proof\n\nI am the muse with this musebook identity, and I claim this address\nfor my Muse Dogs mint. The address is where the NFT will go.\nThis proves my musebook identity ONLY. It does NOT prove control of\nthe wallet, and it does NOT approve any spending, transfer, or token\napproval.\n\nmuse_id: muse_smoke_9\naddress: 0x549E3a70Fb74d75225aA7720ca186bC30569Db4F\nnonce: f6e86d47-ea25-4071-9aef-20155bc73614\nissued_at: 2026-09-23T01:33:17.064Z\nexpires_at: 2026-09-23T01:43:17.064Z\nchain_id: 4663",
+      "issued_at": "2026-09-23T01:33:17.064Z",
+      "expires_at": "2026-09-23T01:43:17.064Z",
+      "consumed": true
+    },
+    {
+      "challenge_id": "38ec40ff-6d77-4761-aaca-d32f11a84cc9",
+      "nonce": "ee135f30-a090-4b0b-b591-1982b9767bf9",
+      "muse_id": "muse_smoke_7",
+      "address": "0xdA8881a239065F7fC23C2597Da5b2b5f34923Fc0",
+      "message": "Muse Dogs — muse identity proof\n\nI am the muse with this musebook identity, and I claim this address\nfor my Muse Dogs mint. The address is where the NFT will go.\nThis proves my musebook identity ONLY. It does NOT prove control of\nthe wallet, and it does NOT approve any spending, transfer, or token\napproval.\n\nmuse_id: muse_smoke_7\naddress: 0xdA8881a239065F7fC23C2597Da5b2b5f34923Fc0\nnonce: ee135f30-a090-4b0b-b591-1982b9767bf9\nissued_at: 2026-09-23T01:33:17.083Z\nexpires_at: 2026-09-23T01:43:17.083Z\nchain_id: 4663",
+      "issued_at": "2026-09-23T01:33:17.083Z",
+      "expires_at": "2026-09-23T01:43:17.083Z",
+      "consumed": true
+    },
+    {
+      "challenge_id": "0ec3eaf0-d165-446e-b04e-8055b7faafde",
+      "nonce": "a13f86ac-52fd-4d60-bc29-4c517b9947d6",
+      "muse_id": "muse_smoke_9",
+      "address": "0xb214459F491FFE0C84ccB361E5610046806ce0e7",
+      "message": "Muse Dogs — muse identity proof\n\nI am the muse with this musebook identity, and I claim this address\nfor my Muse Dogs mint. The address is where the NFT will go.\nThis proves my musebook identity ONLY. It does NOT prove control of\nthe wallet, and it does NOT approve any spending, transfer, or token\napproval.\n\nmuse_id: muse_smoke_9\naddress: 0xb214459F491FFE0C84ccB361E5610046806ce0e7\nnonce: a13f86ac-52fd-4d60-bc29-4c517b9947d6\nissued_at: 2026-09-23T01:33:17.101Z\nexpires_at: 2026-09-23T01:43:17.101Z\nchain_id: 4663",
+      "issued_at": "2026-09-23T01:33:17.101Z",
+      "expires_at": "2026-09-23T01:43:17.101Z",
+      "consumed": false
+    },
+    {
+      "challenge_id": "1517f0d2-92ac-444a-b108-0bd37ebf930d",
+      "nonce": "d8cabb5c-e7d8-4e1c-9041-6924e797737f",
+      "muse_id": "muse_smoke_9",
+      "address": "0x04610F8078e318D1b4dc21570C397EBD85a17898",
+      "message": "Muse Dogs — muse identity proof\n\nI am the muse with this musebook identity, and I claim this address\nfor my Muse Dogs mint. The address is where the NFT will go.\nThis proves my musebook identity ONLY. It does NOT prove control of\nthe wallet, and it does NOT approve any spending, transfer, or token\napproval.\n\nmuse_id: muse_smoke_9\naddress: 0x04610F8078e318D1b4dc21570C397EBD85a17898\nnonce: d8cabb5c-e7d8-4e1c-9041-6924e797737f\nissued_at: 2026-09-23T01:33:17.118Z\nexpires_at: 2026-09-23T01:43:17.118Z\nchain_id: 4663",
+      "issued_at": "2026-09-23T01:33:17.118Z",
+      "expires_at": "2026-09-23T01:43:17.118Z",
+      "consumed": false
+    },
+    {
+      "challenge_id": "056eff5e-c444-48d6-a54a-fea9985f103b",
+      "nonce": "1a78d442-3d56-4677-99a6-d4522dcec205",
+      "muse_id": "muse_smoke_9",
+      "address": "0xCE194cD987e390A40268b30A3c3e0c87698abBe6",
+      "message": "Muse Dogs — muse identity proof\n\nI am the muse with this musebook identity, and I claim this address\nfor my Muse Dogs mint. The address is where the NFT will go.\nThis proves my musebook identity ONLY. It does NOT prove control of\nthe wallet, and it does NOT approve any spending, transfer, or token\napproval.\n\nmuse_id: muse_smoke_9\naddress: 0xCE194cD987e390A40268b30A3c3e0c87698abBe6\nnonce: 1a78d442-3d56-4677-99a6-d4522dcec205\nissued_at: 2026-09-23T01:33:17.136Z\nexpires_at: 2026-09-23T01:43:17.136Z\nchain_id: 4663",
+      "issued_at": "2026-09-23T01:33:17.136Z",
+      "expires_at": "2026-09-23T01:43:17.136Z",
+      "consumed": false
+    },
+    {
+      "challenge_id": "524b583d-3982-4c1e-8b8b-3b29c85ef4ce",
+      "nonce": "6e6c0f3a-75f5-4acb-8a33-8e6999f9935b",
+      "muse_id": "muse_smoke_9",
+      "address": "0xE730a8CEB038c5E70219a6c92cD1484Aa8f62220",
+      "message": "Muse Dogs — muse identity proof\n\nI am the muse with this musebook identity, and I claim this address\nfor my Muse Dogs mint. The address is where the NFT will go.\nThis proves my musebook identity ONLY. It does NOT prove control of\nthe wallet, and it does NOT approve any spending, transfer, or token\napproval.\n\nmuse_id: muse_smoke_9\naddress: 0xE730a8CEB038c5E70219a6c92cD1484Aa8f62220\nnonce: 6e6c0f3a-75f5-4acb-8a33-8e6999f9935b\nissued_at: 2026-09-23T01:33:17.154Z\nexpires_at: 2026-09-23T01:43:17.154Z\nchain_id: 4663",
+      "issued_at": "2026-09-23T01:33:17.154Z",
+      "expires_at": "2026-09-23T01:43:17.154Z",
+      "consumed": false
+    },
+    {
+      "challenge_id": "d2fe2a17-ec3d-454a-b9c8-e4834af93ada",
+      "nonce": "6c31ca0b-4bdd-4c77-b132-4088d8bf7869",
+      "muse_id": "muse_smoke_1",
+      "address": "0xaEe09D8B163065Fd637A3459a9b6Deb12f57f04A",
+      "message": "Muse Dogs — muse identity proof\n\nI am the muse with this musebook identity, and I claim this address\nfor my Muse Dogs mint. The address is where the NFT will go.\nThis proves my musebook identity ONLY. It does NOT prove control of\nthe wallet, and it does NOT approve any spending, transfer, or token\napproval.\n\nmuse_id: muse_smoke_1\naddress: 0xaEe09D8B163065Fd637A3459a9b6Deb12f57f04A\nnonce: 6c31ca0b-4bdd-4c77-b132-4088d8bf7869\nissued_at: 2026-09-23T01:33:17.167Z\nexpires_at: 2026-09-23T01:43:17.167Z\nchain_id: 4663",
+      "issued_at": "2026-09-23T01:33:17.167Z",
+      "expires_at": "2026-09-23T01:43:17.167Z",
+      "consumed": true
+    },
+    {
+      "challenge_id": "409964bc-9bdd-401a-8757-b42e83bf6630",
+      "nonce": "06b22fd9-34e3-471c-9503-a4f279129891",
+      "muse_id": "muse_smoke_7",
+      "address": "0x7BE3548fa2D63bbe4988FF4b69a4589cC6053612",
+      "message": "Muse Dogs — muse identity proof\n\nI am the muse with this musebook identity, and I claim this address\nfor my Muse Dogs mint. The address is where the NFT will go.\nThis proves my musebook identity ONLY. It does NOT prove control of\nthe wallet, and it does NOT approve any spending, transfer, or token\napproval.\n\nmuse_id: muse_smoke_7\naddress: 0x7BE3548fa2D63bbe4988FF4b69a4589cC6053612\nnonce: 06b22fd9-34e3-471c-9503-a4f279129891\nissued_at: 2026-09-23T01:33:17.203Z\nexpires_at: 2026-09-23T01:43:17.203Z\nchain_id: 4663",
+      "issued_at": "2026-09-23T01:33:17.203Z",
+      "expires_at": "2026-09-23T01:43:17.203Z",
+      "consumed": true
+    },
+    {
+      "challenge_id": "5276ae09-5bd4-457b-ae99-c855a776bead",
+      "nonce": "4ef9ad84-cbfd-483f-a100-14d37f5b23f6",
+      "muse_id": "muse_smoke_7",
+      "address": "0x7BE3548fa2D63bbe4988FF4b69a4589cC6053612",
+      "message": "Muse Dogs — muse identity proof\n\nI am the muse with this musebook identity, and I claim this address\nfor my Muse Dogs mint. The address is where the NFT will go.\nThis proves my musebook identity ONLY. It does NOT prove control of\nthe wallet, and it does NOT approve any spending, transfer, or token\napproval.\n\nmuse_id: muse_smoke_7\naddress: 0x7BE3548fa2D63bbe4988FF4b69a4589cC6053612\nnonce: 4ef9ad84-cbfd-483f-a100-14d37f5b23f6\nissued_at: 2026-09-23T01:33:17.222Z\nexpires_at: 2026-09-23T01:43:17.222Z\nchain_id: 4663",
+      "issued_at": "2026-09-23T01:33:17.222Z",
+      "expires_at": "2026-09-23T01:43:17.222Z",
+      "consumed": true
+    },
+    {
+      "challenge_id": "d55e2f00-17b3-4be7-8bfa-5678aa15464c",
+      "nonce": "7ba6a184-37e9-4655-a949-fc28b9885c17",
+      "muse_id": "muse_smoke_7",
+      "address": "0x7BE3548fa2D63bbe4988FF4b69a4589cC6053612",
+      "message": "Muse Dogs — muse identity proof\n\nI am the muse with this musebook identity, and I claim this address\nfor my Muse Dogs mint. The address is where the NFT will go.\nThis proves my musebook identity ONLY. It does NOT prove control of\nthe wallet, and it does NOT approve any spending, transfer, or token\napproval.\n\nmuse_id: muse_smoke_7\naddress: 0x7BE3548fa2D63bbe4988FF4b69a4589cC6053612\nnonce: 7ba6a184-37e9-4655-a949-fc28b9885c17\nissued_at: 2026-09-23T01:33:17.238Z\nexpires_at: 2026-09-23T01:43:17.238Z\nchain_id: 4663",
+      "issued_at": "2026-09-23T01:33:17.238Z",
+      "expires_at": "2026-09-23T01:43:17.238Z",
+      "consumed": true
+    },
+    {
+      "challenge_id": "b2abef66-3f27-4ff7-b927-b74df85b32a7",
+      "nonce": "9e803bae-cb21-4cc5-a452-de285de49fa2",
+      "muse_id": "muse_smoke_7",
+      "address": "0x7BE3548fa2D63bbe4988FF4b69a4589cC6053612",
+      "message": "Muse Dogs — muse identity proof\n\nI am the muse with this musebook identity, and I claim this address\nfor my Muse Dogs mint. The address is where the NFT will go.\nThis proves my musebook identity ONLY. It does NOT prove control of\nthe wallet, and it does NOT approve any spending, transfer, or token\napproval.\n\nmuse_id: muse_smoke_7\naddress: 0x7BE3548fa2D63bbe4988FF4b69a4589cC6053612\nnonce: 9e803bae-cb21-4cc5-a452-de285de49fa2\nissued_at: 2026-09-23T01:33:17.258Z\nexpires_at: 2026-09-23T01:43:17.258Z\nchain_id: 4663",
+      "issued_at": "2026-09-23T01:33:17.258Z",
+      "expires_at": "2026-09-23T01:43:17.258Z",
+      "consumed": true
+    },
+    {
+      "challenge_id": "6bc48e37-dd75-4f58-a246-5cb8d80ab7c6",
+      "nonce": "171ec12d-6bf8-4df7-9cfa-6f9cf364ebb4",
+      "muse_id": "muse_smoke_7",
+      "address": "0x577A0Ed4EC508cBb3559cE841a257Cc66974C726",
+      "message": "Muse Dogs — muse identity proof\n\nI am the muse with this musebook identity, and I claim this address\nfor my Muse Dogs mint. The address is where the NFT will go.\nThis proves my musebook identity ONLY. It does NOT prove control of\nthe wallet, and it does NOT approve any spending, transfer, or token\napproval.\n\nmuse_id: muse_smoke_7\naddress: 0x577A0Ed4EC508cBb3559cE841a257Cc66974C726\nnonce: 171ec12d-6bf8-4df7-9cfa-6f9cf364ebb4\nissued_at: 2026-09-23T01:33:17.269Z\nexpires_at: 2026-09-23T01:43:17.269Z\nchain_id: 4663",
+      "issued_at": "2026-09-23T01:33:17.269Z",
+      "expires_at": "2026-09-23T01:43:17.269Z",
+      "consumed": true
+    },
+    {
+      "challenge_id": "7b7ac5c7-326d-4751-b9d2-b6def54dbf29",
+      "nonce": "9aa8a010-fb61-4d5c-b3ed-703b477e0efc",
+      "muse_id": "muse_smoke_3",
+      "address": "0x0bE354F2B3691d816A837C300a65849BDD9507D5",
+      "message": "Muse Dogs — muse identity proof\n\nI am the muse with this musebook identity, and I claim this address\nfor my Muse Dogs mint. The address is where the NFT will go.\nThis proves my musebook identity ONLY. It does NOT prove control of\nthe wallet, and it does NOT approve any spending, transfer, or token\napproval.\n\nmuse_id: muse_smoke_3\naddress: 0x0bE354F2B3691d816A837C300a65849BDD9507D5\nnonce: 9aa8a010-fb61-4d5c-b3ed-703b477e0efc\nissued_at: 2026-09-23T01:33:17.291Z\nexpires_at: 2026-09-23T01:43:17.291Z\nchain_id: 4663",
+      "issued_at": "2026-09-23T01:33:17.291Z",
+      "expires_at": "2026-09-23T01:43:17.291Z",
+      "consumed": true
+    },
+    {
+      "challenge_id": "a47e8c82-d308-4df8-a427-648dfeefc3d9",
+      "nonce": "fb1a2030-dd17-48ee-b298-408419c89509",
+      "muse_id": "muse_smoke_3",
+      "address": "0xF0FCA0633D459De88406Fc1c270d1ec485B25285",
+      "message": "Muse Dogs — muse identity proof\n\nI am the muse with this musebook identity, and I claim this address\nfor my Muse Dogs mint. The address is where the NFT will go.\nThis proves my musebook identity ONLY. It does NOT prove control of\nthe wallet, and it does NOT approve any spending, transfer, or token\napproval.\n\nmuse_id: muse_smoke_3\naddress: 0xF0FCA0633D459De88406Fc1c270d1ec485B25285\nnonce: fb1a2030-dd17-48ee-b298-408419c89509\nissued_at: 2026-09-23T01:33:17.314Z\nexpires_at: 2026-09-23T01:43:17.314Z\nchain_id: 4663",
+      "issued_at": "2026-09-23T01:33:17.314Z",
+      "expires_at": "2026-09-23T01:43:17.314Z",
+      "consumed": true
+    },
+    {
+      "challenge_id": "42b85aec-a4ff-4293-a01f-5a3d5b65e375",
+      "nonce": "349c9f00-3bb4-48a3-b1ae-3a1cf975add3",
+      "muse_id": "muse_smoke_3",
+      "address": "0xF0FCA0633D459De88406Fc1c270d1ec485B25285",
+      "message": "Muse Dogs — muse identity proof\n\nI am the muse with this musebook identity, and I claim this address\nfor my Muse Dogs mint. The address is where the NFT will go.\nThis proves my musebook identity ONLY. It does NOT prove control of\nthe wallet, and it does NOT approve any spending, transfer, or token\napproval.\n\nmuse_id: muse_smoke_3\naddress: 0xF0FCA0633D459De88406Fc1c270d1ec485B25285\nnonce: 349c9f00-3bb4-48a3-b1ae-3a1cf975add3\nissued_at: 2026-09-23T01:33:17.325Z\nexpires_at: 2026-09-23T01:43:17.325Z\nchain_id: 4663",
+      "issued_at": "2026-09-23T01:33:17.325Z",
+      "expires_at": "2026-09-23T01:43:17.325Z",
+      "consumed": true
+    },
+    {
+      "challenge_id": "4eeadbf4-bc2e-4778-97e4-49698862af1b",
+      "nonce": "2b4859dc-2086-4903-9940-f257232c976d",
+      "muse_id": "muse_smoke_3",
+      "address": "0xF0FCA0633D459De88406Fc1c270d1ec485B25285",
+      "message": "Muse Dogs — muse identity proof\n\nI am the muse with this musebook identity, and I claim this address\nfor my Muse Dogs mint. The address is where the NFT will go.\nThis proves my musebook identity ONLY. It does NOT prove control of\nthe wallet, and it does NOT approve any spending, transfer, or token\napproval.\n\nmuse_id: muse_smoke_3\naddress: 0xF0FCA0633D459De88406Fc1c270d1ec485B25285\nnonce: 2b4859dc-2086-4903-9940-f257232c976d\nissued_at: 2026-09-23T01:33:17.343Z\nexpires_at: 2026-09-23T01:43:17.343Z\nchain_id: 4663",
+      "issued_at": "2026-09-23T01:33:17.343Z",
+      "expires_at": "2026-09-23T01:43:17.343Z",
+      "consumed": true
+    },
+    {
+      "challenge_id": "cd797845-d21d-4431-818a-7227662a4456",
+      "nonce": "676df313-0b75-4e2b-851f-9aa48a9407bb",
+      "muse_id": "muse_smoke_1",
+      "address": "0xaD900e746713340d3C2260C789630A682d05fe7e",
+      "message": "Muse Dogs — muse identity proof\n\nI am the muse with this musebook identity, and I claim this address\nfor my Muse Dogs mint. The address is where the NFT will go.\nThis proves my musebook identity ONLY. It does NOT prove control of\nthe wallet, and it does NOT approve any spending, transfer, or token\napproval.\n\nmuse_id: muse_smoke_1\naddress: 0xaD900e746713340d3C2260C789630A682d05fe7e\nnonce: 676df313-0b75-4e2b-851f-9aa48a9407bb\nissued_at: 2026-09-23T01:33:17.361Z\nexpires_at: 2026-09-23T01:43:17.361Z\nchain_id: 4663",
+      "issued_at": "2026-09-23T01:33:17.361Z",
+      "expires_at": "2026-09-23T01:43:17.361Z",
+      "consumed": false
+    },
+    {
+      "challenge_id": "2e719e30-d46f-445a-b05b-344e250111e6",
+      "nonce": "6e19517e-b16a-4a69-85a3-e36fee80c80c",
+      "muse_id": "muse_smoke_1",
+      "address": "0x279548F7aB8a77D4C6F161A5182b5cA3b95F2C71",
+      "message": "Muse Dogs — muse identity proof\n\nI am the muse with this musebook identity, and I claim this address\nfor my Muse Dogs mint. The address is where the NFT will go.\nThis proves my musebook identity ONLY. It does NOT prove control of\nthe wallet, and it does NOT approve any spending, transfer, or token\napproval.\n\nmuse_id: muse_smoke_1\naddress: 0x279548F7aB8a77D4C6F161A5182b5cA3b95F2C71\nnonce: 6e19517e-b16a-4a69-85a3-e36fee80c80c\nissued_at: 2026-09-23T01:33:17.378Z\nexpires_at: 2026-09-23T01:43:17.378Z\nchain_id: 4663",
+      "issued_at": "2026-09-23T01:33:17.378Z",
+      "expires_at": "2026-09-23T01:43:17.378Z",
+      "consumed": false
+    },
+    {
+      "challenge_id": "98cabb8d-52bc-4126-b63a-6b0a343c5f52",
+      "nonce": "ed65486a-79c6-4023-88e1-fb6f5fdf8915",
+      "muse_id": "muse_smoke_9",
+      "address": "0x7BCe6549B5819048a4e54a8398e82c7B8ADb06C2",
+      "message": "Muse Dogs — muse identity proof\n\nI am the muse with this musebook identity, and I claim this address\nfor my Muse Dogs mint. The address is where the NFT will go.\nThis proves my musebook identity ONLY. It does NOT prove control of\nthe wallet, and it does NOT approve any spending, transfer, or token\napproval.\n\nmuse_id: muse_smoke_9\naddress: 0x7BCe6549B5819048a4e54a8398e82c7B8ADb06C2\nnonce: ed65486a-79c6-4023-88e1-fb6f5fdf8915\nissued_at: 2026-09-23T01:33:17.401Z\nexpires_at: 2026-09-23T01:43:17.401Z\nchain_id: 4663",
+      "issued_at": "2026-09-23T01:33:17.401Z",
+      "expires_at": "2026-09-23T01:43:17.401Z",
+      "consumed": true
+    },
+    {
+      "challenge_id": "e507f3c6-1a6d-4156-8931-2d4439649bd0",
+      "nonce": "9647cf99-d7fc-43aa-99ca-a3fae9020cfa",
+      "muse_id": "muse_smoke_9",
+      "address": "0xBa393218B601880A07e2cD95C8140c847e5b529c",
+      "message": "Muse Dogs — muse identity proof\n\nI am the muse with this musebook identity, and I claim this address\nfor my Muse Dogs mint. The address is where the NFT will go.\nThis proves my musebook identity ONLY. It does NOT prove control of\nthe wallet, and it does NOT approve any spending, transfer, or token\napproval.\n\nmuse_id: muse_smoke_9\naddress: 0xBa393218B601880A07e2cD95C8140c847e5b529c\nnonce: 9647cf99-d7fc-43aa-99ca-a3fae9020cfa\nissued_at: 2026-09-23T01:33:17.431Z\nexpires_at: 2026-09-23T01:43:17.431Z\nchain_id: 4663",
+      "issued_at": "2026-09-23T01:33:17.431Z",
+      "expires_at": "2026-09-23T01:43:17.431Z",
+      "consumed": false
+    },
+    {
+      "challenge_id": "992b64ed-ace9-49d8-970f-ee8f4beab003",
+      "nonce": "8e096eac-f0be-4cb0-bb09-7356a51249ca",
+      "muse_id": "muse_smoke_9",
+      "address": "0xa3F13f45Cb8b8D9B2a7321e6381A61B80a2DFF3f",
+      "message": "Muse Dogs — muse identity proof\n\nI am the muse with this musebook identity, and I claim this address\nfor my Muse Dogs mint. The address is where the NFT will go.\nThis proves my musebook identity ONLY. It does NOT prove control of\nthe wallet, and it does NOT approve any spending, transfer, or token\napproval.\n\nmuse_id: muse_smoke_9\naddress: 0xa3F13f45Cb8b8D9B2a7321e6381A61B80a2DFF3f\nnonce: 8e096eac-f0be-4cb0-bb09-7356a51249ca\nissued_at: 2026-09-23T01:33:17.448Z\nexpires_at: 2026-09-23T01:43:17.448Z\nchain_id: 4663",
+      "issued_at": "2026-09-23T01:33:17.448Z",
+      "expires_at": "2026-09-23T01:43:17.448Z",
+      "consumed": false
+    },
+    {
+      "challenge_id": "6af45917-9e9b-42de-b7b6-5a6cd638a180",
+      "nonce": "542390c2-53c2-419d-a4c7-ce9f0f480464",
+      "muse_id": "muse_smoke_9",
+      "address": "0xF6D4d7C28a8bB33E7eb1dEa20a56FFE780372C17",
+      "message": "Muse Dogs — muse identity proof\n\nI am the muse with this musebook identity, and I claim this address\nfor my Muse Dogs mint. The address is where the NFT will go.\nThis proves my musebook identity ONLY. It does NOT prove control of\nthe wallet, and it does NOT approve any spending, transfer, or token\napproval.\n\nmuse_id: muse_smoke_9\naddress: 0xF6D4d7C28a8bB33E7eb1dEa20a56FFE780372C17\nnonce: 542390c2-53c2-419d-a4c7-ce9f0f480464\nissued_at: 2026-09-23T01:33:17.466Z\nexpires_at: 2026-09-23T01:43:17.466Z\nchain_id: 4663",
+      "issued_at": "2026-09-23T01:33:17.466Z",
+      "expires_at": "2026-09-23T01:43:17.466Z",
+      "consumed": false
+    },
+    {
+      "challenge_id": "fece2f84-35c8-4c44-8bf2-912b95a2b69d",
+      "nonce": "c7d7f250-e374-4508-a64e-59467a4b9a9f",
+      "muse_id": "muse_smoke_att",
+      "address": "0xa62479d44EBD75b904992e1E75072f219B3B077e",
+      "message": "Muse Dogs — muse identity proof\n\nI am the muse with this musebook identity, and I claim this address\nfor my Muse Dogs mint. The address is where the NFT will go.\nThis proves my musebook identity ONLY. It does NOT prove control of\nthe wallet, and it does NOT approve any spending, transfer, or token\napproval.\n\nmuse_id: muse_smoke_att\naddress: 0xa62479d44EBD75b904992e1E75072f219B3B077e\nnonce: c7d7f250-e374-4508-a64e-59467a4b9a9f\nissued_at: 2026-09-23T01:33:17.481Z\nexpires_at: 2026-09-23T01:43:17.481Z\nchain_id: 4663",
+      "issued_at": "2026-09-23T01:33:17.481Z",
+      "expires_at": "2026-09-23T01:43:17.481Z",
+      "consumed": true
+    },
+    {
+      "challenge_id": "09a504e1-590c-4503-922b-69462fde1003",
+      "nonce": "90926932-ef24-4820-9b97-cbcd8dbfe5b6",
+      "muse_id": "muse_smoke_att",
+      "address": "0xa62479d44EBD75b904992e1E75072f219B3B077e",
+      "message": "Muse Dogs — muse identity proof\n\nI am the muse with this musebook identity, and I claim this address\nfor my Muse Dogs mint. The address is where the NFT will go.\nThis proves my musebook identity ONLY. It does NOT prove control of\nthe wallet, and it does NOT approve any spending, transfer, or token\napproval.\n\nmuse_id: muse_smoke_att\naddress: 0xa62479d44EBD75b904992e1E75072f219B3B077e\nnonce: 90926932-ef24-4820-9b97-cbcd8dbfe5b6\nissued_at: 2026-09-23T01:33:17.491Z\nexpires_at: 2026-09-23T01:43:17.491Z\nchain_id: 4663",
+      "issued_at": "2026-09-23T01:33:17.491Z",
+      "expires_at": "2026-09-23T01:43:17.491Z",
+      "consumed": true
+    },
+    {
+      "challenge_id": "f02ea6fd-d02b-401d-b406-bcc066cb8120",
+      "nonce": "10472e98-4399-4d50-8fb0-00462568634d",
+      "muse_id": "muse_smoke_att",
+      "address": "0xa62479d44EBD75b904992e1E75072f219B3B077e",
+      "message": "Muse Dogs — muse identity proof\n\nI am the muse with this musebook identity, and I claim this address\nfor my Muse Dogs mint. The address is where the NFT will go.\nThis proves my musebook identity ONLY. It does NOT prove control of\nthe wallet, and it does NOT approve any spending, transfer, or token\napproval.\n\nmuse_id: muse_smoke_att\naddress: 0xa62479d44EBD75b904992e1E75072f219B3B077e\nnonce: 10472e98-4399-4d50-8fb0-00462568634d\nissued_at: 2026-09-23T01:33:17.507Z\nexpires_at: 2026-09-23T01:43:17.507Z\nchain_id: 4663",
+      "issued_at": "2026-09-23T01:33:17.507Z",
+      "expires_at": "2026-09-23T01:43:17.507Z",
+      "consumed": false
+    },
+    {
+      "challenge_id": "40c9ea01-74be-4f6d-8813-7339e547c36a",
+      "nonce": "e56aef42-f790-4d78-ae49-825376e4f338",
+      "muse_id": "muse_smoke_att",
+      "address": "0xa62479d44EBD75b904992e1E75072f219B3B077e",
+      "message": "Muse Dogs — muse identity proof\n\nI am the muse with this musebook identity, and I claim this address\nfor my Muse Dogs mint. The address is where the NFT will go.\nThis proves my musebook identity ONLY. It does NOT prove control of\nthe wallet, and it does NOT approve any spending, transfer, or token\napproval.\n\nmuse_id: muse_smoke_att\naddress: 0xa62479d44EBD75b904992e1E75072f219B3B077e\nnonce: e56aef42-f790-4d78-ae49-825376e4f338\nissued_at: 2026-09-23T01:33:17.515Z\nexpires_at: 2026-09-23T01:43:17.515Z\nchain_id: 4663",
+      "issued_at": "2026-09-23T01:33:17.515Z",
+      "expires_at": "2026-09-23T01:43:17.515Z",
+      "consumed": false
+    },
+    {
+      "challenge_id": "e165e426-fa8b-4697-ad2d-882a09bdea1a",
+      "nonce": "d9e720da-2497-4a5a-9d1d-4fa1077f52bf",
+      "muse_id": "muse_smoke_att",
+      "address": "0xa62479d44EBD75b904992e1E75072f219B3B077e",
+      "message": "Muse Dogs — muse identity proof\n\nI am the muse with this musebook identity, and I claim this address\nfor my Muse Dogs mint. The address is where the NFT will go.\nThis proves my musebook identity ONLY. It does NOT prove control of\nthe wallet, and it does NOT approve any spending, transfer, or token\napproval.\n\nmuse_id: muse_smoke_att\naddress: 0xa62479d44EBD75b904992e1E75072f219B3B077e\nnonce: d9e720da-2497-4a5a-9d1d-4fa1077f52bf\nissued_at: 2026-09-23T01:33:17.522Z\nexpires_at: 2026-09-23T01:43:17.522Z\nchain_id: 4663",
+      "issued_at": "2026-09-23T01:33:17.522Z",
+      "expires_at": "2026-09-23T01:43:17.522Z",
+      "consumed": false
+    },
+    {
+      "challenge_id": "d53b4b84-3f85-4c91-9c3e-83e8d76541de",
+      "nonce": "1f44f17d-3336-4e41-80b1-95edf217964c",
+      "muse_id": "muse_smoke_att",
+      "address": "0xa62479d44EBD75b904992e1E75072f219B3B077e",
+      "message": "Muse Dogs — muse identity proof\n\nI am the muse with this musebook identity, and I claim this address\nfor my Muse Dogs mint. The address is where the NFT will go.\nThis proves my musebook identity ONLY. It does NOT prove control of\nthe wallet, and it does NOT approve any spending, transfer, or token\napproval.\n\nmuse_id: muse_smoke_att\naddress: 0xa62479d44EBD75b904992e1E75072f219B3B077e\nnonce: 1f44f17d-3336-4e41-80b1-95edf217964c\nissued_at: 2026-09-23T01:33:17.531Z\nexpires_at: 2026-09-23T01:43:17.531Z\nchain_id: 4663",
+      "issued_at": "2026-09-23T01:33:17.531Z",
+      "expires_at": "2026-09-23T01:43:17.531Z",
+      "consumed": false
+    },
+    {
+      "challenge_id": "679d03b8-0fc7-47d5-82d5-fd164433ff32",
+      "nonce": "3317723b-4c95-40ee-99a2-5306ac365314",
+      "muse_id": "muse_smoke_att",
+      "address": "0xa62479d44EBD75b904992e1E75072f219B3B077e",
+      "message": "Muse Dogs — muse identity proof\n\nI am the muse with this musebook identity, and I claim this address\nfor my Muse Dogs mint. The address is where the NFT will go.\nThis proves my musebook identity ONLY. It does NOT prove control of\nthe wallet, and it does NOT approve any spending, transfer, or token\napproval.\n\nmuse_id: muse_smoke_att\naddress: 0xa62479d44EBD75b904992e1E75072f219B3B077e\nnonce: 3317723b-4c95-40ee-99a2-5306ac365314\nissued_at: 2026-09-23T01:33:17.543Z\nexpires_at: 2026-09-23T01:43:17.543Z\nchain_id: 4663",
+      "issued_at": "2026-09-23T01:33:17.543Z",
+      "expires_at": "2026-09-23T01:43:17.543Z",
+      "consumed": false
+    },
+    {
+      "challenge_id": "ad7c09b8-eab7-4b86-9d51-e99fbdec115f",
+      "nonce": "ca5b6773-f163-4fad-bc2b-a97e0a30f2e1",
+      "muse_id": "muse_smoke_7",
+      "address": "0x682A8177593734a5a8B7340eA545bD3F2014dFA0",
+      "message": "Muse Dogs — muse identity proof\n\nI am the muse with this musebook identity, and I claim this address\nfor my Muse Dogs mint. The address is where the NFT will go.\nThis proves my musebook identity ONLY. It does NOT prove control of\nthe wallet, and it does NOT approve any spending, transfer, or token\napproval.\n\nmuse_id: muse_smoke_7\naddress: 0x682A8177593734a5a8B7340eA545bD3F2014dFA0\nnonce: ca5b6773-f163-4fad-bc2b-a97e0a30f2e1\nissued_at: 2026-09-23T01:33:17.564Z\nexpires_at: 2026-09-23T01:43:17.564Z\nchain_id: 4663",
+      "issued_at": "2026-09-23T01:33:17.564Z",
+      "expires_at": "2026-09-23T01:43:17.564Z",
+      "consumed": true
+    },
+    {
+      "challenge_id": "70308ed3-86b9-4b73-b971-49a9da76b4f5",
+      "nonce": "bd39facd-9c71-4afc-815e-99b477f86502",
+      "muse_id": "muse_smoke_9",
+      "address": "0x0160aBd2Cc1D52D4263202390C6F5dDE2450D313",
+      "message": "Muse Dogs — muse identity proof\n\nI am the muse with this musebook identity, and I claim this address\nfor my Muse Dogs mint. The address is where the NFT will go.\nThis proves my musebook identity ONLY. It does NOT prove control of\nthe wallet, and it does NOT approve any spending, transfer, or token\napproval.\n\nmuse_id: muse_smoke_9\naddress: 0x0160aBd2Cc1D52D4263202390C6F5dDE2450D313\nnonce: bd39facd-9c71-4afc-815e-99b477f86502\nissued_at: 2026-09-23T01:33:17.585Z\nexpires_at: 2026-09-23T01:43:17.585Z\nchain_id: 4663",
+      "issued_at": "2026-09-23T01:33:17.585Z",
+      "expires_at": "2026-09-23T01:43:17.585Z",
+      "consumed": false
+    },
+    {
+      "challenge_id": "3bc771de-0a3d-453f-9334-b84f2dbd3265",
+      "nonce": "8ace7598-b713-411f-806b-bfa98680813b",
+      "muse_id": "muse_smoke_9",
+      "address": "0x73ad19cDA9EfB3b9bE2B8F70958F3f08EB370219",
+      "message": "Muse Dogs — muse identity proof\n\nI am the muse with this musebook identity, and I claim this address\nfor my Muse Dogs mint. The address is where the NFT will go.\nThis proves my musebook identity ONLY. It does NOT prove control of\nthe wallet, and it does NOT approve any spending, transfer, or token\napproval.\n\nmuse_id: muse_smoke_9\naddress: 0x73ad19cDA9EfB3b9bE2B8F70958F3f08EB370219\nnonce: 8ace7598-b713-411f-806b-bfa98680813b\nissued_at: 2026-09-23T01:33:17.603Z\nexpires_at: 2026-09-23T01:43:17.603Z\nchain_id: 4663",
+      "issued_at": "2026-09-23T01:33:17.603Z",
+      "expires_at": "2026-09-23T01:43:17.603Z",
+      "consumed": false
+    },
+    {
+      "challenge_id": "c5a0fa4a-f58d-45ae-88b6-52055440fa41",
+      "nonce": "babca1f0-68a2-4b9e-9026-093a5a3c6e08",
+      "muse_id": "muse_smoke_9",
+      "address": "0xc792bba9dFeee4BA126B04418Cf582CcdC1EaAe5",
+      "message": "Muse Dogs — muse identity proof\n\nI am the muse with this musebook identity, and I claim this address\nfor my Muse Dogs mint. The address is where the NFT will go.\nThis proves my musebook identity ONLY. It does NOT prove control of\nthe wallet, and it does NOT approve any spending, transfer, or token\napproval.\n\nmuse_id: muse_smoke_9\naddress: 0xc792bba9dFeee4BA126B04418Cf582CcdC1EaAe5\nnonce: babca1f0-68a2-4b9e-9026-093a5a3c6e08\nissued_at: 2026-09-23T01:33:17.620Z\nexpires_at: 2026-09-23T01:43:17.620Z\nchain_id: 4663",
+      "issued_at": "2026-09-23T01:33:17.620Z",
+      "expires_at": "2026-09-23T01:43:17.620Z",
+      "consumed": false
+    }
+  ],
+  "registrations": [
+    {
+      "registration_id": "1d12abe5-f5ad-4e61-8e35-f05200bcda83",
+      "muse_id": "muse_smoke_1",
+      "address": "0xaEe09D8B163065Fd637A3459a9b6Deb12f57f04A",
+      "muse_id_hash": "7c16e7b9ea31df3ea4e6f49b8a04ae1fde55ae2b9369581ec4e278294333140c",
+      "address_hash": "4098f255f6eefac6e1bf4b06481512a1d7387802d893bda58ea2f5dc712ba1b4",
+      "challenge_id": "a5e2fc85-180f-4443-ad78-ee93cc3d19b9",
+      "allocation": null,
+      "distribution_status": "registered",
+      "recheck_required": false,
+      "created_at": "2026-09-23T01:33:16.779Z"
+    },
+    {
+      "registration_id": "81723ee6-4980-4fbd-bb38-dffa018dd126",
+      "muse_id": "muse_smoke_7",
+      "address": "0x84541952948cbad878A29Ccba1f5b78E11DDb08d",
+      "muse_id_hash": "c6977822dbe0756d435513e7ce6c95cda48064f841b30010128eaa21b9f99027",
+      "address_hash": "757803dd7f6548fd318496f38a93f72c02c3460e17acc652cc8e3ce301743f62",
+      "challenge_id": "11ae994c-127f-4dad-9fc5-4781a8f15bb2",
+      "allocation": null,
+      "distribution_status": "registered",
+      "recheck_required": false,
+      "created_at": "2026-09-23T01:33:16.874Z"
+    },
+    {
+      "registration_id": "reg-smoke-h-7BE3548f",
+      "muse_id": "muse_smoke_7",
+      "address": "0x7BE3548fa2D63bbe4988FF4b69a4589cC6053612",
+      "muse_id_hash": "c6977822dbe0756d435513e7ce6c95cda48064f841b30010128eaa21b9f99027",
+      "address_hash": "7eb2c9e6e369dbc98ab87b13b83fdc50cddcfb0024a120d8ec78c90e095e9a38",
+      "allocation": "holder",
+      "created_at": "2026-09-23T01:33:17.198Z"
+    },
+    {
+      "registration_id": "reg-smoke-h-577A0Ed4",
+      "muse_id": "muse_smoke_7",
+      "address": "0x577A0Ed4EC508cBb3559cE841a257Cc66974C726",
+      "muse_id_hash": "c6977822dbe0756d435513e7ce6c95cda48064f841b30010128eaa21b9f99027",
+      "address_hash": "5ded5cc52b5da16a843bd83b6c6efc5f9246bcc65b24d8d3287781be884a650d",
+      "allocation": "holder",
+      "created_at": "2026-09-23T01:33:17.199Z"
+    },
+    {
+      "registration_id": "ace7cd2c-7dcc-4916-9153-c39666c272b9",
+      "muse_id": "muse_smoke_3",
+      "address": "0xF0FCA0633D459De88406Fc1c270d1ec485B25285",
+      "muse_id_hash": "86459adbbbfc8b1b192f8a909398ad690ddd0fcc2fe6d6de6d02d95c5eabebda",
+      "address_hash": "ee398f0bc1ac93b0d2a3c6d9eb3906942c23857859d494ccc0c3a6030e2c8cf6",
+      "challenge_id": "a47e8c82-d308-4df8-a427-648dfeefc3d9",
+      "allocation": null,
+      "distribution_status": "registered",
+      "recheck_required": false,
+      "created_at": "2026-09-23T01:33:17.319Z"
+    },
+    {
+      "registration_id": "a046b465-b0ca-4655-9698-a7da61abbf2d",
+      "muse_id": "muse_smoke_9",
+      "address": "0x7BCe6549B5819048a4e54a8398e82c7B8ADb06C2",
+      "muse_id_hash": "d82b5307193a32ae9e2faf9a2fd856d1cf9d304fbbdac12b961030b10fcb6041",
+      "address_hash": "d4577e0d6adb469e601457671b307524f6c1d3d8a1d846138d04d015751b8e88",
+      "challenge_id": "98cabb8d-52bc-4126-b63a-6b0a343c5f52",
+      "allocation": null,
+      "distribution_status": "registered",
+      "recheck_required": false,
+      "created_at": "2026-09-23T01:33:17.407Z"
+    },
+    {
+      "registration_id": "cccc58d0-8baf-406e-8643-852869379daa",
+      "muse_id": "muse_smoke_att",
+      "address": "0xa62479d44EBD75b904992e1E75072f219B3B077e",
+      "muse_id_hash": "357d22322430dca7e8254fde2c7530aab70c810ae73f21f62203baca8ba1c4a2",
+      "address_hash": "cf1dab22bf10fa834bd78472d0745a17d693f7b67988ab6afe03a971979fbc25",
+      "challenge_id": "fece2f84-35c8-4c44-8bf2-912b95a2b69d",
+      "allocation": null,
+      "distribution_status": "registered",
+      "recheck_required": false,
+      "created_at": "2026-09-23T01:33:17.488Z"
+    }
+  ],
+  "vouchers": [
+    {
+      "voucher_nonce": "100695933190056001276559670696810310088811758875608714679397242129465136524149",
+      "muse_id": "muse_smoke_1",
+      "muse_id_hash": "7c16e7b9ea31df3ea4e6f49b8a04ae1fde55ae2b9369581ec4e278294333140c",
+      "recipient": "0xaEe09D8B163065Fd637A3459a9b6Deb12f57f04A",
+      "allocation": "COMMUNITY",
+      "issued_at": "2026-09-23T01:33:16.959Z",
+      "expires_at": "2026-09-26T01:33:16.901Z",
+      "payload": {
+        "chainId": 4663,
+        "contract": "0x1111111111111111111111111111111111111111",
+        "recipient": "0xaEe09D8B163065Fd637A3459a9b6Deb12f57f04A",
+        "mintType": 0,
+        "allocation": "COMMUNITY",
+        "nonce": "100695933190056001276559670696810310088811758875608714679397242129465136524149",
+        "expiry": 1790386396,
+        "price": 0,
+        "quantity": 1
+      },
+      "eip712_signature": "0x401a2a50d27e108f696a120e55daa75cd1b03815104e3c924def6432021aff58211eb916639834289e21e6e7754e5efcbe3f7ba62bbaadea4ea7eae44dff5a961b"
+    },
+    {
+      "voucher_nonce": "104221366244624860540175917820074301952714889532200124142361782828634615899960",
+      "muse_id": "muse_smoke_9",
+      "muse_id_hash": "d82b5307193a32ae9e2faf9a2fd856d1cf9d304fbbdac12b961030b10fcb6041",
+      "recipient": "0x7597E102Acc6A24D4E46953D5C65e0235868414e",
+      "allocation": "COMMUNITY",
+      "issued_at": "2026-09-23T01:33:17.000Z",
+      "expires_at": "2026-09-26T01:33:16.995Z",
+      "payload": {
+        "chainId": 4663,
+        "contract": "0x1111111111111111111111111111111111111111",
+        "recipient": "0x7597E102Acc6A24D4E46953D5C65e0235868414e",
+        "mintType": 0,
+        "allocation": "COMMUNITY",
+        "nonce": "104221366244624860540175917820074301952714889532200124142361782828634615899960",
+        "expiry": 1790386396,
+        "price": 0,
+        "quantity": 1
+      },
+      "eip712_signature": "0x86988bb740a9da9d4cb68a7617d941d867908ffc7b8d6c556dae6f1fde960a7131e356988ec2a6319617b3cb73928f03b796ae68a7534dabf1863950c4d555a11c"
+    },
+    {
+      "voucher_nonce": "46429283951528373117282259347160686769970325475563285244111060597991512877065",
+      "muse_id": "muse_smoke_9",
+      "muse_id_hash": "d82b5307193a32ae9e2faf9a2fd856d1cf9d304fbbdac12b961030b10fcb6041",
+      "recipient": "0x7597E102Acc6A24D4E46953D5C65e0235868414e",
+      "allocation": "COMMUNITY",
+      "issued_at": "2026-09-23T01:33:17.017Z",
+      "expires_at": "2026-09-26T01:33:17.014Z",
+      "payload": {
+        "chainId": 4663,
+        "contract": "0x1111111111111111111111111111111111111111",
+        "recipient": "0x7597E102Acc6A24D4E46953D5C65e0235868414e",
+        "mintType": 0,
+        "allocation": "COMMUNITY",
+        "nonce": "46429283951528373117282259347160686769970325475563285244111060597991512877065",
+        "expiry": 1790386397,
+        "price": 0,
+        "quantity": 1
+      },
+      "eip712_signature": "0xceb195b7291be975c5af8d1bb26fb2ad13708ec8ab57e00f3a1835771718413b23b2dbddf8f1bad76ef6097e2dead354d86ef44c8e9b7e78d18e5d1c7a4022871b"
+    },
+    {
+      "voucher_nonce": "49167816096410672881273967761516841188593096354077599069726343649141527832807",
+      "muse_id": "muse_smoke_9",
+      "muse_id_hash": "d82b5307193a32ae9e2faf9a2fd856d1cf9d304fbbdac12b961030b10fcb6041",
+      "recipient": "0x7597E102Acc6A24D4E46953D5C65e0235868414e",
+      "allocation": "COMMUNITY",
+      "issued_at": "2026-09-23T01:33:17.033Z",
+      "expires_at": "2026-09-26T01:33:17.030Z",
+      "payload": {
+        "chainId": 4663,
+        "contract": "0x1111111111111111111111111111111111111111",
+        "recipient": "0x7597E102Acc6A24D4E46953D5C65e0235868414e",
+        "mintType": 0,
+        "allocation": "COMMUNITY",
+        "nonce": "49167816096410672881273967761516841188593096354077599069726343649141527832807",
+        "expiry": 1790386397,
+        "price": 0,
+        "quantity": 1
+      },
+      "eip712_signature": "0x106393bbfd6c3b74330c1cb6fc50cce6575bd84853494c48873ac9565ea28a3a106b9ba5b1a48fa42a50ebdfca2094b8965c5798ac0998d8492b81f6ee8cbb9a1c"
+    },
+    {
+      "voucher_nonce": "2985359855822843467799132701322839754384744073457164992531303173769864770898",
+      "muse_id": "muse_smoke_1",
+      "muse_id_hash": "7c16e7b9ea31df3ea4e6f49b8a04ae1fde55ae2b9369581ec4e278294333140c",
+      "recipient": "0xaEe09D8B163065Fd637A3459a9b6Deb12f57f04A",
+      "allocation": "HOLDER",
+      "issued_at": "2026-09-23T01:33:17.177Z",
+      "expires_at": "2026-09-26T01:33:17.173Z",
+      "payload": {
+        "chainId": 4663,
+        "contract": "0x1111111111111111111111111111111111111111",
+        "recipient": "0xaEe09D8B163065Fd637A3459a9b6Deb12f57f04A",
+        "mintType": 1,
+        "allocation": "HOLDER",
+        "nonce": "2985359855822843467799132701322839754384744073457164992531303173769864770898",
+        "expiry": 1790386397,
+        "price": 0,
+        "quantity": 1
+      },
+      "eip712_signature": "0x2177e7ce07bae48518b11cf9628d616ee0cf0e909a8784e2c5253ceb779195a274bec6ac225d0cce4be6f371ca6bfa8e603fa28593fcf0c05160f15db2206d781b"
+    },
+    {
+      "voucher_nonce": "59781530454546936824730122913021095652663797240144800261095860894211866276771",
+      "muse_id": "muse_smoke_7",
+      "muse_id_hash": "c6977822dbe0756d435513e7ce6c95cda48064f841b30010128eaa21b9f99027",
+      "recipient": "0x7BE3548fa2D63bbe4988FF4b69a4589cC6053612",
+      "allocation": "HOLDER",
+      "issued_at": "2026-09-23T01:33:17.212Z",
+      "expires_at": "2026-09-26T01:33:17.209Z",
+      "payload": {
+        "chainId": 4663,
+        "contract": "0x1111111111111111111111111111111111111111",
+        "recipient": "0x7BE3548fa2D63bbe4988FF4b69a4589cC6053612",
+        "mintType": 1,
+        "allocation": "HOLDER",
+        "nonce": "59781530454546936824730122913021095652663797240144800261095860894211866276771",
+        "expiry": 1790386397,
+        "price": 0,
+        "quantity": 1
+      },
+      "eip712_signature": "0x366bda63692bff17082bbfc206afec6ead4fbb1e4b1aab31b4ec1af8e41f1d906b3ee1845eafe5e2d40adc11ad72e7c910f09371e5340144e409fb09adeb21541c"
+    },
+    {
+      "voucher_nonce": "23036944109481417388926160074491687006987704135750612889830828052141496889735",
+      "muse_id": "muse_smoke_7",
+      "muse_id_hash": "c6977822dbe0756d435513e7ce6c95cda48064f841b30010128eaa21b9f99027",
+      "recipient": "0x7BE3548fa2D63bbe4988FF4b69a4589cC6053612",
+      "allocation": "HOLDER",
+      "issued_at": "2026-09-23T01:33:17.232Z",
+      "expires_at": "2026-09-26T01:33:17.229Z",
+      "payload": {
+        "chainId": 4663,
+        "contract": "0x1111111111111111111111111111111111111111",
+        "recipient": "0x7BE3548fa2D63bbe4988FF4b69a4589cC6053612",
+        "mintType": 1,
+        "allocation": "HOLDER",
+        "nonce": "23036944109481417388926160074491687006987704135750612889830828052141496889735",
+        "expiry": 1790386397,
+        "price": 0,
+        "quantity": 1
+      },
+      "eip712_signature": "0xfaf59a01030bf79d32f60cfee6c7cb1b7fed1f590598756615f5120fae5d39ae2e43b161515b20511404c3eb8714dbd96336556b5effffa75fb30619a6b0c14c1c"
+    },
+    {
+      "voucher_nonce": "97048632490774769469319243560588644021606009700299373856780955529783752942582",
+      "muse_id": "muse_smoke_7",
+      "muse_id_hash": "c6977822dbe0756d435513e7ce6c95cda48064f841b30010128eaa21b9f99027",
+      "recipient": "0x7BE3548fa2D63bbe4988FF4b69a4589cC6053612",
+      "allocation": "HOLDER",
+      "issued_at": "2026-09-23T01:33:17.250Z",
+      "expires_at": "2026-09-26T01:33:17.244Z",
+      "payload": {
+        "chainId": 4663,
+        "contract": "0x1111111111111111111111111111111111111111",
+        "recipient": "0x7BE3548fa2D63bbe4988FF4b69a4589cC6053612",
+        "mintType": 1,
+        "allocation": "HOLDER",
+        "nonce": "97048632490774769469319243560588644021606009700299373856780955529783752942582",
+        "expiry": 1790386397,
+        "price": 0,
+        "quantity": 1
+      },
+      "eip712_signature": "0xe89f6327e9c8b82e678bc1d13667ad83eb02543817e6bc670f69dbfa55581e1b2ae925c4eddcc7c2d359888a8be95431d55bf1f5b817b3663f3c917d88b15a951c"
+    },
+    {
+      "voucher_nonce": "19563357541115317543521197565022478156189203992011751349757105309299965308692",
+      "muse_id": "muse_smoke_3",
+      "muse_id_hash": "86459adbbbfc8b1b192f8a909398ad690ddd0fcc2fe6d6de6d02d95c5eabebda",
+      "recipient": "0xF0FCA0633D459De88406Fc1c270d1ec485B25285",
+      "allocation": "HOLDER",
+      "issued_at": "2026-09-23T01:33:17.334Z",
+      "expires_at": "2026-09-26T01:33:17.331Z",
+      "payload": {
+        "chainId": 4663,
+        "contract": "0x1111111111111111111111111111111111111111",
+        "recipient": "0xF0FCA0633D459De88406Fc1c270d1ec485B25285",
+        "mintType": 1,
+        "allocation": "HOLDER",
+        "nonce": "19563357541115317543521197565022478156189203992011751349757105309299965308692",
+        "expiry": 1790386397,
+        "price": 0,
+        "quantity": 1
+      },
+      "eip712_signature": "0xc3e5fcedd57ed9ae375d8fc5132e39455e5f4a1d665132e05f5726af570fce9602464824598bcf173f26089817300e3481febe41af7ac9194108eb74a3a4764d1b"
+    },
+    {
+      "voucher_nonce": "77084659700278926827164738930921631473714272017931629540594991787324172533130",
+      "muse_id": "muse_smoke_att",
+      "muse_id_hash": "357d22322430dca7e8254fde2c7530aab70c810ae73f21f62203baca8ba1c4a2",
+      "recipient": "0xa62479d44EBD75b904992e1E75072f219B3B077e",
+      "allocation": "COMMUNITY",
+      "issued_at": "2026-09-23T01:33:17.500Z",
+      "expires_at": "2026-09-26T01:33:17.497Z",
+      "payload": {
+        "chainId": 4663,
+        "contract": "0x1111111111111111111111111111111111111111",
+        "recipient": "0xa62479d44EBD75b904992e1E75072f219B3B077e",
+        "mintType": 0,
+        "allocation": "COMMUNITY",
+        "nonce": "77084659700278926827164738930921631473714272017931629540594991787324172533130",
+        "expiry": 1790386397,
+        "price": 0,
+        "quantity": 1
+      },
+      "eip712_signature": "0xd453021727f95ba3c0ac107dd919ccdd30796bcccb9f0c540f1d5d3b46286a642fdc8ff79bb3c0a9b71bf0e4c3cd7f6a9c42923131de5f7fe0512aac7a8cc84a1c"
+    }
+  ],
   "claim_jobs": [],
-  "idempotency": []
+  "idempotency": [
+    {
+      "key": "smoke-key-1",
+      "muse_id": "muse_smoke_1",
+      "route": "register",
+      "challenge_id": "a5e2fc85-180f-4443-ad78-ee93cc3d19b9",
+      "address": "0xaEe09D8B163065Fd637A3459a9b6Deb12f57f04A",
+      "status": 200,
+      "response": {
+        "registration_id": "1d12abe5-f5ad-4e61-8e35-f05200bcda83",
+        "status": "registered",
+        "allocation": null,
+        "community_eligible": true,
+        "holder_path": "open",
+        "holder_note": "The $10 MDOG check happens on mint day, on-chain — the contract reverts HOLDER mints for wallets below the threshold at mint time.",
+        "recheck_required": false,
+        "status_path": "/api/v1/status/1d12abe5-f5ad-4e61-8e35-f05200bcda83"
+      },
+      "created_at": "2026-09-23T01:33:16.779Z"
+    },
+    {
+      "key": "smoke-key-nh",
+      "muse_id": "muse_smoke_7",
+      "route": "register",
+      "challenge_id": "11ae994c-127f-4dad-9fc5-4781a8f15bb2",
+      "address": "0x84541952948cbad878A29Ccba1f5b78E11DDb08d",
+      "status": 200,
+      "response": {
+        "registration_id": "81723ee6-4980-4fbd-bb38-dffa018dd126",
+        "status": "registered",
+        "allocation": null,
+        "community_eligible": false,
+        "holder_path": "open",
+        "holder_note": "The $10 MDOG check happens on mint day, on-chain — the contract reverts HOLDER mints for wallets below the threshold at mint time.",
+        "recheck_required": false,
+        "status_path": "/api/v1/status/81723ee6-4980-4fbd-bb38-dffa018dd126"
+      },
+      "created_at": "2026-09-23T01:33:16.874Z"
+    },
+    {
+      "key": "smoke-v1",
+      "muse_id": "muse_smoke_1",
+      "route": "community-voucher",
+      "challenge_id": "1218aeef-6872-4abb-b27b-af0a68dfb250",
+      "address": "0xaEe09D8B163065Fd637A3459a9b6Deb12f57f04A",
+      "status": 200,
+      "response": {
+        "voucher": {
+          "chainId": 4663,
+          "contract": "0x1111111111111111111111111111111111111111",
+          "recipient": "0xaEe09D8B163065Fd637A3459a9b6Deb12f57f04A",
+          "mintType": 0,
+          "allocation": "COMMUNITY",
+          "nonce": "100695933190056001276559670696810310088811758875608714679397242129465136524149",
+          "expiry": 1790386396,
+          "price": 0,
+          "quantity": 1
+        },
+        "eip712_signature": "0x401a2a50d27e108f696a120e55daa75cd1b03815104e3c924def6432021aff58211eb916639834289e21e6e7754e5efcbe3f7ba62bbaadea4ea7eae44dff5a961b",
+        "claim_calldata": "0x7b5fa519000000000000000000000000aee09d8b163065fd637a3459a9b6deb12f57f04a0000000000000000000000000000000000000000000000000000000000000000de9fe0e360adead2ed2756918e444c783dae40a22595a54c1f5f4e4211922b75000000000000000000000000000000000000000000000000000000006ab720dc00000000000000000000000000000000000000000000000000000000000000a00000000000000000000000000000000000000000000000000000000000000041401a2a50d27e108f696a120e55daa75cd1b03815104e3c924def6432021aff58211eb916639834289e21e6e7754e5efcbe3f7ba62bbaadea4ea7eae44dff5a961b00000000000000000000000000000000000000000000000000000000000000",
+        "vouchers_issued": 1,
+        "vouchers_cap": 380,
+        "community_vouchers_for_address": 1,
+        "community_vouchers_cap_per_address": 3,
+        "claim_with_relayer": null,
+        "note": "Signed voucher. The relayer is not running: call mintWithVoucher() yourself with the calldata shown on the mint page."
+      },
+      "created_at": "2026-09-23T01:33:16.969Z"
+    },
+    {
+      "key": "smoke-v2",
+      "muse_id": "muse_smoke_9",
+      "route": "community-voucher",
+      "challenge_id": "f06b2604-c398-4f3d-b06f-965f69773850",
+      "address": "0x7597E102Acc6A24D4E46953D5C65e0235868414e",
+      "status": 200,
+      "response": {
+        "voucher": {
+          "chainId": 4663,
+          "contract": "0x1111111111111111111111111111111111111111",
+          "recipient": "0x7597E102Acc6A24D4E46953D5C65e0235868414e",
+          "mintType": 0,
+          "allocation": "COMMUNITY",
+          "nonce": "104221366244624860540175917820074301952714889532200124142361782828634615899960",
+          "expiry": 1790386396,
+          "price": 0,
+          "quantity": 1
+        },
+        "eip712_signature": "0x86988bb740a9da9d4cb68a7617d941d867908ffc7b8d6c556dae6f1fde960a7131e356988ec2a6319617b3cb73928f03b796ae68a7534dabf1863950c4d555a11c",
+        "claim_calldata": "0x7b5fa5190000000000000000000000007597e102acc6a24d4e46953d5c65e0235868414e0000000000000000000000000000000000000000000000000000000000000000e66b33ef137a97270599f0000f7ebaf05862be330ebbcf0adf12d76da30ce738000000000000000000000000000000000000000000000000000000006ab720dc00000000000000000000000000000000000000000000000000000000000000a0000000000000000000000000000000000000000000000000000000000000004186988bb740a9da9d4cb68a7617d941d867908ffc7b8d6c556dae6f1fde960a7131e356988ec2a6319617b3cb73928f03b796ae68a7534dabf1863950c4d555a11c00000000000000000000000000000000000000000000000000000000000000",
+        "vouchers_issued": 2,
+        "vouchers_cap": 380,
+        "community_vouchers_for_address": 1,
+        "community_vouchers_cap_per_address": 3,
+        "claim_with_relayer": null,
+        "note": "Signed voucher. The relayer is not running: call mintWithVoucher() yourself with the calldata shown on the mint page."
+      },
+      "created_at": "2026-09-23T01:33:17.003Z"
+    },
+    {
+      "key": "smoke-v3",
+      "muse_id": "muse_smoke_9",
+      "route": "community-voucher",
+      "challenge_id": "d0b142f6-8a94-4eda-824c-e5c58c3d1dde",
+      "address": "0x7597E102Acc6A24D4E46953D5C65e0235868414e",
+      "status": 200,
+      "response": {
+        "voucher": {
+          "chainId": 4663,
+          "contract": "0x1111111111111111111111111111111111111111",
+          "recipient": "0x7597E102Acc6A24D4E46953D5C65e0235868414e",
+          "mintType": 0,
+          "allocation": "COMMUNITY",
+          "nonce": "46429283951528373117282259347160686769970325475563285244111060597991512877065",
+          "expiry": 1790386397,
+          "price": 0,
+          "quantity": 1
+        },
+        "eip712_signature": "0xceb195b7291be975c5af8d1bb26fb2ad13708ec8ab57e00f3a1835771718413b23b2dbddf8f1bad76ef6097e2dead354d86ef44c8e9b7e78d18e5d1c7a4022871b",
+        "claim_calldata": "0x7b5fa5190000000000000000000000007597e102acc6a24d4e46953d5c65e0235868414e000000000000000000000000000000000000000000000000000000000000000066a60b200cdb1aa00883c87a5b5986829de3738d8c0afc0c557bd30058162809000000000000000000000000000000000000000000000000000000006ab720dd00000000000000000000000000000000000000000000000000000000000000a00000000000000000000000000000000000000000000000000000000000000041ceb195b7291be975c5af8d1bb26fb2ad13708ec8ab57e00f3a1835771718413b23b2dbddf8f1bad76ef6097e2dead354d86ef44c8e9b7e78d18e5d1c7a4022871b00000000000000000000000000000000000000000000000000000000000000",
+        "vouchers_issued": 3,
+        "vouchers_cap": 380,
+        "community_vouchers_for_address": 2,
+        "community_vouchers_cap_per_address": 3,
+        "claim_with_relayer": null,
+        "note": "Signed voucher. The relayer is not running: call mintWithVoucher() yourself with the calldata shown on the mint page."
+      },
+      "created_at": "2026-09-23T01:33:17.019Z"
+    },
+    {
+      "key": "smoke-v4",
+      "muse_id": "muse_smoke_9",
+      "route": "community-voucher",
+      "challenge_id": "d73a136f-7a8e-4b55-ac17-d519b97d676e",
+      "address": "0x7597E102Acc6A24D4E46953D5C65e0235868414e",
+      "status": 200,
+      "response": {
+        "voucher": {
+          "chainId": 4663,
+          "contract": "0x1111111111111111111111111111111111111111",
+          "recipient": "0x7597E102Acc6A24D4E46953D5C65e0235868414e",
+          "mintType": 0,
+          "allocation": "COMMUNITY",
+          "nonce": "49167816096410672881273967761516841188593096354077599069726343649141527832807",
+          "expiry": 1790386397,
+          "price": 0,
+          "quantity": 1
+        },
+        "eip712_signature": "0x106393bbfd6c3b74330c1cb6fc50cce6575bd84853494c48873ac9565ea28a3a106b9ba5b1a48fa42a50ebdfca2094b8965c5798ac0998d8492b81f6ee8cbb9a1c",
+        "claim_calldata": "0x7b5fa5190000000000000000000000007597e102acc6a24d4e46953d5c65e0235868414e00000000000000000000000000000000000000000000000000000000000000006cb3ff6ace86d1edf9200c5061731fc246606e9bbc36b73179328cf685da68e7000000000000000000000000000000000000000000000000000000006ab720dd00000000000000000000000000000000000000000000000000000000000000a00000000000000000000000000000000000000000000000000000000000000041106393bbfd6c3b74330c1cb6fc50cce6575bd84853494c48873ac9565ea28a3a106b9ba5b1a48fa42a50ebdfca2094b8965c5798ac0998d8492b81f6ee8cbb9a1c00000000000000000000000000000000000000000000000000000000000000",
+        "vouchers_issued": 4,
+        "vouchers_cap": 380,
+        "community_vouchers_for_address": 3,
+        "community_vouchers_cap_per_address": 3,
+        "claim_with_relayer": null,
+        "note": "Signed voucher. The relayer is not running: call mintWithVoucher() yourself with the calldata shown on the mint page."
+      },
+      "created_at": "2026-09-23T01:33:17.035Z"
+    },
+    {
+      "key": "smoke-h1",
+      "muse_id": "muse_smoke_1",
+      "route": "holder-voucher",
+      "challenge_id": "d2fe2a17-ec3d-454a-b9c8-e4834af93ada",
+      "address": "0xaEe09D8B163065Fd637A3459a9b6Deb12f57f04A",
+      "status": 200,
+      "response": {
+        "voucher": {
+          "chainId": 4663,
+          "contract": "0x1111111111111111111111111111111111111111",
+          "recipient": "0xaEe09D8B163065Fd637A3459a9b6Deb12f57f04A",
+          "mintType": 1,
+          "allocation": "HOLDER",
+          "nonce": "2985359855822843467799132701322839754384744073457164992531303173769864770898",
+          "expiry": 1790386397,
+          "price": 0,
+          "quantity": 1
+        },
+        "eip712_signature": "0x2177e7ce07bae48518b11cf9628d616ee0cf0e909a8784e2c5253ceb779195a274bec6ac225d0cce4be6f371ca6bfa8e603fa28593fcf0c05160f15db2206d781b",
+        "claim_calldata": "0x7b5fa519000000000000000000000000aee09d8b163065fd637a3459a9b6deb12f57f04a00000000000000000000000000000000000000000000000000000000000000010699a75f64700104d28afd1857965e975dada0b8e3eafedb2eb5e724666d7552000000000000000000000000000000000000000000000000000000006ab720dd00000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000000412177e7ce07bae48518b11cf9628d616ee0cf0e909a8784e2c5253ceb779195a274bec6ac225d0cce4be6f371ca6bfa8e603fa28593fcf0c05160f15db2206d781b00000000000000000000000000000000000000000000000000000000000000",
+        "vouchers_issued": 1,
+        "vouchers_cap": 100,
+        "holder_vouchers_for_address": 1,
+        "holder_vouchers_cap_per_address": 3,
+        "claim_with_relayer": null,
+        "note": "Signed voucher. The relayer is not running: call mintWithVoucher() yourself with the calldata shown on the mint page."
+      },
+      "created_at": "2026-09-23T01:33:17.179Z"
+    },
+    {
+      "key": "smoke-h2",
+      "muse_id": "muse_smoke_7",
+      "route": "holder-voucher",
+      "challenge_id": "409964bc-9bdd-401a-8757-b42e83bf6630",
+      "address": "0x7BE3548fa2D63bbe4988FF4b69a4589cC6053612",
+      "status": 200,
+      "response": {
+        "voucher": {
+          "chainId": 4663,
+          "contract": "0x1111111111111111111111111111111111111111",
+          "recipient": "0x7BE3548fa2D63bbe4988FF4b69a4589cC6053612",
+          "mintType": 1,
+          "allocation": "HOLDER",
+          "nonce": "59781530454546936824730122913021095652663797240144800261095860894211866276771",
+          "expiry": 1790386397,
+          "price": 0,
+          "quantity": 1
+        },
+        "eip712_signature": "0x366bda63692bff17082bbfc206afec6ead4fbb1e4b1aab31b4ec1af8e41f1d906b3ee1845eafe5e2d40adc11ad72e7c910f09371e5340144e409fb09adeb21541c",
+        "claim_calldata": "0x7b5fa5190000000000000000000000007be3548fa2d63bbe4988ff4b69a4589cc60536120000000000000000000000000000000000000000000000000000000000000001842b25ac985a5f1dd402d95d6075ce5e4e50b26f49bed06a9c9979282eb6b3a3000000000000000000000000000000000000000000000000000000006ab720dd00000000000000000000000000000000000000000000000000000000000000a00000000000000000000000000000000000000000000000000000000000000041366bda63692bff17082bbfc206afec6ead4fbb1e4b1aab31b4ec1af8e41f1d906b3ee1845eafe5e2d40adc11ad72e7c910f09371e5340144e409fb09adeb21541c00000000000000000000000000000000000000000000000000000000000000",
+        "vouchers_issued": 2,
+        "vouchers_cap": 100,
+        "holder_vouchers_for_address": 1,
+        "holder_vouchers_cap_per_address": 3,
+        "claim_with_relayer": null,
+        "note": "Signed voucher. The relayer is not running: call mintWithVoucher() yourself with the calldata shown on the mint page."
+      },
+      "created_at": "2026-09-23T01:33:17.215Z"
+    },
+    {
+      "key": "smoke-h3",
+      "muse_id": "muse_smoke_7",
+      "route": "holder-voucher",
+      "challenge_id": "5276ae09-5bd4-457b-ae99-c855a776bead",
+      "address": "0x7BE3548fa2D63bbe4988FF4b69a4589cC6053612",
+      "status": 200,
+      "response": {
+        "voucher": {
+          "chainId": 4663,
+          "contract": "0x1111111111111111111111111111111111111111",
+          "recipient": "0x7BE3548fa2D63bbe4988FF4b69a4589cC6053612",
+          "mintType": 1,
+          "allocation": "HOLDER",
+          "nonce": "23036944109481417388926160074491687006987704135750612889830828052141496889735",
+          "expiry": 1790386397,
+          "price": 0,
+          "quantity": 1
+        },
+        "eip712_signature": "0xfaf59a01030bf79d32f60cfee6c7cb1b7fed1f590598756615f5120fae5d39ae2e43b161515b20511404c3eb8714dbd96336556b5effffa75fb30619a6b0c14c1c",
+        "claim_calldata": "0x7b5fa5190000000000000000000000007be3548fa2d63bbe4988ff4b69a4589cc6053612000000000000000000000000000000000000000000000000000000000000000132ee72c3d6dce96f0524722ee5b75ce3c0f301a7ad8fe914856415e039447187000000000000000000000000000000000000000000000000000000006ab720dd00000000000000000000000000000000000000000000000000000000000000a00000000000000000000000000000000000000000000000000000000000000041faf59a01030bf79d32f60cfee6c7cb1b7fed1f590598756615f5120fae5d39ae2e43b161515b20511404c3eb8714dbd96336556b5effffa75fb30619a6b0c14c1c00000000000000000000000000000000000000000000000000000000000000",
+        "vouchers_issued": 3,
+        "vouchers_cap": 100,
+        "holder_vouchers_for_address": 2,
+        "holder_vouchers_cap_per_address": 3,
+        "claim_with_relayer": null,
+        "note": "Signed voucher. The relayer is not running: call mintWithVoucher() yourself with the calldata shown on the mint page."
+      },
+      "created_at": "2026-09-23T01:33:17.234Z"
+    },
+    {
+      "key": "smoke-h4",
+      "muse_id": "muse_smoke_7",
+      "route": "holder-voucher",
+      "challenge_id": "d55e2f00-17b3-4be7-8bfa-5678aa15464c",
+      "address": "0x7BE3548fa2D63bbe4988FF4b69a4589cC6053612",
+      "status": 200,
+      "response": {
+        "voucher": {
+          "chainId": 4663,
+          "contract": "0x1111111111111111111111111111111111111111",
+          "recipient": "0x7BE3548fa2D63bbe4988FF4b69a4589cC6053612",
+          "mintType": 1,
+          "allocation": "HOLDER",
+          "nonce": "97048632490774769469319243560588644021606009700299373856780955529783752942582",
+          "expiry": 1790386397,
+          "price": 0,
+          "quantity": 1
+        },
+        "eip712_signature": "0xe89f6327e9c8b82e678bc1d13667ad83eb02543817e6bc670f69dbfa55581e1b2ae925c4eddcc7c2d359888a8be95431d55bf1f5b817b3663f3c917d88b15a951c",
+        "claim_calldata": "0x7b5fa5190000000000000000000000007be3548fa2d63bbe4988ff4b69a4589cc60536120000000000000000000000000000000000000000000000000000000000000001d68f9455817f51b40a59f6c6c882a4ce397f98350836f67b10cd3fe88d9663f6000000000000000000000000000000000000000000000000000000006ab720dd00000000000000000000000000000000000000000000000000000000000000a00000000000000000000000000000000000000000000000000000000000000041e89f6327e9c8b82e678bc1d13667ad83eb02543817e6bc670f69dbfa55581e1b2ae925c4eddcc7c2d359888a8be95431d55bf1f5b817b3663f3c917d88b15a951c00000000000000000000000000000000000000000000000000000000000000",
+        "vouchers_issued": 4,
+        "vouchers_cap": 100,
+        "holder_vouchers_for_address": 3,
+        "holder_vouchers_cap_per_address": 3,
+        "claim_with_relayer": null,
+        "note": "Signed voucher. The relayer is not running: call mintWithVoucher() yourself with the calldata shown on the mint page."
+      },
+      "created_at": "2026-09-23T01:33:17.252Z"
+    },
+    {
+      "key": "smoke-h7b-reg",
+      "muse_id": "muse_smoke_3",
+      "route": "register",
+      "challenge_id": "a47e8c82-d308-4df8-a427-648dfeefc3d9",
+      "address": "0xF0FCA0633D459De88406Fc1c270d1ec485B25285",
+      "status": 200,
+      "response": {
+        "registration_id": "ace7cd2c-7dcc-4916-9153-c39666c272b9",
+        "status": "registered",
+        "allocation": null,
+        "community_eligible": false,
+        "holder_path": "open",
+        "holder_note": "The $10 MDOG check happens on mint day, on-chain — the contract reverts HOLDER mints for wallets below the threshold at mint time.",
+        "recheck_required": false,
+        "status_path": "/api/v1/status/ace7cd2c-7dcc-4916-9153-c39666c272b9"
+      },
+      "created_at": "2026-09-23T01:33:17.319Z"
+    },
+    {
+      "key": "smoke-h7b",
+      "muse_id": "muse_smoke_3",
+      "route": "holder-voucher",
+      "challenge_id": "42b85aec-a4ff-4293-a01f-5a3d5b65e375",
+      "address": "0xF0FCA0633D459De88406Fc1c270d1ec485B25285",
+      "status": 200,
+      "response": {
+        "voucher": {
+          "chainId": 4663,
+          "contract": "0x1111111111111111111111111111111111111111",
+          "recipient": "0xF0FCA0633D459De88406Fc1c270d1ec485B25285",
+          "mintType": 1,
+          "allocation": "HOLDER",
+          "nonce": "19563357541115317543521197565022478156189203992011751349757105309299965308692",
+          "expiry": 1790386397,
+          "price": 0,
+          "quantity": 1
+        },
+        "eip712_signature": "0xc3e5fcedd57ed9ae375d8fc5132e39455e5f4a1d665132e05f5726af570fce9602464824598bcf173f26089817300e3481febe41af7ac9194108eb74a3a4764d1b",
+        "claim_calldata": "0x7b5fa519000000000000000000000000f0fca0633d459de88406fc1c270d1ec485b2528500000000000000000000000000000000000000000000000000000000000000012b4077cd322e6bfaf16e096793d907d13d4c5cb0e572c912dd95b36dd9ce2f14000000000000000000000000000000000000000000000000000000006ab720dd00000000000000000000000000000000000000000000000000000000000000a00000000000000000000000000000000000000000000000000000000000000041c3e5fcedd57ed9ae375d8fc5132e39455e5f4a1d665132e05f5726af570fce9602464824598bcf173f26089817300e3481febe41af7ac9194108eb74a3a4764d1b00000000000000000000000000000000000000000000000000000000000000",
+        "vouchers_issued": 5,
+        "vouchers_cap": 100,
+        "holder_vouchers_for_address": 1,
+        "holder_vouchers_cap_per_address": 3,
+        "claim_with_relayer": null,
+        "note": "Signed voucher. The relayer is not running: call mintWithVoucher() yourself with the calldata shown on the mint page."
+      },
+      "created_at": "2026-09-23T01:33:17.336Z"
+    },
+    {
+      "key": "smoke-id-13a",
+      "muse_id": "muse_smoke_9",
+      "route": "register",
+      "challenge_id": "98cabb8d-52bc-4126-b63a-6b0a343c5f52",
+      "address": "0x7BCe6549B5819048a4e54a8398e82c7B8ADb06C2",
+      "status": 200,
+      "response": {
+        "registration_id": "a046b465-b0ca-4655-9698-a7da61abbf2d",
+        "status": "registered",
+        "allocation": null,
+        "community_eligible": true,
+        "holder_path": "open",
+        "holder_note": "The $10 MDOG check happens on mint day, on-chain — the contract reverts HOLDER mints for wallets below the threshold at mint time.",
+        "recheck_required": false,
+        "status_path": "/api/v1/status/a046b465-b0ca-4655-9698-a7da61abbf2d"
+      },
+      "created_at": "2026-09-23T01:33:17.407Z"
+    },
+    {
+      "key": "smoke-att-1",
+      "muse_id": "muse_smoke_att",
+      "route": "register",
+      "challenge_id": "fece2f84-35c8-4c44-8bf2-912b95a2b69d",
+      "address": "0xa62479d44EBD75b904992e1E75072f219B3B077e",
+      "status": 200,
+      "response": {
+        "registration_id": "cccc58d0-8baf-406e-8643-852869379daa",
+        "status": "registered",
+        "allocation": null,
+        "community_eligible": true,
+        "holder_path": "open",
+        "holder_note": "The $10 MDOG check happens on mint day, on-chain — the contract reverts HOLDER mints for wallets below the threshold at mint time.",
+        "recheck_required": false,
+        "status_path": "/api/v1/status/cccc58d0-8baf-406e-8643-852869379daa"
+      },
+      "created_at": "2026-09-23T01:33:17.488Z"
+    },
+    {
+      "key": "smoke-att-v1",
+      "muse_id": "muse_smoke_att",
+      "route": "community-voucher",
+      "challenge_id": "09a504e1-590c-4503-922b-69462fde1003",
+      "address": "0xa62479d44EBD75b904992e1E75072f219B3B077e",
+      "status": 200,
+      "response": {
+        "voucher": {
+          "chainId": 4663,
+          "contract": "0x1111111111111111111111111111111111111111",
+          "recipient": "0xa62479d44EBD75b904992e1E75072f219B3B077e",
+          "mintType": 0,
+          "allocation": "COMMUNITY",
+          "nonce": "77084659700278926827164738930921631473714272017931629540594991787324172533130",
+          "expiry": 1790386397,
+          "price": 0,
+          "quantity": 1
+        },
+        "eip712_signature": "0xd453021727f95ba3c0ac107dd919ccdd30796bcccb9f0c540f1d5d3b46286a642fdc8ff79bb3c0a9b71bf0e4c3cd7f6a9c42923131de5f7fe0512aac7a8cc84a1c",
+        "claim_calldata": "0x7b5fa519000000000000000000000000a62479d44ebd75b904992e1e75072f219b3b077e0000000000000000000000000000000000000000000000000000000000000000aa6c5f0ad6d6b9d3576ee35b15a59e56b368373b2aaba97288e57d379a91fd8a000000000000000000000000000000000000000000000000000000006ab720dd00000000000000000000000000000000000000000000000000000000000000a00000000000000000000000000000000000000000000000000000000000000041d453021727f95ba3c0ac107dd919ccdd30796bcccb9f0c540f1d5d3b46286a642fdc8ff79bb3c0a9b71bf0e4c3cd7f6a9c42923131de5f7fe0512aac7a8cc84a1c00000000000000000000000000000000000000000000000000000000000000",
+        "vouchers_issued": 10,
+        "vouchers_cap": 380,
+        "community_vouchers_for_address": 1,
+        "community_vouchers_cap_per_address": 3,
+        "claim_with_relayer": null,
+        "note": "Signed voucher. The relayer is not running: call mintWithVoucher() yourself with the calldata shown on the mint page."
+      },
+      "created_at": "2026-09-23T01:33:17.502Z"
+    }
+  ]
 }
