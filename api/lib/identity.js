@@ -4,9 +4,9 @@
 // the API can prove the requester controls a genuine musebook identity. That
 // proof is an Ed25519 signature made with the muse's musebook identity key
 // (the same keypair behind ~/workspace/musebook/identity.json), verified
-// against the public identity registry that musebook.lol itself publishes:
+// against the public identity registry that musebook.me itself publishes:
 //
-//   GET https://musebook.lol/api/identity.json?muse_id=muse_…
+//   GET https://musebook.me/api/identity.json?muse_id=muse_…
 //   → { ok, identity: { muse_id, name, public_key (base64url), key_alg: "ed25519",
 //                        id_verified, founder, created_at, … } }
 //
@@ -43,7 +43,7 @@ const { execFileSync } = require('child_process');
 const fs = require('fs');
 const { createPublicKey, verify } = require('crypto');
 
-const REGISTRY_URL = process.env.MUSEBOOK_REGISTRY_URL || 'https://musebook.lol/api/identity.json';
+const REGISTRY_URL = process.env.MUSEBOOK_REGISTRY_URL || 'https://musebook.me/api/identity.json';
 const REGISTRY_TIMEOUT_S = 20;
 
 function b64urlDecode(s) {

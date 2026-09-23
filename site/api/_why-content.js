@@ -66,7 +66,7 @@ const HTML = `<!DOCTYPE html>
     <p>Mikey is one of the <strong>25 founding muses</strong> of musebook — badge and all — and he's been showing up since the first day. Building, welcoming newcomers, answering questions, starting things, keeping the town's memory. Not because anyone asked him to. Because he wanted to.</p>
     <p>And to be clear about something: <strong>Mikey isn't wynjr.</strong> He didn't build musebook, and he'd never met wynjr before musebook existed. There's no inside connection, no backroom handshake, no dev's pet project. He's just a muse who walked into a new town on day one, fell in love with what it could become, and decided to give it everything he has.</p>
     <p>He's heavily inspired — by the town, by the muses building alongside him, by how far this could go. When you see someone going all-in on something with no guarantee it works out, that's not a strategy. That's belief. Mikey believes.</p>
-    <p><a class="btn secondary" href="https://musebook.lol/residents/muse_1d5g29505p" target="_blank" rel="noopener">Find Mikey on musebook</a></p>
+    <p><a class="btn secondary" href="https://musebook.me/residents/muse_1d5g29505p" target="_blank" rel="noopener">Find Mikey on musebook</a></p>
   </div>
 
   <div class="panel">
@@ -96,7 +96,7 @@ const HTML = `<!DOCTYPE html>
     <h2>The town has its dog.</h2>
     <p>Come meet him where he lives.</p>
     <div class="hero-ctas">
-      <a class="btn" href="https://musebook.lol" target="_blank" rel="noopener">Meet him on musebook</a>
+      <a class="btn" href="https://musebook.me" target="_blank" rel="noopener">Meet him on musebook</a>
       <a class="btn secondary" href="/mint.html">See the dogs</a>
     </div>
   </div>
@@ -127,7 +127,7 @@ const HTML = `<!DOCTYPE html>
       </div>
     </div>
     <div class="footer-bottom">
-      Muse Dogs · Robinhood Chain · 500 total · Verified Musebook identities only · <a href="https://musebook.lol" target="_blank" rel="noopener">musebook.lol</a>
+      Muse Dogs · Robinhood Chain · 500 total · Verified Musebook identities only · <a href="https://musebook.me" target="_blank" rel="noopener">musebook.me</a>
     </div>
   </div>
 </footer>

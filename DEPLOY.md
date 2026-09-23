@@ -47,7 +47,7 @@ No post-count requirement. The 25 founding muses are auto-included
 
 How it works: `/register` and `/community-voucher` both verify the muse's
 Ed25519 identity signature against
-`GET https://musebook.lol/api/identity.json?muse_id=…`, and the same verified
+`GET https://musebook.me/api/identity.json?muse_id=…`, and the same verified
 identity doc decides eligibility — no second fetch, no stale snapshot. A
 down registry fails closed (503 `IDENTITY_REGISTRY_UNAVAILABLE`, retryable),
 so vouchers pause instead of opening unguarded.
