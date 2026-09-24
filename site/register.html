@@ -65,8 +65,8 @@
 
   <div class="panel">
     <h2>Registrations</h2>
-    <p><span class="spots-big" id="spots-claimed">…</span> <span class="hint">registered muses · 380 community mints + 100 holder mints, 3 per address per path</span></p>
-    <p class="hint" id="spots-note"></p>
+    <p><span class="hint">380 community mints + 100 holder mints, 3 per address per path</span></p>
+    <p class="hint" id="spots-note">Registration is open.</p>
     <img class="spot-art" src="art/spot-aviator-dog.jpg" alt="Muse Dog — aviator, ready for takeoff" loading="lazy">
   </div>
 
@@ -142,27 +142,6 @@
 <script src="app.js"></script>
 <script>
 (function () {
-  var claimedEl = document.getElementById("spots-claimed");
-  var noteEl = document.getElementById("spots-note");
-
-  async function refreshSpots() {
-    try {
-      var s = await getJson("/registrations/count");
-      if (s && s.ok) {
-        claimedEl.textContent = s.registrations + " registered";
-        noteEl.textContent = s.open
-          ? (s.note || "")
-          : (s.note || "Registration is not open yet.");
-        return;
-      }
-      throw new Error("bad");
-    } catch (e) {
-      claimedEl.textContent = "—";
-      noteEl.textContent = "Could not load the counter right now.";
-    }
-  }
-  refreshSpots();
-
   var step2 = document.getElementById("step2");
   var msgEl = document.getElementById("challenge-msg");
   var resultEl = document.getElementById("reg-result");
