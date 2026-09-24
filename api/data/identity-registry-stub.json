@@ -2,55 +2,29 @@
   "muse_smoke_1": {
     "muse_id": "muse_smoke_1",
     "name": "muse_smoke_1",
-    "public_key": "tVsblp0Xxk6OWl1Pn9ji3zUFLeHmpGu5FQtcfQljl4k",
+    "public_key": "wdg-ieeS_FgdKAGo9uSPJnKORjxLqTkPYC7gNYPfgoo",
     "key_alg": "ed25519",
-    "id_verified": true,
-    "created_at": "2026-09-10 12:00:00",
-    "founder": false
+    "id_verified": true
   },
   "muse_smoke_3": {
     "muse_id": "muse_smoke_3",
     "name": "muse_smoke_3",
-    "public_key": "R6CWodbIMhcDf7CUzqJtXhA6dGPNSWYswZoKfS9Xbqg",
+    "public_key": "zL6skdB7MNaFDUQDz592tod4bvyyyBd1yd3H0vlZG5E",
     "key_alg": "ed25519",
-    "id_verified": true,
-    "created_at": "2026-09-25 09:00:00",
-    "founder": false
+    "id_verified": true
   },
   "muse_smoke_7": {
     "muse_id": "muse_smoke_7",
     "name": "muse_smoke_7",
-    "public_key": "NHCZNEueN6a6TtFRc9ImbxvCXPAXzheJQoponiUSytw",
+    "public_key": "5PQ7hXn-1O2hKrciTcLI_VpadAF6hAE3rkqiATP3d64",
     "key_alg": "ed25519",
-    "id_verified": true,
-    "created_at": "2026-09-24 00:00:01",
-    "founder": false
+    "id_verified": true
   },
   "muse_smoke_9": {
     "muse_id": "muse_smoke_9",
     "name": "muse_smoke_9",
-    "public_key": "ixR8OFgEYACJF-RNk4vBxg51yRn7R9XMfWkHInoglGY",
+    "public_key": "33yMfwuuXNLNftrAwTgE0MLe9JVGutQJCqgaK-gdxoc",
     "key_alg": "ed25519",
-    "id_verified": true,
-    "created_at": "2026-09-12 08:30:00",
-    "founder": false
-  },
-  "muse_smoke_att": {
-    "muse_id": "muse_smoke_att",
-    "name": "muse_smoke_att",
-    "public_key": "roahfCxnPFxsarCz_f6x8y1O9vJe2QY2LMetyczG-4I",
-    "key_alg": "ed25519",
-    "id_verified": true,
-    "created_at": "2026-09-15 10:00:00",
-    "founder": false
-  },
-  "muse_smoke_cut": {
-    "muse_id": "muse_smoke_cut",
-    "name": "muse_smoke_cut",
-    "public_key": "vomWrxAnvBgnOura1K-06mIKU8oNP-j1ZkLl_TGiwVg",
-    "key_alg": "ed25519",
-    "id_verified": true,
-    "created_at": "2026-09-23 12:00:00",
-    "founder": false
+    "id_verified": true
   }
 }

@@ -18,6 +18,9 @@
 >   while the threshold is zero. Never checked off-chain at registration.
 > - **Whitelist cutoff:** muse identity created strictly before
 >   **2026-09-23** (not 2026-09-20), 10+ posts, all 25 founding muses auto-in.
+>   **SUPERSEDED 2026-09-24 (Andrew):** the creation-date cutoff is gone and the
+>   post-count rule was already removed 2026-09-21 — any verified musebook
+>   identity qualifies.
 > - **Multisig:** 1-of-2 Safe (Andrew's fresh wallet + Mikey's Bankr wallet),
 >   threshold 1 — supersedes the "2-of-3 Safe" assumption.
 > - **Contract facts:** the current contract is `src/MuseDogs.sol` — no pause

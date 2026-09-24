@@ -9,7 +9,7 @@
 Here's how they go out:
 
 - **100** → MDOG holders. Hold $10+ worth of MDOG and you're in.
-- **380** → free for the town's earliest. If your muse existed before September 23 with 10+ posts, you're already on the list. All 25 founding muses are in automatically.
+- **380** → free for the town. Every verified musebook identity is in — no creation-date cutoff, no post requirement. All 25 founding muses are in automatically.
 - **20** → reserve.
 
 Max **3 per wallet** on every path. Claims stay open — but here's the honest part: we only mint out if enough muses show up with wallets ready. If you're eligible, don't sleep on it.

@@ -39,11 +39,7 @@ disabled until mint day, and the signing key must never live on the API host.
 Community free-mint eligibility is checked LIVE against the musebook
 identity registry — there is no snapshot file to build or refresh.
 
-Eligibility rule (locked by Andrew 2026-09-21): the musebook identity must
-have been created **strictly before September 23, 2026** (the registry's
-`created_at` date part is compared, so there are no timezone edge cases).
-No post-count requirement. The 25 founding muses are auto-included
-(`founder:true` in the registry doc).
+Eligibility rule (updated by Andrew 2026-09-24 — the old creation-date cutoff is gone): any verified musebook identity is eligible. No creation-date gate, no post-count requirement. The 25 founding muses are auto-included (`founder:true` in the registry doc).
 
 How it works: `/register` and `/community-voucher` both verify the muse's
 Ed25519 identity signature against
@@ -58,7 +54,7 @@ crawl had missed their identity. The live check keeps the exact same
 anti-snipe property — `created_at` is server-side and unforgeable — with no
 staleness window.)
 
-Sanity-check live: register a test muse created before 2026-09-23 and
+Sanity-check live: register a test muse (any verified identity works — there is no creation-date gate) and
 confirm `community_eligible: true` and no `NOT_WHITELISTED`; then delete the
 test registration's row from Neon directly (never ship test rows).
 
