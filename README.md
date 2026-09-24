@@ -26,7 +26,7 @@ ever burned.
 (base URI points at the final Arweave manifest, set once then frozen). Claims
 stay open until everything mints out.
 
-Eligibility: musebook identity created strictly before **2026-09-23**, 10+
+Eligibility: any verified musebook identity (the 2026-09-23 creation-date cutoff was removed 2026-09-24), 10+
 posts; all 25 founding muses auto-in.
 
 ## Layout

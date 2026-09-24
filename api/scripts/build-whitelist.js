@@ -1,15 +1,25 @@
+// RETIRED 2026-09-24 (Andrew). The static whitelist snapshot this script
+// built (data/whitelist.json) was deleted 2026-09-21 and replaced by the live
+// registry check in api/server.js — and on 2026-09-24 the 2026-09-23
+// creation-date cutoff itself was removed entirely: the free community mint
+// is now open to EVERY verified musebook identity, so no allowlist is built
+// or consulted at all. This script is kept for history only; the cutoff
+// filter below has been neutralized to the no-cutoff rule (not deleted, so
+// the old rule is still visible as dated history).
+//
 // Build the community allowlist from a musebook identity list.
 //
-// The allowlist is the real anti-snipe gate: only muses whose identity
-// existed BEFORE the announcement can claim a free mint. An attacker with
-// 500 fresh addresses still needs 500 aged muse identities, which is the
+// The allowlist was the real anti-snipe gate: only muses whose identity
+// existed BEFORE the announcement could claim a free mint. An attacker with
+// 500 fresh addresses still needed 500 aged muse identities, which was the
 // expensive part.
 //
-// Locked rules (Andrew, 2026-09-21): the muse identity must have been
-// created strictly BEFORE 2026-09-23. No post-count requirement. All 25
-// founding muses are auto-included (they are also pre-announcement
-// identities, so they qualify either way; the --founders flag is a
-// belt-and-braces check and flags anything odd, like a banned founder).
+// Original locked rules (Andrew, 2026-09-21 — retired 2026-09-24): the muse
+// identity must have been created strictly BEFORE 2026-09-23. No post-count
+// requirement. All 25 founding muses were auto-included (they are also
+// pre-announcement identities, so they qualified either way; the --founders
+// flag was a belt-and-braces check and flagged anything odd, like a banned
+// founder).
 //
 // Usage:
 //   HASH_SALT=<prod-salt> node scripts/build-whitelist.js \
@@ -58,14 +68,17 @@ function parseArgs(argv) {
 
 function main() {
   const args = parseArgs(process.argv.slice(2));
-  if (!args.input || !args.announcement) {
-    console.error('Usage: node scripts/build-whitelist.js --input muses.json --announcement YYYY-MM-DD [--founders founders.json] [--out data/whitelist.json]');
+  if (!args.input) {
+    console.error('Usage: node scripts/build-whitelist.js --input muses.json [--announcement YYYY-MM-DD (legacy, ignored)] [--founders founders.json] [--out data/whitelist.json]');
     process.exit(1);
   }
   const salt = process.env.HASH_SALT || 'muse-dog-lol-dev-salt';
-  // Strictly-before comparison on the YYYY-MM-DD date part only — no
-  // timezone edge cases: "2026-09-22 23:59:59" counts, "2026-09-23" does not.
-  const cutoffDay = args.announcement;
+  // RETIRED RULE: the 2026-09-23 creation-date cutoff was removed 2026-09-24
+  // (Andrew) — the free community mint is now open to every verified
+  // musebook identity, so no allowlist is built or consulted. The
+  // --announcement arg is accepted but ignored; the filter below approves
+  // any non-banned identity to match the current no-cutoff rule.
+  if (args.announcement) console.error('note: --announcement is ignored (cutoff retired 2026-09-24; approving all non-banned identities)');
 
   const muses = JSON.parse(fs.readFileSync(args.input, 'utf8'));
   const founders = new Set();
@@ -91,13 +104,14 @@ function main() {
       approve(m, `founding muse (auto-included), identity created ${createdDay}`);
       continue;
     }
-    if (!m.created_at || !/^\d{4}-\d{2}-\d{2}$/.test(createdDay) || createdDay >= cutoffDay)
-      reasons.push('identity created on/after announcement cutoff');
+    // No creation-date cutoff (retired 2026-09-24): every non-banned
+    // verified identity is eligible for the free community mint.
+    // (Old rule for history: reject if !m.created_at or createdDay >= cutoffDay.)
     if (reasons.length) {
       rejected.push({ muse_id: m.muse_id, founder: isFounder, reasons });
       continue;
     }
-    approve(m, `identity created ${createdDay}, before announcement`);
+    approve(m, `verified musebook identity (no creation-date cutoff since 2026-09-24)`);
   }
 
   const outPath = args.out || path.join(__dirname, '..', 'data', 'whitelist.json');
@@ -106,7 +120,7 @@ function main() {
 
   console.log(JSON.stringify({
     announcement: args.announcement,
-    rule: 'identity created strictly before announcement; 25 founders auto-included',
+    rule: 'RETIRED 2026-09-24: no creation-date cutoff — every non-banned verified musebook identity approved; 25 founders auto-included',
     banned_data_present: muses.some(m => 'banned' in m),
     total: muses.length,
     founders_listed: founders.size,

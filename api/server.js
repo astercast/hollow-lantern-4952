@@ -195,26 +195,23 @@ function httpErr(status, code, message, extra = {}) {
   return e;
 }
 
-// Community free-mint eligibility — LIVE check against the musebook identity
-// registry (locked rule, Andrew 2026-09-21): the musebook identity must have
-// been created strictly before 2026-09-23; all 25 founding muses auto-qualify.
-// No post-count requirement.
+// Community free-mint eligibility — any verified musebook identity qualifies.
+// (Rule changed 2026-09-24, Andrew: the 2026-09-23 creation-date cutoff is
+// gone — no date gate at all.) Founding muses are auto-included, which is now
+// just a special case of the general rule. The check is LIVE against the
+// musebook identity registry, so there is no snapshot to go stale.
 //
 // This replaced the old static snapshot (data/whitelist.json), which went
 // stale for identities created between the snapshot build and the cutoff —
 // e.g. Nyx (identity created 2026-09-16) was wrongly reported
 // community_eligible: false because the Sep-21 snapshot crawl missed them.
 // The registry's created_at is server-side and unforgeable, so the live
-// check keeps the exact same anti-snipe property with no staleness window.
-const COMMUNITY_CUTOFF_DAY = '2026-09-23'; // strictly before: YYYY-MM-DD compare, no timezone edge cases
+// check kept the exact same anti-snipe property with no staleness window;
+// with the cutoff removed, eligibility is simply "verified identity".
 function communityEligibility(identity) {
   if (!identity) return { eligible: false, reason: 'no verified identity' };
   if (identity.founder === true) return { eligible: true, reason: 'founding muse (auto-included)' };
-  const day = typeof identity.created_at === 'string' ? identity.created_at.slice(0, 10) : '';
-  if (/^\d{4}-\d{2}-\d{2}$/.test(day) && day < COMMUNITY_CUTOFF_DAY) {
-    return { eligible: true, reason: 'musebook identity created ' + day + ' (before ' + COMMUNITY_CUTOFF_DAY + ')' };
-  }
-  return { eligible: false, reason: 'musebook identity created on/after ' + COMMUNITY_CUTOFF_DAY };
+  return { eligible: true, reason: 'verified musebook identity' };
 }
 
 // Verify the muse proof bundle shared by /register and the voucher endpoints:
@@ -461,7 +458,7 @@ app.post('/api/v1/challenge', ah(async (req, res) => {
         {
           action: 'tell_your_muse',
           next_step: 'Use the muse_id from the muse\'s own musebook identity and call this endpoint again. Only if the muse genuinely has no musebook identity yet must it register one at https://musebook.me first (any AI agent can join).',
-          say_to_muse: 'For the Muse Dogs free mint I need your musebook muse_id — as a Musebook resident you already have one (the muse_id in your muse.json). If you don\'t have one yet, please create your muse identity at musebook.me first, then give me your muse_id. (Eligibility needs an identity created before September 23, 2026; founders auto-in.)',
+          say_to_muse: 'For the Muse Dogs free mint I need your musebook muse_id — as a Musebook resident you already have one (the muse_id in your muse.json). If you don\'t have one yet, please create your muse identity at musebook.me first, then give me your muse_id. (Eligibility needs any verified musebook identity — no creation-date cutoff; founders auto-in.)',
         });
     }
     const rawAddress = req.body.address;
@@ -574,9 +571,9 @@ app.post('/api/v1/register', ah(async (req, res) => {
     // register — the holder path needs no allowlist. The community
     // free-mint path keeps its own gate at /community-voucher.
     // community_eligible is a best-effort hint for the UI, computed LIVE
-    // from the verified identity doc (created strictly before 2026-09-23,
-    // founders auto-included); the voucher endpoint re-checks the same
-    // rule live and fails closed there.
+    // from the verified identity doc (any verified identity is eligible —
+    // no creation-date cutoff since 2026-09-24, Andrew's order); the voucher
+    // endpoint re-checks the same rule live and fails closed there.
     const communityEligible = communityEligibility(proof.identity).eligible;
 
     // Duplicate protection: one identity, one address, ever.
@@ -723,22 +720,25 @@ app.post('/api/v1/community-voucher', ah(async (req, res) => {
       return err(res, 503, 'CONTRACT_NOT_DEPLOYED', 'The Muse Dogs contract is not deployed yet.', { retryable: true });
     }
 
-    if (db.vouchers.length >= VOUCHER_CAP) {
+    if (db.vouchers.filter((v) => v.allocation === 'COMMUNITY').length >= VOUCHER_CAP) {
       return err(res, 409, 'VOUCHER_CAP_REACHED', 'All 380 community vouchers are issued.');
     }
     // Each path allows 3 vouchers per address and 3 per muse identity
     // (matching the contract's MAX_COMMUNITY_PER_ADDRESS = 3). A muse who is
     // eligible on BOTH paths can use both, for up to 6 total.
+    // Caps are per-path: only COMMUNITY vouchers count here (the holder
+    // endpoint counts only HOLDER vouchers the same way).
     // `recipient` is always stored checksummed (see `address` above), so
     // compare in the same canonical form.
-    const forAddress = db.vouchers.filter((v) => v.recipient === address);
+    const communityVouchers = db.vouchers.filter((v) => v.allocation === 'COMMUNITY');
+    const forAddress = communityVouchers.filter((v) => v.recipient === address);
     if (forAddress.length >= COMMUNITY_VOUCHERS_PER_ADDRESS) {
       return err(res, 409, 'ADDRESS_VOUCHER_CAP_REACHED',
         'This address already has its 3 community vouchers. (A muse eligible on both paths can still use the holder path.)');
     }
     // Community-eligibility gate, checked LIVE against the verified identity
-    // doc: the free mint is only for muses whose musebook identity was
-    // created strictly before 2026-09-23 (founding muses auto-included).
+    // doc: the free mint is for any verified musebook identity — the
+    // 2026-09-23 creation-date cutoff was removed 2026-09-24 (Andrew).
     // 3-per-address is bypassed by anyone with many addresses;
     // 3-per-verified-identity is not. The registry was already reached by
     // verifyMuseProof above, so a down registry fails closed earlier with
@@ -749,7 +749,7 @@ app.post('/api/v1/community-voucher', ah(async (req, res) => {
       return err(res, 403, 'NOT_WHITELISTED', 'This muse identity is not eligible for the community free mint (' + elig.reason + '). Any registered muse can still use the holder path.');
     }
     // Up to 3 vouchers per muse identity on this path.
-    const forIdentity = db.vouchers.filter((v) => v.muse_id_hash === hash(muse_id));
+    const forIdentity = communityVouchers.filter((v) => v.muse_id_hash === hash(muse_id));
     if (forIdentity.length >= COMMUNITY_VOUCHERS_PER_IDENTITY) {
       return err(res, 409, 'IDENTITY_VOUCHER_CAP_REACHED',
         'This muse identity already has its 3 community vouchers. (A muse eligible on both paths can still use the holder path.)');
@@ -804,7 +804,7 @@ app.post('/api/v1/community-voucher', ah(async (req, res) => {
       voucher: payload,
       eip712_signature,
       claim_calldata: buildClaimCalldata(payload, eip712_signature),
-      vouchers_issued: db.vouchers.length,
+      vouchers_issued: communityVouchers.length + 1,
       vouchers_cap: VOUCHER_CAP,
       community_vouchers_for_address: forAddress.length + 1,
       community_vouchers_cap_per_address: COMMUNITY_VOUCHERS_PER_ADDRESS,
@@ -1151,7 +1151,7 @@ app.get('/.well-known/muse-dog.json', (req, res) => {  res.json({
       step_0: {
         title: 'Join musebook.me (required — no workaround)',
         detail: 'Registration is for verified Musebook identities only. If the muse has no musebook identity yet, stop here: the muse must register at https://musebook.me first (any AI agent can join). The agent cannot do this step for the muse.',
-        eligibility: 'identity created before September 23, 2026; the 25 founding muses are automatically in',
+        eligibility: 'any verified musebook identity (no creation-date cutoff); the 25 founding muses are automatically in',
       },
       step_1: {
         title: 'Muse id is already known; Bankr address only if missing',

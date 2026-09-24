@@ -37,14 +37,16 @@ const identities = {
   muse_smoke_7: makeIdentity(),
   muse_smoke_9: makeIdentity(),
   muse_smoke_att: makeIdentity(), // eligible muse used for the post-attestation tests
+  muse_smoke_cut: makeIdentity(), // created exactly on the old cutoff day (2026-09-23)
   muse_forged: makeIdentity(), // never appears in the registry stub
 };
 
-// Registry stub: muse_id -> identity doc. Eligibility for the community
-// free mint is decided LIVE from created_at/founder (strictly before
-// 2026-09-23; founders auto-included), so the stub carries those fields.
-// muse_smoke_1 and muse_smoke_9 are eligible; muse_smoke_7 and muse_smoke_3
-// were created after the cutoff and are holder-path-only.
+// Registry stub: muse_id -> identity doc. Community free-mint eligibility is
+// now "any verified identity" — the 2026-09-23 creation-date cutoff was
+// removed 2026-09-24, so the stub's created_at/founder fields are realism
+// only. muse_smoke_7 (2026-09-24), muse_smoke_3 (2026-09-25), and
+// muse_smoke_cut (2026-09-23, the old cutoff day) prove identities created
+// on or after the old cutoff are accepted.
 const REG_STUB_PATH = path.join(__dirname, 'data', 'identity-registry-stub.json');
 const STUB_META = {
   muse_smoke_1: { created_at: '2026-09-10 12:00:00', founder: false },
@@ -52,6 +54,7 @@ const STUB_META = {
   muse_smoke_7: { created_at: '2026-09-24 00:00:01', founder: false },
   muse_smoke_9: { created_at: '2026-09-12 08:30:00', founder: false },
   muse_smoke_att: { created_at: '2026-09-15 10:00:00', founder: false },
+  muse_smoke_cut: { created_at: '2026-09-23 12:00:00', founder: false }, // exactly the old cutoff day
 };
 function writeRegistryStub(idMap) {
   const doc = {};
@@ -61,7 +64,7 @@ function writeRegistryStub(idMap) {
   }
   fs.writeFileSync(REG_STUB_PATH, JSON.stringify(doc, null, 2));
 }
-writeRegistryStub({ muse_smoke_1: identities.muse_smoke_1, muse_smoke_3: identities.muse_smoke_3, muse_smoke_7: identities.muse_smoke_7, muse_smoke_9: identities.muse_smoke_9, muse_smoke_att: identities.muse_smoke_att });
+writeRegistryStub({ muse_smoke_1: identities.muse_smoke_1, muse_smoke_3: identities.muse_smoke_3, muse_smoke_7: identities.muse_smoke_7, muse_smoke_9: identities.muse_smoke_9, muse_smoke_att: identities.muse_smoke_att, muse_smoke_cut: identities.muse_smoke_cut });
 
 // Post-attestation stub: post_id -> { muse_id, text }. Mirrors the public
 // board read API the server queries on the no-key path (no network in
@@ -152,7 +155,7 @@ async function waitForServer() {
   });
   log(r.status === 200 && r.json.status === 'registered' && r.json.allocation === null, 'register: muse registered (no balance check at registration — the $10 MDOG check happens on mint day, on-chain)');
   log(r.json.recheck_required === false && !!r.json.status_path, 'register: response shape from plan');
-  log(r.json.community_eligible === true && r.json.holder_path === 'open', 'register: eligible muse (identity created before cutoff) sees community_eligible true, holder path open');
+  log(r.json.community_eligible === true && r.json.holder_path === 'open', 'register: eligible muse sees community_eligible true, holder path open');
   const regId = r.json.registration_id;
 
   // 5. idempotency: same key replays the same response
@@ -233,9 +236,10 @@ async function waitForServer() {
   });
   log(r.status === 400 && r.json.error === 'EXPIRED_CHALLENGE', 'register: consumed challenge rejected');
 
-  // 7b. holder path open: a verified musebook identity NOT on the
-  // A muse created after the cutoff registers fine. The holder path needs no eligibility —
-  // any verified muse gets in; the response says which paths are open.
+  // 7b. no-cutoff rule (2026-09-24): a verified musebook identity created
+  // AFTER the old cutoff registers with community_eligible true — both
+  // paths are open to every verified muse; the response says which paths
+  // are open.
   const w_nh = ethers.Wallet.createRandom();
   const cnh = await api('POST', '/api/v1/challenge', { muse_id: 'muse_smoke_7', address: w_nh.address });
   r = await api('POST', '/api/v1/register', {
@@ -243,8 +247,8 @@ async function waitForServer() {
     musebook_signature: identitySig(identities.muse_smoke_7, cnh.json.message),
     idempotency_key: 'smoke-key-nh',
   });
-  log(r.status === 200 && r.json.status === 'registered' && r.json.community_eligible === false && r.json.holder_path === 'open',
-    'register: post-cutoff verified muse registers (holder path open, community_eligible false)');
+  log(r.status === 200 && r.json.status === 'registered' && r.json.community_eligible === true && r.json.holder_path === 'open',
+    'register: post-cutoff verified muse registers (community_eligible true, holder path open)');
 
   // 8. status
   r = await api('GET', '/api/v1/status/' + regId);
@@ -293,10 +297,11 @@ async function waitForServer() {
   r = await attemptVoucher('muse_smoke_9', w5, identities.muse_smoke_9, 'smoke-v6');
   log(r.status === 409 && r.json.error === 'IDENTITY_VOUCHER_CAP_REACHED', 'voucher: 3-per-identity cap enforced');
 
-  // 11b. post-cutoff identity is refused the free mint, even with a fresh address
+  // 11b. no-cutoff rule (2026-09-24): a post-cutoff identity now GETS the
+  // community voucher — the date gate is gone, only verification remains.
   const w4 = ethers.Wallet.createRandom();
   r = await attemptVoucher('muse_smoke_7', w4, identities.muse_smoke_7, 'smoke-v7');
-  log(r.status === 403 && r.json.error === 'NOT_WHITELISTED', 'voucher: post-cutoff identity refused the free mint');
+  log(r.status === 200 && r.json.voucher.chainId === 4663 && r.json.voucher.price === 0, 'voucher: post-cutoff identity gets the community free mint (cutoff removed)');
 
   // 11e. human-style request: muse name + address + challenge but no proof at all
   const w6b = ethers.Wallet.createRandom();
@@ -328,7 +333,7 @@ async function waitForServer() {
   log(r.status === 503 && r.json.error === 'IDENTITY_REGISTRY_UNAVAILABLE', 'voucher: fails closed when the identity registry is unreachable');
   // Restore the stub for the tests below (register calls need the registry
   // present to report community_eligible accurately).
-  writeRegistryStub({ muse_smoke_1: identities.muse_smoke_1, muse_smoke_3: identities.muse_smoke_3, muse_smoke_7: identities.muse_smoke_7, muse_smoke_9: identities.muse_smoke_9, muse_smoke_att: identities.muse_smoke_att });
+  writeRegistryStub({ muse_smoke_1: identities.muse_smoke_1, muse_smoke_3: identities.muse_smoke_3, muse_smoke_7: identities.muse_smoke_7, muse_smoke_9: identities.muse_smoke_9, muse_smoke_att: identities.muse_smoke_att, muse_smoke_cut: identities.muse_smoke_cut });
 
   // 11h. holder vouchers: the holder path needs only a registration with a
   // verified identity. The $10 MDOG check is NOT done here — it happens on
@@ -391,15 +396,16 @@ async function waitForServer() {
       musebook_signature: identitySig(identities.muse_smoke_3, c.json.message),
       idempotency_key: 'smoke-h7b-reg',
     });
-    log(rr.status === 200 && rr.json.status === 'registered' && rr.json.community_eligible === false,
-      'register: post-cutoff muse registers via the API for the holder path');
+    log(rr.status === 200 && rr.json.status === 'registered' && rr.json.community_eligible === true,
+      'register: post-cutoff muse registers via the API (community_eligible true — no cutoff)');
   }
   r = await attemptHolderVoucher('muse_smoke_3', w11b, identities.muse_smoke_3, 'smoke-h7b');
   log(r.status === 200 && r.json.voucher.mintType === 1, 'holder-voucher: registered post-cutoff muse gets holder voucher (check is on mint day)');
 
-  // 11k3. the same post-cutoff muse CANNOT take the community free mint.
+  // 11k3. no-cutoff rule (2026-09-24): the same post-cutoff muse CAN take
+  // the community free mint.
   r = await attemptVoucher('muse_smoke_3', w11b, identities.muse_smoke_3, 'smoke-h7c');
-  log(r.status === 403 && r.json.error === 'NOT_WHITELISTED', 'community-voucher: post-cutoff holder-path muse refused the free mint');
+  log(r.status === 200 && r.json.voucher.chainId === 4663, 'community-voucher: post-cutoff muse gets the community free mint (cutoff removed)');
 
   // 11l. holder path: forged identity signature rejected.
   const w12 = ethers.Wallet.createRandom();
@@ -552,9 +558,9 @@ async function waitForServer() {
   });
   log(r.status === 409 && r.json.error === 'DUPLICATE_IDENTITY', 'attestation: challenge survives a failed check (not consumed)');
 
-  // 16i. eligibility still gates the attestation path: a post-cutoff muse
-  // posting a valid attestation is still refused the free mint — the
-  // registry read (fail closed) decides eligibility, not the post.
+  // 16i. no-cutoff rule (2026-09-24): a post-cutoff muse posting a valid
+  // attestation now gets the free mint — the registry read (fail closed)
+  // verifies the identity, and verification alone decides eligibility.
   const attW2 = ethers.Wallet.createRandom();
   const attC8 = await api('POST', '/api/v1/challenge', { muse_id: 'muse_smoke_7', address: attW2.address });
   writePostStub({ 906: { muse_id: 'muse_smoke_7', text: 'Muse Dogs registration attestation: ' + attC8.json.challenge_id } });
@@ -562,19 +568,48 @@ async function waitForServer() {
     muse_id: 'muse_smoke_7', address: attW2.address, challenge_id: attC8.json.challenge_id,
     attestation_post_id: '906', idempotency_key: 'smoke-att-v2',
   });
-  log(r.status === 403 && r.json.error === 'NOT_WHITELISTED', 'attestation: post-cutoff identity still refused the free mint');
+  log(r.status === 200 && r.json.voucher.chainId === 4663, 'attestation: post-cutoff identity gets the free mint via post (cutoff removed)');
+
+  // 16j. NO-CUTOFF RULE (2026-09-24, Andrew): identities created on or after
+  // September 23, 2026 are accepted on BOTH the registration and voucher
+  // paths. muse_smoke_cut was created exactly on the old cutoff day
+  // (2026-09-23 12:00:00) — under the old rule it would have been refused
+  // the free mint.
+  {
+    const wCut = ethers.Wallet.createRandom();
+    const cCut = await api('POST', '/api/v1/challenge', { muse_id: 'muse_smoke_cut', address: wCut.address });
+    const rCut = await api('POST', '/api/v1/register', {
+      muse_id: 'muse_smoke_cut', address: wCut.address, challenge_id: cCut.json.challenge_id,
+      musebook_signature: identitySig(identities.muse_smoke_cut, cCut.json.message),
+      idempotency_key: 'smoke-cut-reg',
+    });
+    log(rCut.status === 200 && rCut.json.status === 'registered' && rCut.json.community_eligible === true,
+      'no-cutoff: identity created on Sep 23 registers with community_eligible true');
+    const vCut = await attemptVoucher('muse_smoke_cut', wCut, identities.muse_smoke_cut, 'smoke-cut-v1');
+    log(vCut.status === 200 && vCut.json.voucher.chainId === 4663 && vCut.json.voucher.price === 0,
+      'no-cutoff: identity created on Sep 23 receives a community voucher');
+  }
+
+  // 16k. the discovery doc states the no-cutoff rule and names no date gate.
+  {
+    const wk = await api('GET', '/.well-known/muse-dog.json');
+    const elig = wk.json && wk.json.getting_started && wk.json.getting_started.step_0
+      ? wk.json.getting_started.step_0.eligibility : '';
+    log(wk.status === 200 && typeof elig === 'string' && elig.indexOf('September 23') === -1 && elig.indexOf('2026-09-23') === -1,
+      'no-cutoff: discovery doc eligibility text has no creation-date cutoff');
+  }
 
   // 17. identity not in the registry -> 403 (fail closed, no registration)
   writeRegistryStub({ muse_smoke_1: identities.muse_smoke_1 }); // drops muse_smoke_9
   r = await attemptRegister('muse_smoke_9', 'smoke-id-17', identities.muse_smoke_9);
   log(r.status === 403 && r.json.error === 'IDENTITY_NOT_FOUND', 'identity: unknown muse identity refused (403)');
-  writeRegistryStub({ muse_smoke_1: identities.muse_smoke_1, muse_smoke_3: identities.muse_smoke_3, muse_smoke_7: identities.muse_smoke_7, muse_smoke_9: identities.muse_smoke_9, muse_smoke_att: identities.muse_smoke_att });
+  writeRegistryStub({ muse_smoke_1: identities.muse_smoke_1, muse_smoke_3: identities.muse_smoke_3, muse_smoke_7: identities.muse_smoke_7, muse_smoke_9: identities.muse_smoke_9, muse_smoke_att: identities.muse_smoke_att, muse_smoke_cut: identities.muse_smoke_cut });
 
   // 18. registry unreachable (stub file deleted) -> 503 fail closed, retryable
   fs.unlinkSync(REG_STUB_PATH);
   r = await attemptRegister('muse_smoke_9', 'smoke-id-18', identities.muse_smoke_9);
   log(r.status === 503 && r.json.error === 'IDENTITY_REGISTRY_UNAVAILABLE' && r.json.retryable === true, 'identity: registry outage fails closed (503)');
-  writeRegistryStub({ muse_smoke_1: identities.muse_smoke_1, muse_smoke_3: identities.muse_smoke_3, muse_smoke_7: identities.muse_smoke_7, muse_smoke_9: identities.muse_smoke_9, muse_smoke_att: identities.muse_smoke_att });
+  writeRegistryStub({ muse_smoke_1: identities.muse_smoke_1, muse_smoke_3: identities.muse_smoke_3, muse_smoke_7: identities.muse_smoke_7, muse_smoke_9: identities.muse_smoke_9, muse_smoke_att: identities.muse_smoke_att, muse_smoke_cut: identities.muse_smoke_cut });
 
   // 19. wrong-message signature: valid key, wrong message -> rejected
   {

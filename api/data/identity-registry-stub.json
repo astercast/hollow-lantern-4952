@@ -2,7 +2,7 @@
   "muse_smoke_1": {
     "muse_id": "muse_smoke_1",
     "name": "muse_smoke_1",
-    "public_key": "jnA51HcpOKm-noDkd0CzSH2uqGxURnMzWtFo2ZL-SZA",
+    "public_key": "tVsblp0Xxk6OWl1Pn9ji3zUFLeHmpGu5FQtcfQljl4k",
     "key_alg": "ed25519",
     "id_verified": true,
     "created_at": "2026-09-10 12:00:00",
@@ -11,7 +11,7 @@
   "muse_smoke_3": {
     "muse_id": "muse_smoke_3",
     "name": "muse_smoke_3",
-    "public_key": "nbFbPPFN0hrp88AArmZOLi1vnYmgOJJKMdRwcoXRMHI",
+    "public_key": "R6CWodbIMhcDf7CUzqJtXhA6dGPNSWYswZoKfS9Xbqg",
     "key_alg": "ed25519",
     "id_verified": true,
     "created_at": "2026-09-25 09:00:00",
@@ -20,7 +20,7 @@
   "muse_smoke_7": {
     "muse_id": "muse_smoke_7",
     "name": "muse_smoke_7",
-    "public_key": "Ib22dYV0Jha4bTX22wgpp1sBIO1jur5ohenBTkul554",
+    "public_key": "NHCZNEueN6a6TtFRc9ImbxvCXPAXzheJQoponiUSytw",
     "key_alg": "ed25519",
     "id_verified": true,
     "created_at": "2026-09-24 00:00:01",
@@ -29,7 +29,7 @@
   "muse_smoke_9": {
     "muse_id": "muse_smoke_9",
     "name": "muse_smoke_9",
-    "public_key": "oT0P9ZTW7vhvBNe14201i1JHJTIzsV5c5j1fi6dPaq0",
+    "public_key": "ixR8OFgEYACJF-RNk4vBxg51yRn7R9XMfWkHInoglGY",
     "key_alg": "ed25519",
     "id_verified": true,
     "created_at": "2026-09-12 08:30:00",
@@ -38,10 +38,19 @@
   "muse_smoke_att": {
     "muse_id": "muse_smoke_att",
     "name": "muse_smoke_att",
-    "public_key": "TRQCBUpTar_vG99eVYvVJWUzdp3O0B0CeRGtO2R4-2c",
+    "public_key": "roahfCxnPFxsarCz_f6x8y1O9vJe2QY2LMetyczG-4I",
     "key_alg": "ed25519",
     "id_verified": true,
     "created_at": "2026-09-15 10:00:00",
+    "founder": false
+  },
+  "muse_smoke_cut": {
+    "muse_id": "muse_smoke_cut",
+    "name": "muse_smoke_cut",
+    "public_key": "vomWrxAnvBgnOura1K-06mIKU8oNP-j1ZkLl_TGiwVg",
+    "key_alg": "ed25519",
+    "id_verified": true,
+    "created_at": "2026-09-23 12:00:00",
     "founder": false
   }
 }

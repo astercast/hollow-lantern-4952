@@ -28,15 +28,16 @@ node e2e-claim-anvil.js   # 13 end-to-end checks on a local Anvil chain:
 
 The smoke test starts the server in-process, then exercises: config, challenge (identity-only, no
 PoW), unknown-field rejection, identity-signature register — including an
-eligible muse (identity created before 2026-09-23, `community_eligible: true`) and a post-cutoff verified
-muse registering for the holder path (`community_eligible: false`) —
+eligible muse (any verified identity, `community_eligible: true`) and a verified
+muse created after September 23, 2026 registering with `community_eligible: true`
+(the creation-date cutoff was removed 2026-09-24) —
 idempotent replay, duplicate-identity/wallet rejection, challenge replay
 rejection, the public registrations counter, status, receipt stub,
 community-voucher caps (3 per address, 3 per identity, live eligibility gate,
 fail-closed when the registry is unreachable), the holder-voucher endpoint (registration
 required, 3-per-address and 3-per-identity caps independent of the community
-caps, refusal for unregistered muses, post-cutoff muses refused the
-community free mint), forged-signature and legacy wallet-signature/PoW field
+caps, refusal for unregistered muses, post-cutoff muses get the
+community free mint too — no cutoff since 2026-09-24), forged-signature and legacy wallet-signature/PoW field
 refusal, identity-registry outage failing closed, the rate limit firing at the
 default 60 req/min/IP, and the discovery doc. The rewards section then checks `/rewards/config` shape, the
 fail-closed 404s, and runs `scripts/rewards-publish.js` end-to-end on 7 fixture
@@ -88,7 +89,8 @@ served `/rewards/claim` shape — then deletes the fixtures. It wipes
   `{muse_id, address, challenge_id, musebook_signature, idempotency_key}`.
   Naming an eligible `muse_id` without that muse's identity key is refused.
   Eligibility is checked LIVE against the musebook identity registry (no snapshot
-  file): identity created strictly before September 23, 2026, 25 founders
+  file): any verified musebook identity is eligible — the 2026-09-23
+  creation-date cutoff was removed 2026-09-24 — 25 founders
   auto-included, no post-count rule. A down registry fails closed (503).
   3 vouchers per address and 3 per muse identity on this path; a muse eligible
   for both paths can use both, up to 6 total.

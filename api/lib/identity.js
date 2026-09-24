@@ -115,9 +115,10 @@ async function fetchRegistryIdentity(muse_id) {
 // Verify that `signatureB64url` is a valid Ed25519 signature by the registered
 // key of `muse_id` over the exact `message` string (UTF-8).
 // Returns the verified identity doc fields on success; throws on any failure.
-// `founder` and `created_at` are returned so callers can decide community
-// free-mint eligibility live (identity created strictly before 2026-09-23,
-// founders auto-included) — no static snapshot, so no snapshot staleness.
+// `founder` and `created_at` are returned so callers can report
+// community-eligibility context — any verified identity is eligible for the
+// free community mint (the 2026-09-23 creation-date cutoff was removed
+// 2026-09-24, Andrew). No static snapshot, so no snapshot staleness.
 async function verifyIdentitySignature(muse_id, message, signatureB64url) {
   const ident = await fetchRegistryIdentity(muse_id);
 

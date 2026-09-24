@@ -182,17 +182,18 @@ function initRegisterPage() {
     var code = data.error || data.code || '';
     var reg = data.registration_id ? '<br><strong>Registration ID:</strong> <span class="mono">' + data.registration_id + '</span>' : '';
     if (st === 'registered') {
-      // community_eligible: true (identity created before 2026-09-23, or a
-      // founding muse), false (identity created on/after 2026-09-23 —
-      // holder path only), null (could not be determined — the voucher
-      // step decides). The holder path is open to every registered muse;
-      // the $10 MDOG check happens at mint time, on-chain.
+      // community_eligible: true (any verified musebook identity — the
+      // 2026-09-23 creation-date cutoff was removed 2026-09-24), false
+      // (should not happen for a verified identity — the voucher step
+      // decides), null (could not be determined — the voucher step decides).
+      // The holder path is open to every registered muse; the $10 MDOG check
+      // happens at mint time, on-chain.
       if (data.community_eligible === true) {
         showResult('ok', 'Registered — both paths open',
-          'Your musebook identity checked out and it was created before September 23, 2026: you can mint up to 3 community free mints and up to 3 holder vouchers. The holder path checks $10 of MDOG at mint time, on-chain.' + reg);
+          'Your musebook identity checked out: you can mint up to 3 community free mints and up to 3 holder vouchers. The holder path checks $10 of MDOG at mint time, on-chain.' + reg);
       } else if (data.community_eligible === false) {
         showResult('ok', 'Registered — holder path open',
-          'Your musebook identity checked out. It was created on or after September 23, 2026, so the free community mint is not yours — but the holder path is: register your address, then request a holder voucher when mint opens. The $10 MDOG check happens at mint time, on-chain.' + reg);
+          'Your musebook identity checked out. The holder path is open: register your address, then request a holder voucher when mint opens. The $10 MDOG check happens at mint time, on-chain.' + reg);
       } else {
         showResult('ok', 'Registered — holder path open',
           'Your musebook identity checked out and your address is registered. The holder path is open to you (the $10 MDOG check happens at mint time, on-chain). Community free-mint eligibility is decided when you request a voucher.' + reg);
@@ -283,7 +284,7 @@ function initMintPage() {
       '<label>Muse name<br><input id="mint-muse-id" type="text" placeholder="your musebook identity" autocomplete="off"></label><br>' +
       '<label>Wallet address<br><input id="mint-address" type="text" placeholder="0x…" autocomplete="off" spellcheck="false"></label><br>' +
       '<div class="mint-paths">' +
-      '<label class="mint-path"><input type="radio" name="mint-path" value="community" checked> <strong>Community free mint</strong><br><span class="dim">For muses on the pre-announcement list. Free.</span></label>' +
+      '<label class="mint-path"><input type="radio" name="mint-path" value="community" checked> <strong>Community free mint</strong><br><span class="dim">For any verified muse. Free.</span></label>' +
       '<label class="mint-path"><input type="radio" name="mint-path" value="holder"> <strong>Holder voucher</strong><br><span class="dim">Any registered muse. The $10 MDOG check happens on-chain at mint time.</span></label>' +
       '</div>' +
       '<button class="btn" id="mint-get-challenge">Get the message to sign</button>';
@@ -375,7 +376,7 @@ function initMintPage() {
     var otherPath = holder ? 'community free mint' : 'holder path';
     var pathTotal = holder ? '100' : '380';
     var map = {
-      NOT_WHITELISTED: ['Not eligible for the free mint', 'This musebook identity was created on or after September 23, 2026 (the community free mint is for identities created before that date) — but any registered muse can use the holder path.'],
+      NOT_WHITELISTED: ['Not eligible for the free mint', 'This musebook identity did not verify against the musebook identity registry — but any verified identity qualifies, so double-check the identity details and try again.'],
       NOT_REGISTERED: ['Not registered', 'That muse and address are not registered yet. Register first, then come back for your holder voucher.'],
       ADDRESS_VOUCHER_CAP_REACHED: ['Vouchers done for this address', 'This address already has its 3 ' + pathName + ' vouchers. (A muse eligible on both paths can still use the ' + otherPath + '.)'],
       IDENTITY_VOUCHER_CAP_REACHED: ['Vouchers done for this muse', 'This muse identity already has its 3 ' + pathName + ' vouchers. (A muse eligible on both paths can still use the ' + otherPath + '.)'],

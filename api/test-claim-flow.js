@@ -175,32 +175,32 @@ async function run() {
   const q = new ClaimQueue({ relayer: fakeRelayer, store: memStore() });
   const v1 = { ...voucher, nonce: '111' };
   const v2 = { ...voucher, nonce: '222' };
-  const r1 = q.enqueue({ voucher: v1, signature: sig, idempotencyKey: 'k1' });
-  const r1b = q.enqueue({ voucher: v1, signature: sig, idempotencyKey: 'k1' });
+  const r1 = await q.enqueue({ voucher: v1, signature: sig, idempotencyKey: 'k1' });
+  const r1b = await q.enqueue({ voucher: v1, signature: sig, idempotencyKey: 'k1' });
   assert.equal(r1b.duplicate, true);
   assert.equal(r1b.job.job_id, r1.job.job_id);
-  const r2 = q.enqueue({ voucher: v2, signature: sig, idempotencyKey: 'k2' });
+  const r2 = await q.enqueue({ voucher: v2, signature: sig, idempotencyKey: 'k2' });
   assert.equal(r2.duplicate, false);
   assert.notEqual(r2.job.job_id, r1.job.job_id);
   // Same nonce, different recipient => separate job (NOT a duplicate).
   const otherRecipient = ethers.Wallet.createRandom().address;
-  const r3 = q.enqueue({ voucher: { ...voucher, recipient: otherRecipient, nonce: '111' }, signature: sig, idempotencyKey: 'k3' });
+  const r3 = await q.enqueue({ voucher: { ...voucher, recipient: otherRecipient, nonce: '111' }, signature: sig, idempotencyKey: 'k3' });
   assert.equal(r3.duplicate, false);
   assert.notEqual(r3.job.job_id, r1.job.job_id);
   // Same recipient, same nonce, different idempotency key => still duplicate.
-  const r1c = q.enqueue({ voucher: v1, signature: sig, idempotencyKey: 'k-other' });
+  const r1c = await q.enqueue({ voucher: v1, signature: sig, idempotencyKey: 'k-other' });
   assert.equal(r1c.duplicate, true);
   assert.equal(r1c.job.job_id, r1.job.job_id);
   // byRecipientNonce: finds the job for (recipient, nonce), null otherwise.
-  assert.equal(q.byRecipientNonce(recipient, '111').job_id, r1.job.job_id);
-  assert.equal(q.byRecipientNonce(otherRecipient, '111').job_id, r3.job.job_id);
-  assert.equal(q.byRecipientNonce(recipient, '999'), null);
+  assert.equal((await q.byRecipientNonce(recipient, '111')).job_id, r1.job.job_id);
+  assert.equal((await q.byRecipientNonce(otherRecipient, '111')).job_id, r3.job.job_id);
+  assert.equal(await q.byRecipientNonce(recipient, '999'), null);
   ok('queue is idempotent by (recipient, nonce), not nonce alone');
 
   const waitFor = async (queue, jobId, want, timeoutMs = 15000) => {
     const start = Date.now();
     for (;;) {
-      const job = queue.get(jobId);
+      const job = await queue.get(jobId);
       if (want.includes(job.status)) return job;
       if (Date.now() - start > timeoutMs) throw new Error('timeout waiting for ' + jobId + ' -> ' + want);
       await new Promise((r) => setTimeout(r, 100));
@@ -219,7 +219,7 @@ async function run() {
     async waitForReceipt() { throw new Error('should not be called'); },
   };
   const q2 = new ClaimQueue({ relayer: failRelayer, store: memStore() });
-  const rf = q2.enqueue({ voucher: { ...voucher, nonce: '333' }, signature: sig, idempotencyKey: 'k3' });
+  const rf = await q2.enqueue({ voucher: { ...voucher, nonce: '333' }, signature: sig, idempotencyKey: 'k3' });
   const failed = await waitFor(q2, rf.job.job_id, ['failed']);
   assert.equal(failed.attempts, 1);
   assert.equal(failed.error.code, 'VOUCHER_EXPIRED');
@@ -236,7 +236,7 @@ async function run() {
     async waitForReceipt(hash) { return { hash, status: 'confirmed', blockNumber: 43, tokenId: '8' }; },
   };
   const q3 = new ClaimQueue({ relayer: flakyRelayer, store: memStore() });
-  const rr = q3.enqueue({ voucher: { ...voucher, nonce: '444' }, signature: sig, idempotencyKey: 'k4' });
+  const rr = await q3.enqueue({ voucher: { ...voucher, nonce: '444' }, signature: sig, idempotencyKey: 'k4' });
   const retried = await waitFor(q3, rr.job.job_id, ['confirmed', 'failed'], 30000);
   assert.equal(retried.status, 'confirmed');
   assert.equal(retried.attempts, 2);
