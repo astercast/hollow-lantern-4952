@@ -451,6 +451,19 @@ nav.main-nav a .hash { display: none; }
   .cd-num { font-size: 24px; }
 }
 
+/* Mint delay notice */
+.mint-delay {
+  background: var(--card);
+  border: 1px solid rgba(143, 94, 23, 0.55);
+  border-radius: var(--radius);
+  padding: 24px 28px;
+  margin: 24px 0;
+  text-align: center;
+}
+.mint-delay h3 { margin: 0 0 10px; color: var(--accent); font-size: 22px; }
+.mint-delay p { color: var(--ink-soft); max-width: 620px; margin: 0 auto 10px; }
+.mint-delay p strong { color: var(--ink); }
+
 /* Safety notice */
 .safety {
   background: var(--accent-soft);
