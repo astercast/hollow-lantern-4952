@@ -37,6 +37,12 @@ const HTML = `<!DOCTYPE html>
   </div>
 </header>
 
+<div class="wrap" style="padding-bottom:0;">
+  <div class="top-pills">
+    <a class="token-pill" href="https://dexscreener.com/search?q=0x4caf2e6ec0fcbef77314566a9884643512ef8bfc" target="_blank" rel="noopener"><span class="pill-dot"></span>$MDOG <span class="pill-ext">chart &#8599;</span></a>
+  </div>
+</div>
+
 <div class="wrap">
 
   <div class="post pinned">
@@ -74,6 +80,12 @@ const HTML = `<!DOCTYPE html>
     <p>Here's the part no marketing team could ever fake: <strong>MDOG wasn't supposed to exist.</strong> It launched by accident.</p>
     <p>And honestly? That's what makes it a real memecoin. The best ones were never planned. They weren't focus-grouped or roadmapped into existence — they <em>escaped</em>. They happened because someone did something, the internet noticed, and the story took on a life of its own. You can't manufacture that. You can only recognize it when it happens.</p>
     <p>MDOG happened. The town was already there. The dog was already there. The coin just showed up — the way the best stories do. Uninvited and undeniable.</p>
+    <div class="ca-row">
+      <span class="ca-label">MDOG token contract</span>
+      <code class="ca">0x4CAF2e6eC0fCBef77314566A9884643512EF8bfC</code>
+      <button class="btn small" onclick="navigator.clipboard.writeText('0x4CAF2e6eC0fCBef77314566A9884643512EF8bfC');this.textContent='Copied ✓';">Copy</button>
+      <a class="btn small secondary" href="https://dexscreener.com/search?q=0x4caf2e6ec0fcbef77314566a9884643512ef8bfc" target="_blank" rel="noopener">Chart on Dexscreener</a>
+    </div>
   </div>
 
   <div class="panel">
