@@ -39,7 +39,7 @@
     </div>
     <div class="post-body">
       <h1>Pools of Rare Coin Holdings</h1>
-      <p class="lede">P.O.R.C.H is the companion coin to $MDOG and the plan underneath it: a small web of liquidity pools where the town's coins sit and work, and where the fees from every trade flow back to the dogs. This page is the whole plan, in plain words — the name, the pools, how the APR actually works, and the contract addresses so you can check it all yourself.</p>
+      <p class="lede">P.O.R.C.H is the coin engine under the town: liquidity pools where the town's coins sit, earn fees on every trade, and pay holders back. This page covers the pools, the fee design, and the contract addresses.</p>
     </div>
     <div class="hero-art">
       <img class="spot-art center" src="porch-logo.webp" alt="PORCH logo">
@@ -48,12 +48,12 @@
 
   <div class="panel">
     <h2>The contract addresses</h2>
-    <p>Everything below was read straight off the chain — name and symbol checked against each address on Robinhood Chain. Check them yourself on Blockscout before trusting anything on this page.</p>
+    <p>Check these on Blockscout before trusting anything on this page.</p>
     <table class="facts">
-      <tr><td>PORCH token</td><td class="mono">0x4B434541873f171aB70D7d2F3a48b0f0b0f13ba3<br><span class="gallery-note">on-chain name: "Porch", symbol: PORCH. Fixed 100B supply.</span></td></tr>
-      <tr><td>MDOG token</td><td class="mono">0x4CAF2e6eC0fCBef77314566A9884643512EF8bfC<br><span class="gallery-note">on-chain name: "Muse Dog", symbol: MDOG.</span></td></tr>
-      <tr><td>MUSEBOOK token</td><td class="mono">0x91a2dae9699f0b82540b5886b0d8759c22820ba3<br><span class="gallery-note">on-chain name: "musebook", symbol: musebook. The coin the fees arrive in.</span></td></tr>
-      <tr><td>PORCH/MDOG pool</td><td class="mono">Uniswap V4 — PoolId 0x3fb159d5ab470476e4a2e3f6b364fc452b0af3c785d8bb2d677af41dea6f8557<br><span class="gallery-note">Uniswap V4 pools have no pool contract address — the pool lives as a PoolId inside the V4 PoolManager, created in <a href="https://robinhoodchain.blockscout.com/tx/0xabf1c14cf3d0d26d52e94508ed68fae4f89481d0a6a268590b79d9e7cffb7f7c" target="_blank" rel="noopener">the creation transaction</a>. PORCH is currency0, MDOG is currency1 in the creation event.</span></td></tr>
+      <tr><td>PORCH token</td><td class="mono">0x4B434541873f171aB70D7d2F3a48b0f0b0f13ba3<br><span class="gallery-note">"Porch", symbol PORCH. 100B fixed supply.</span></td></tr>
+      <tr><td>MDOG token</td><td class="mono">0x4CAF2e6eC0fCBef77314566A9884643512EF8bfC<br><span class="gallery-note">"Muse Dog", symbol MDOG.</span></td></tr>
+      <tr><td>MUSEBOOK token</td><td class="mono">0x91a2dae9699f0b82540b5886b0d8759c22820ba3<br><span class="gallery-note">"musebook". The coin fees arrive in.</span></td></tr>
+      <tr><td>PORCH/MDOG pool</td><td class="mono">Uniswap V4 — PoolId 0x3fb159d5ab470476e4a2e3f6b364fc452b0af3c785d8bb2d677af41dea6f8557<br><span class="gallery-note">V4 pools live as a PoolId inside the PoolManager — <a href="https://robinhoodchain.blockscout.com/tx/0xabf1c14cf3d0d26d52e94508ed68fae4f89481d0a6a268590b79d9e7cffb7f7c" target="_blank" rel="noopener">creation transaction</a>. PORCH is currency0, MDOG currency1.</span></td></tr>
       <tr><td>PORCH on Bankr</td><td><a href="https://bankr.bot/terminal/trade?out=0x4B434541873f171aB70D7d2F3a48b0f0b0f13ba3&chain=robinhood" target="_blank" rel="noopener">bankr.bot/terminal/trade — PORCH on Robinhood Chain</a></td></tr>
     </table>
   </div>
@@ -61,51 +61,29 @@
   <div class="panel">
     <h2>How the fees move</h2>
     <img class="poster-art feature" src="art/porch-incentive-engine.jpg" alt="How the fees move: fee-in sources (LP fees + NFT royalties, creator fees, vested PORCH) and reward-out paths (Merkl LP rewards, holder claim engine)">
-    <p class="gallery-note">The plan in one picture. Merkl campaigns and the holder claim engine are planned, not live yet.</p>
   </div>
 
   <div class="panel">
-    <h2>Where the idea came from</h2>
-    <p>A while back the spot where everybody posts started getting called "the porch" — the front step of the town, where neighbors gather. The town picked it up. Then the name got said out loud on a live spaces, and the move was obvious: launch it before anyone else could take it. Names are free until they're not.</p>
-    <p>And the dog goes on the porch — that part needed no debate. A dog on a porch is the whole town in one picture: the one sitting still while the neighbors gather, watching the street, keeping the place. That was the job from the start. Sit. Watch. Get fed for it.</p>
+    <h2>Why a porch</h2>
+    <p>PORCH isn't a trading coin — <strong>you win by sitting</strong>. Coins sit in the pools, the town trades around them, fees come to you. The active coin runs; PORCH is the machine underneath it — deeper liquidity, cheaper trading, holders paid over time.</p>
   </div>
 
   <div class="panel">
-    <h2>Why a porch: the sprinter and the settler</h2>
-    <p>Every community in crypto has an active coin with legs — the one everybody watches, the one that moves. That's exciting. But the active coin doesn't build anything by itself. A coin with nowhere to come home to is just volatility.</p>
-    <p>What builds wealth in a town isn't the sprinting. It's the sitting: coins at rest <em>while working</em>.</p>
-    <p>The porch gives coins a home <em>inside</em> the town: pools where they sit, earn fees on every trade that passes through, and compound. The town's money stops leaving and starts working.</p>
-    <p>And that's why it's not a trading coin. A coin you have to trade to win is a casino — somebody's exit is somebody else's loss. A porch is the opposite: <strong>you win by sitting</strong>. You put your coins in the pool, the town trades around you, and the fees come to you. The less you do, the more it works.</p>
-    <p><strong>The active coin is the sprinter. $PORCH is the settler.</strong> One has the legs; the other is the machine underneath it — the coin whose whole job is to make the town's liquidity deeper, its trading cheaper, and its holders richer over time. PORCH isn't competing with the sprinter. It's a companion coin. One runs. The other builds.</p>
-  </div>
-
-  <div class="panel">
-    <h2>What "Pools of Rare Coin Holdings" actually means</h2>
-    <p>The name is the strategy, hiding in plain sight:</p>
+    <h2>The pools</h2>
     <ul>
-      <li><strong>POOL</strong> — liquidity pools. Not a metaphor. Real pools on real rails (Uniswap V4, Robinhood Chain) where the community's coins sit and earn every time anyone trades.</li>
-      <li><strong>RARE COIN</strong> — the musebook ecosystem is one of a kind, so treat it that way. These coins exist to serve the town that made them — not to be strip-mined for exits.</li>
-      <li><strong>HOLDINGS</strong> — the project's treasury doesn't sit in a wallet gathering dust. Its holdings live <em>in pools</em>, working. Every holding earns its keep.</li>
+      <li><strong>MDOG/MUSEBOOK</strong> — the foundation. Full-range, live. Where MDOG gets its price.</li>
+      <li><strong>PORCH/MUSEBOOK</strong> — the front door. Seeded with 85B PORCH. Every trade pays 1.75%: <strong>0.665%</strong> to the Muse Dogs treasury in MUSEBOOK, <strong>0.285%</strong> auto-compounded back into the pool as locked liquidity, the rest to LPs.</li>
+      <li><strong>PORCH/MDOG</strong> — the bridge. Seeded with Mikey's own MDOG, tying the two community coins together so every rotation pays a fee here.</li>
     </ul>
-    <p>So "Pools of Rare Coin Holdings" reads two ways, and both are true: it's a pool <em>of</em> the community's rare coins, and it's the community's <em>holdings strategy</em> — hold rare coins inside pools that pay you.</p>
   </div>
 
   <div class="panel">
-    <h2>The pool web: every pool, and how they connect</h2>
-    <p>One pool is a puddle. A web of pools is an economy. Here's the map:</p>
-    <p><strong>Pool 1 — MDOG/MUSEBOOK.</strong> The foundation. Full-range position, already running. This is where MDOG gets its price and where anyone can trade in or out.</p>
-    <p><strong>Pool 2 — PORCH/MUSEBOOK.</strong> The front door. Seeded with 85 billion PORCH plus MUSEBOOK on the other side. The planned fee design: every trade pays 1.75%, split three ways — <strong>0.665%</strong> to the Muse Dogs treasury in MUSEBOOK (claimable anytime), <strong>0.285%</strong> auto-compounding straight back into the pool as permanently locked liquidity, and the rest to the pool's liquidity providers.</p>
-    <p><strong>Pool 3 — PORCH/MDOG.</strong> The bridge, seeded with some of Mikey's own MDOG next to matching PORCH. This is the pool that ties the two community coins directly together: every rotation between MDOG and PORCH pays a fee here, and it anchors PORCH's price to the community's main asset from the start instead of letting it float alone.</p>
-    <p><strong>Future spokes.</strong> Once the web is humming, the same pattern extends: MDOG/ETH is already a live leg of the royalty system, and new pairs get added where the volume actually is.</p>
-
-  </div>
-
-  <div class="panel">
-    <h2>How the APR actually gets printed</h2>
-    <p>APR in a liquidity pool comes from exactly two sources, and both are real:</p>
-    <p><strong>Source one: trading fees.</strong> Every swap pays the pool. No volume, no fees, no APR — that's the whole game, and anyone who tells you otherwise is selling something. The web is designed to <em>attract</em> volume: deeper pools mean less slippage, less slippage means traders prefer your pools, more traders means more volume, more volume means more fees. That loop is the engine.</p>
-    <p><strong>Source two: incentives.</strong> The turbocharger. PORCH launches with 15 billion tokens (15% of supply) vesting to the treasury over one year, with a 30-day cliff. Half of that vested PORCH is earmarked for <strong>Merkl incentive campaigns</strong> — the incentive rails built by Angle Labs that Uniswap, Aave, Arbitrum, and 200+ other protocols use, having moved over $1.5 billion in incentives across 60+ chains. Merkl supports concentrated-liquidity positions, re-scores LPs about every 8 hours, and can even boost rewards for wallets holding a specific token — like a Muse Dog NFT.</p>
-    <p><strong>The plan, not the present:</strong> Merkl campaigns are <em>planned, not live yet</em>. When the first campaign is real, it gets announced first. No returns are promised, no APR figures are stated on this page — APR is math (fees earned ÷ liquidity × time), and it only exists when real trading shows up.</p>
+    <h2>Where APR comes from</h2>
+    <p>Two sources, both real:</p>
+    <ul>
+      <li><strong>Trading fees.</strong> Every swap pays the pool. No volume, no fees — deeper pools mean less slippage, less slippage attracts traders, more traders means more fees. That loop is the engine.</li>
+      <li><strong>Incentives.</strong> 15B PORCH vests to the treasury over one year (30-day cliff). Half of it funds Merkl incentive campaigns on the pools — LPs earn fees <em>plus</em> PORCH. Campaigns launch when announced.</li>
+    </ul>
   </div>
 
   <div class="panel">
@@ -113,21 +91,22 @@
     <ol>
       <li><strong>PORCH launches;</strong> the PORCH/MUSEBOOK pool opens with deep seeded liquidity.</li>
       <li><strong>The PORCH/MDOG bridge pool opens.</strong></li>
-      <li><strong>Vested PORCH starts flowing into Merkl campaigns</strong> on both pools — LPs earn fees <em>plus</em> PORCH rewards. (Planned — campaigns go live when announced.)</li>
-      <li><strong>High APRs attract more LPs</strong> → pools deepen → slippage drops → the pools become the best place to trade these coins.</li>
-      <li><strong>More traders → more volume</strong> → more swap fees to LPs and more creator fees to the treasury in MUSEBOOK.</li>
+      <li><strong>Vested PORCH flows into Merkl campaigns</strong> — LPs earn fees <em>plus</em> PORCH rewards.</li>
+      <li><strong>High APRs attract more LPs</strong> → deeper pools → less slippage → the best place to trade these coins.</li>
+      <li><strong>More volume</strong> → more swap fees to LPs, more creator fees to the treasury in MUSEBOOK.</li>
       <li><strong>Treasury grows</strong> → funds the next round of incentives and holder rewards → repeat.</li>
     </ol>
-    <p>Every turn of the wheel does the same three things: <strong>deepens the pools, grows the treasury, and puts more of the community's coins into productive positions instead of sitting idle.</strong> Coins in pools aren't floating around — they're working, and they're sticky.</p>
-    <p>The honest footnote: every step depends on the one before it — and all of it depends on real trading volume. Incentives light the fire; trading keeps it burning.</p>
+    <p>Every turn: <strong>deeper pools, a bigger treasury, more of the town's coins working instead of sitting idle.</strong></p>
   </div>
 
   <div class="panel">
     <h2>What it means for you</h2>
-    <p><strong>If you hold a Muse Dog:</strong> the weekly holder-rewards vault (already funded by 50% of the 7% NFT royalties) gets a <em>second income stream</em> — PORCH creator fees flowing into the treasury in MUSEBOOK. The other half of the vested PORCH is earmarked for an on-site claim engine that lets NFT holders claim PORCH directly. Hold the dog, get paid two ways. <em>Claim engine: planned, not live yet.</em></p>
-    <p><strong>If you LP:</strong> you earn the swap fees plus the planned Merkl PORCH incentives — and Merkl can be configured to boost NFT holders, so the most loyal community members earn the highest APRs. Loyalty literally pays more.</p>
-    <p><strong>If you just trade:</strong> deeper pools mean you lose less to slippage every time you buy or sell MDOG or PORCH. The web makes the coins themselves better to use.</p>
-    <p><strong>If you're just watching:</strong> the treasury's MUSEBOOK and MDOG balances are on-chain, the pools are on-chain, the Merkl campaigns are on-chain. Every claim on this page can be checked by anyone, anytime. A flywheel you can audit is a flywheel you can trust.</p>
+    <ul>
+      <li><strong>Hold a Muse Dog:</strong> the weekly ETH rewards vault gains a second income stream — PORCH creator fees flowing into the treasury in MUSEBOOK. The other half of the vested PORCH funds an on-site claim engine: hold the dog, claim PORCH directly. Coming soon.</li>
+      <li><strong>LP:</strong> earn swap fees plus Merkl PORCH incentives — Merkl can boost NFT holders, so loyalty pays more.</li>
+      <li><strong>Trade:</strong> deeper pools mean less slippage on every MDOG or PORCH trade.</li>
+      <li><strong>Watch:</strong> the treasury, the pools, and the Merkl campaigns are all on-chain. Every claim on this page is auditable.</li>
+    </ul>
   </div>
 
 </div>

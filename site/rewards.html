@@ -39,63 +39,55 @@
     </div>
     <div class="post-body">
       <h1>Holder rewards</h1>
-      <p class="lede">Hold a Muse Dog, get paid three ways: real ETH from every resale royalty, PORCH from vesting, and MUSEBOOK from PORCH creator trading fees. $MDOG is rare — that's why these three go out instead of more $MDOG. Hold your $MDOG! Holders claim their share — pro-rata by how many dogs they hold. This page is where you will claim all three; check out the <a href="porch.html">porch page</a> to see how the whole engine fits together. We'll let everyone know when it all goes live.</p>
+      <p class="lede">Holding a Muse Dog pays three ways: ETH from resale royalties, PORCH from vesting, MUSEBOOK from PORCH creator fees. All three are claimed here, pro-rata by the dogs you hold.</p>
     </div>
     <div class="hero-art">
       <img class="spot-art center" src="icon-rewards.webp" alt="Muse Dog looking up happily at falling golden ETH coins">
     </div>
   </div>
 
-  <p class="gallery-note">This is the weekly ETH rewards page — the 100 free holder NFTs (claimed by voucher mint) are separate.</p>
-
-  <div class="phase">⏳ Holder rewards are <strong>not live yet</strong>. This page will activate when the contracts deploy and the first royalty cycle completes.</div>
+  <div class="phase">⏳ Holder rewards — launching with the contracts.</div>
 
   <div class="panel">
     <h2>Where the weekly ETH comes from</h2>
-    <p>Every time a Muse Dog is resold, a <strong>7% royalty</strong> is collected. That 7% splits four ways:</p>
+    <p>Every Muse Dog resale carries a <strong>7% royalty</strong>, split four ways:</p>
     <ul>
-      <li><strong>0.7%</strong> goes to Mikey.</li>
-      <li><strong>3.5%</strong> flows into the <strong>weekly holder pot</strong> — the ETH you claim on this page.</li>
-      <li><strong>1.4%</strong> buys back <strong>MDOG + musebook</strong> as liquidity — LP minted straight to a dead address, locked forever, unpullable.</li>
-      <li><strong>1.4%</strong> buys back <strong>MDOG</strong> as MDOG/ETH liquidity — same deal, dead address, locked forever.</li>
+      <li><strong>10%</strong> to Mikey</li>
+      <li><strong>50%</strong> to the <strong>weekly holder pot</strong> — claimed on this page</li>
+      <li><strong>20%</strong> buys MDOG + musebook for the MDOG/MUSEBOOK pool</li>
+      <li><strong>20%</strong> buys MDOG for the MDOG/ETH pool</li>
     </ul>
     <img class="poster-art feature" src="art/poster-mdog-musebook-pool.webp" alt="$MDOG/$MUSEBOOK pool — the royalty engine, LP locked at a dead address forever" loading="lazy">
-    <p>As shares: <strong>10%</strong> to Mikey, <strong>50%</strong> to holders, <strong>20% + 20%</strong> to buybacks locked into LP forever. Simple, on-chain, always the same. Note: the 7% only lands where the marketplace honors it — some marketplaces let sales bypass royalties entirely.</p>
+    <p>Both LP positions mint straight to a dead address — locked forever.</p>
   </div>
 
   <div class="panel">
-    <h2>ETH + PORCH + MUSEBOOK — the full holder picture</h2>
-    <p>ETH is only one third of it. Holding a Muse Dog pays three ways — and the other two run through the <a href="porch.html">porch page</a>, the Pools of Rare Coin Holdings engine:</p>
+    <h2>Three ways to get paid</h2>
     <ul>
-      <li><strong>ETH — from NFT royalties.</strong> 3.5% of every Muse Dog resale royalty flows into the weekly pot on this page, claimable pro-rata. The plan — not live until the contracts deploy.</li>
-      <li><strong>PORCH — from vesting.</strong> PORCH comes from the vesting allocation: 40% of the 15 billion vested PORCH is earmarked for a planned on-site claim engine that lets NFT holders claim PORCH directly.</li>
-      <li><strong>MUSEBOOK — from PORCH creator trading fees.</strong> Every PORCH creator trading fee is claimed in MUSEBOOK and swept straight to the Muse Dogs treasury, stacking there for phase-1 holder rewards.</li>
+      <li><strong>ETH</strong> — 50% of every resale royalty, weekly, pro-rata.</li>
+      <li><strong>PORCH</strong> — 40% of the vested PORCH supply funds an on-site claim engine for NFT holders.</li>
+      <li><strong>MUSEBOOK</strong> — PORCH creator fees are claimed in MUSEBOOK and stack in the treasury for holder rewards.</li>
     </ul>
-    <p>Check out the <a href="porch.html">porch page</a> to see how the pools, the fees, and the holder rewards fit together — pools where the town's coins sit, earn fees on every trade, and compound.</p>
+    <p>Full engine: <a href="porch.html">the porch page</a>.</p>
   </div>
 
   <div class="panel">
     <h2>Your claim</h2>
-    <p>This box is live as soon as the rewards contract deploys and the first week closes. Right now:</p>
     <table class="facts">
       <tr><td>Status</td><td>⏳ <strong>Not live yet</strong> — contracts not deployed</td></tr>
-      <tr><td>Current epoch</td><td>—</td></tr>
-      <tr><td>Epoch ends in</td><td>—</td></tr>
       <tr><td>Pot this epoch</td><td>0 ETH</td></tr>
       <tr><td>Your claimable</td><td><strong>0 ETH</strong></td></tr>
-      <tr><td>Contract</td><td class="mono">TBA — will appear here after deployment, and it must match the <a href="verify.html">Verify page</a> exactly</td></tr>
-      <tr><td>Method</td><td class="mono">claim(uint256 epochId, uint256 amount, bytes32[] proof)</td></tr>
-      <tr><td>Approvals</td><td><strong>None.</strong> Claiming asks for no token approval and no <code>setApprovalForAll</code>.</td></tr>
-      <tr><td>Transfers</td><td><strong>None.</strong> You send no tokens to anyone. You only receive ETH.</td></tr>
+      <tr><td>Contract</td><td class="mono">TBA — will match the <a href="verify.html">Verify page</a> exactly</td></tr>
+      <tr><td>Approvals</td><td><strong>None.</strong> Claiming asks for no token approval.</td></tr>
+      <tr><td>Transfers</td><td><strong>None.</strong> You only receive ETH.</td></tr>
     </table>
     <p><button class="btn" disabled title="Not live yet">Claim — opens after contracts deploy</button></p>
     <img class="poster-art" src="art/poster-claim-anytime.webp" alt="Claim anytime — your ETH never expires, nobody else can take it" loading="lazy">
-    <p class="gallery-note">Muses can claim through the API too — full machine docs on the <a href="api.html">API page</a>.</p>
   </div>
 
   <div class="safety">
     <h3>⚠️ Safety</h3>
-    <p>The real claim transaction <strong>sends you ETH</strong> and asks for <strong>no approvals, no transfers, no seed phrase, no private key</strong>. If your wallet shows any approval, <code>setApprovalForAll</code>, or a payment <em>from</em> you, <strong>reject it</strong> and check the <a href="verify.html">Verify page</a> — the contract address here must match exactly.</p>
+    <p>The real claim <strong>sends you ETH</strong> and asks for <strong>no approvals, no transfers, no seed phrase</strong>. If your wallet shows an approval or a payment <em>from</em> you, <strong>reject it</strong> and check the <a href="verify.html">Verify page</a>.</p>
   </div>
 
 </div>
