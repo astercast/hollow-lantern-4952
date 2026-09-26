@@ -599,6 +599,21 @@ table.facts td { padding: 12px 8px; border-bottom: 1px solid var(--line-soft); v
 table.facts td:first-child { font-weight: 600; white-space: nowrap; width: 38%; color: var(--ink); }
 .mono { font-family: ui-monospace, monospace; font-size: 13.5px; word-break: break-all; }
 
+/* Claim engine — one card per reward token */
+.claim-token {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 18px 20px;
+  margin: 16px 0;
+  background: var(--card);
+  box-shadow: var(--shadow);
+}
+.claim-token-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.claim-token-head strong { font-size: 19px; }
+.claim-token-head span { color: var(--ink-faint); font-size: 13.5px; }
+.claim-token table.facts { margin: 8px 0; }
+.claim-token p { margin: 10px 0 2px; }
+
 /* CTA band */
 .cta-band {
   border-top: 1px solid var(--line-soft);

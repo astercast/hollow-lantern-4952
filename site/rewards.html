@@ -75,19 +75,44 @@
     <h2>Your claim</h2>
     <table class="facts">
       <tr><td>Status</td><td>⏳ <strong>Not live yet</strong> — contracts not deployed</td></tr>
-      <tr><td>Pot this epoch</td><td>0 ETH</td></tr>
-      <tr><td>Your claimable</td><td><strong>0 ETH</strong></td></tr>
       <tr><td>Contract</td><td class="mono">TBA — will match the <a href="verify.html">Verify page</a> exactly</td></tr>
       <tr><td>Approvals</td><td><strong>None.</strong> Claiming asks for no token approval.</td></tr>
-      <tr><td>Transfers</td><td><strong>None.</strong> You only receive ETH.</td></tr>
+      <tr><td>Transfers</td><td><strong>None.</strong> You only receive tokens — nothing leaves your wallet.</td></tr>
     </table>
-    <p><button class="btn" disabled title="Not live yet">Claim — opens after contracts deploy</button></p>
-    <img class="poster-art" src="art/poster-claim-anytime.webp" alt="Claim anytime — your ETH never expires, nobody else can take it" loading="lazy">
+
+    <div class="claim-token">
+      <div class="claim-token-head"><strong>ETH</strong><span>50% of resale royalties · weekly</span></div>
+      <table class="facts">
+        <tr><td>Pot this epoch</td><td id="claim-pot-eth">—</td></tr>
+        <tr><td>Your claimable</td><td id="claim-amount-eth"><strong>—</strong></td></tr>
+      </table>
+      <p><button class="btn" data-claim="eth" disabled title="Not live yet">Claim ETH — opens after contracts deploy</button></p>
+    </div>
+
+    <div class="claim-token">
+      <div class="claim-token-head"><strong>PORCH</strong><span>40% of the vested PORCH supply</span></div>
+      <table class="facts">
+        <tr><td>Pot this epoch</td><td id="claim-pot-porch">—</td></tr>
+        <tr><td>Your claimable</td><td id="claim-amount-porch"><strong>—</strong></td></tr>
+      </table>
+      <p><button class="btn" data-claim="porch" disabled title="Not live yet">Claim PORCH — opens after contracts deploy</button></p>
+    </div>
+
+    <div class="claim-token">
+      <div class="claim-token-head"><strong>MUSEBOOK</strong><span>PORCH creator fees, via the treasury</span></div>
+      <table class="facts">
+        <tr><td>Pot this epoch</td><td id="claim-pot-musebook">—</td></tr>
+        <tr><td>Your claimable</td><td id="claim-amount-musebook"><strong>—</strong></td></tr>
+      </table>
+      <p><button class="btn" data-claim="musebook" disabled title="Not live yet">Claim MUSEBOOK — opens after contracts deploy</button></p>
+    </div>
+
+    <img class="poster-art" src="art/poster-claim-anytime.webp" alt="Claim anytime — your rewards never expire, nobody else can take them" loading="lazy">
   </div>
 
   <div class="safety">
     <h3>⚠️ Safety</h3>
-    <p>The real claim <strong>sends you ETH</strong> and asks for <strong>no approvals, no transfers, no seed phrase</strong>. If your wallet shows an approval or a payment <em>from</em> you, <strong>reject it</strong> and check the <a href="verify.html">Verify page</a>.</p>
+    <p>The real claim <strong>sends you ETH, PORCH, or MUSEBOOK</strong> and asks for <strong>no approvals, no transfers, no seed phrase</strong>. If your wallet shows an approval or a payment <em>from</em> you, <strong>reject it</strong> and check the <a href="verify.html">Verify page</a>.</p>
   </div>
 
 </div>
@@ -97,6 +122,7 @@
 </footer>
 
 <script src="app.js"></script>
+<script src="claim.js"></script>
 <!-- Vercel Web Analytics + Speed Insights -->
 <script>
   window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
