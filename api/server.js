@@ -79,8 +79,8 @@ const EXPLORER_TX_URL = process.env.EXPLORER_TX_URL || 'https://robinhoodchain.b
 // Holder rewards (weekly epochs): the multisig address that publishes the
 // weekly merkle root, and the rewards contract holders claim from. Both are
 // TBD until the rewards system ships — the config endpoint says so honestly.
-const REWARDS_PUBLISHER = process.env.REWARDS_PUBLISHER || 'TBD';
-const REWARDS_CONTRACT = process.env.REWARDS_CONTRACT || 'TBD';
+const REWARDS_PUBLISHER = process.env.REWARDS_PUBLISHER || '0xEac12759e1Bb4A3c1455Ea3FE03b668c493BFb25'; // treasury EOA, owner of the v2 distributor
+const REWARDS_CONTRACT = process.env.REWARDS_CONTRACT || '0xc050c5d452a9733a2d951c97166eb3ca7b78e90b'; // RewardsDistributor v2, Robinhood Chain 4663
 const REWARDS_DATA_DIR = path.join(__dirname, 'data', 'rewards');
 
 const env = {
@@ -1109,20 +1109,28 @@ app.get('/api/v1/receipt/:registration_id', ah(async (req, res) => {
 app.get('/api/v1/rewards/config', (req, res) => {
   res.json({
     epoch_days: 7,
+    epoch_ids: 'integers starting at 1 (1 = 2026-09-28..2026-10-04)',
     snapshot: 'daily 00:00 UTC',
     payout: 'weekly',
-    pot_source: '3.5% of resale royalties (where honored)',
+    pot_source: '1/8 of the treasury MUSEBOOK balance at epoch start, plus unclaimed carryover from prior epochs. 100% of every epoch pot goes to holders — no reserve, no treasury cut.',
+    vesting: '1/7 of each epoch allocation unlocks per 24h after publishRoot; unclaimed slices pile up; 30-day claim window per epoch.',
     publisher: REWARDS_PUBLISHER,
     rewards_contract: REWARDS_CONTRACT,
-    leaf_scheme: 'keccak256(abi.encode(address,uint256)), sorted pairs',
+    claim_fn: 'claim(uint256 epochId, uint256 index, address account, uint256 amount, bytes32[] proof)',
+    leaf_scheme: 'keccak256(abi.encode(epochId,index,account,amount)) double-hashed, sorted pairs',
     data_dir: 'api/data/rewards',
   });
 });
 
 app.get('/api/v1/rewards/claim', (req, res) => {
+  // Serves the scoring engine's output verbatim: rewards/engine/run-epoch.js
+  // writes claims-<epochId>.json = {epochId, root, totalAllocated,
+  // claims:[{epochId,index,account,amount,proof}]}. After scoring, copy that
+  // file to api/data/rewards/claims-<epochId>.json, commit, and redeploy —
+  // the API serves it from there. Epoch ids are integers starting at 1.
   const epochRaw = String(req.query.epoch || '');
   if (!/^\d+$/.test(epochRaw)) {
-    return err(res, 400, 'INVALID_EPOCH', 'Query param epoch must be the epoch id (the Monday 00:00 UTC unix timestamp).');
+    return err(res, 400, 'INVALID_EPOCH', 'Query param epoch must be the integer epoch id (1, 2, 3, ...).');
   }
   let holder;
   try {
@@ -1132,21 +1140,25 @@ app.get('/api/v1/rewards/claim', (req, res) => {
   }
   let doc;
   try {
-    doc = JSON.parse(fs.readFileSync(path.join(REWARDS_DATA_DIR, 'epochs', epochRaw + '.json'), 'utf8'));
+    doc = JSON.parse(fs.readFileSync(path.join(REWARDS_DATA_DIR, 'claims-' + epochRaw + '.json'), 'utf8'));
   } catch {
     return err(res, 404, 'NOT_FOUND', 'No published rewards for that epoch yet.', { epoch: epochRaw });
   }
-  const claim = doc.claims && doc.claims[holder];
+  const claims = Array.isArray(doc.claims) ? doc.claims : [];
+  const claim = claims.find((c) => {
+    try { return checksumAddress(c.account) === holder; } catch { return false; }
+  });
   if (!claim) {
     return err(res, 404, 'NO_CLAIM', 'This holder has no claim in that epoch.', { epoch: epochRaw, holder });
   }
   res.json({
     epochId: doc.epochId,
+    index: claim.index,
     holder,
-    amount: claim.amount,
+    amount: String(claim.amount),
     proof: claim.proof,
     root: doc.root,
-    totalAmount: doc.totalAmount,
+    totalAllocated: String(doc.totalAllocated),
   });
 });
 
@@ -1196,13 +1208,14 @@ app.get('/.well-known/muse-dog.json', (req, res) => {  res.json({
       liquidity: 'both LP positions minted directly to the dead address — locked forever, never withdrawn; no MDOG tokens are burned',
     },
     holder_rewards: {
-      eligibility: 'every Muse Dogs holder earns, per NFT held',
-      snapshots: 'daily holder-balance snapshot at 00:00 UTC',
-      epoch: 'weekly, Monday 00:00 UTC to the next Monday',
-      pot_source: '3.5% of every resale royalty (where honored)',
-      share: 'time-weighted pro-rata across the 7 daily snapshots',
-      root: 'weekly merkle root published on-chain by the project multisig',
-      claim: 'claim(uint256 epochId, uint256 amount, bytes32[] proof) — pull, any time, no expiry',
+      eligibility: 'PORCH and MDOG spot holders with a verified musebook identity linked to the wallet (one wallet per muse): 1,000,000 PORCH / 1,000 MDOG floors held on >= 4 of 7 daily snapshots',
+      snapshots: 'daily spot-balance snapshots at 00:00 UTC, Monday to Sunday',
+      epoch: 'weekly, Monday 00:00 UTC to the next Monday; epoch ids are integers starting at 1',
+      pot_source: '1/8 of the treasury MUSEBOOK balance at epoch start, plus unclaimed carryover from prior epochs. 100% of every epoch pot goes to holders — no reserve, no treasury cut.',
+      share: 'combined score per wallet: PORCH weight 50, MDOG weight 30; 2% whale cap; 1 MUSEBOOK minimum payout',
+      vesting: '1/7 of each epoch allocation unlocks per 24h after publishRoot; unclaimed slices pile up; 30-day claim window per epoch',
+      root: 'weekly merkle root published on-chain by the treasury',
+      claim: 'claim(uint256 epochId, uint256 index, address account, uint256 amount, bytes32[] proof) — pull, vested',
       endpoints: 'GET /api/v1/rewards/config, GET /api/v1/rewards/claim?epoch={epochId}&holder={address}',
     },
     phases: { current: CURRENT_PHASE },

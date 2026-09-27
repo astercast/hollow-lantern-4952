@@ -86,31 +86,6 @@
   }
   .lb-section .sub { color: var(--lb-faint); font-size: 14px; margin: 0 0 26px; line-height: 1.6; }
 
-  /* ---------- DESKTOP: explainer (six steps) ---------- */
-  .explainer { background: linear-gradient(180deg, rgba(212, 169, 78, .06), transparent 70%); }
-  .explain-list { margin: 8px 0 0; padding: 0; list-style: none; max-width: 760px; }
-  .explain-list li {
-    position: relative;
-    padding: 16px 0 16px 64px;
-    border-bottom: 1px solid rgba(212, 169, 78, .09);
-    font-size: 16px; color: var(--lb-muted); line-height: 1.65;
-  }
-  .explain-list li:last-child { border-bottom: none; }
-  .explain-list li::before {
-    content: counter(lb-step, decimal-leading-zero);
-    counter-increment: lb-step;
-    position: absolute; left: 0; top: 16px;
-    width: 44px; height: 44px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 13px; font-weight: 800; letter-spacing: 1px;
-    color: var(--lb-gold);
-    border: 1px solid rgba(212, 169, 78, .35);
-    border-radius: 12px;
-    background: rgba(212, 169, 78, .07);
-  }
-  .explain-list { counter-reset: lb-step; }
-  .explain-list strong { color: var(--lb-text); font-weight: 700; }
-
   /* ---------- DESKTOP: ranking rows ---------- */
   .lb-head, .lb-row { padding-left: 12px; padding-right: 12px; }
   .lb-head {
@@ -234,10 +209,6 @@
     .lb-section h2 { font-size: 21px; }
     .lb-section .sub { font-size: 13px; margin-bottom: 20px; }
 
-    /* Mobile explainer: full-width, roomier numbers */
-    .explain-list li { font-size: 14.5px; padding: 14px 0 14px 56px; }
-    .explain-list li::before { width: 38px; height: 38px; top: 13px; border-radius: 11px; }
-
 
     /* Mobile rows: vertical cards.
        Line 1: rank + name (+ you tag). Line 2: holdings.
@@ -336,22 +307,8 @@
       <div class="lb-eyebrow">Muse Dogs · Holder Rewards</div>
       <h1>Leaderboard</h1>
       <p class="lb-lede">Weekly <strong>MUSEBOOK</strong> rewards for <strong>PORCH</strong> and <strong>MDOG</strong> holders, funded by PORCH trading fees. Every holder appears under a dog codename — no addresses on the board, ever.</p>
+      <p class="lb-note">Scores are time-weighted — how much you hold and how long you hold it. Last-minute buys barely count.</p>
       <div class="lb-epoch"><span class="dot"></span><span id="epoch-line">Epoch 1 · weekly cycle, Monday 00:00 UTC</span></div>
-    </div>
-
-    <div class="lb-section explainer">
-      <div class="sec-eyebrow">The short version</div>
-      <h2>How the rewards work</h2>
-      <p class="sub">Six steps, no jargon.</p>
-      <ol class="explain-list">
-        <li>The treasury collects MUSEBOOK from PORCH trading fees.</li>
-        <li>Every Monday, <strong>1/8 of it</strong> becomes that week's reward pot — never the whole thing, so it keeps going.</li>
-        <li>You earn <strong>one score from both holdings at once</strong>. Your PORCH counts a bit more than your MDOG. No separate categories.</li>
-        <li>Scores are <strong>time-weighted</strong> — how much you hold and how long you hold it. Last-minute buys barely count.</li>
-        <li>Every holder gets a <strong>dog codename</strong> on the board. No addresses, no real names — just dogs.</li>
-        <li><strong>You claim your rewards</strong> — they don't land automatically. Whatever goes unclaimed rolls into next week's pot.</li>
-        <li>Each week's share unlocks <strong>a seventh per day</strong> after results post — claim a little each day, or let it pile up and take it all at once.</li>
-      </ol>
     </div>
 
     <div class="lb-section">

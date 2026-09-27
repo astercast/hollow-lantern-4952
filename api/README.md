@@ -39,11 +39,12 @@ required, 3-per-address and 3-per-identity caps independent of the community
 caps, refusal for unregistered muses, post-cutoff muses get the
 community free mint too — no cutoff since 2026-09-24), forged-signature and legacy wallet-signature/PoW field
 refusal, identity-registry outage failing closed, the rate limit firing at the
-default 60 req/min/IP, and the discovery doc. The rewards section then checks `/rewards/config` shape, the
-fail-closed 404s, and runs `scripts/rewards-publish.js` end-to-end on 7 fixture
-snapshots: shares math (333/667 of a 1000-wei pot, dust to the largest holder),
-a known-vector merkle root recomputed independently, proof verification, and the
-served `/rewards/claim` shape — then deletes the fixtures. It wipes
+default 60 req/min/IP, and the discovery doc. The rewards section then checks `/rewards/config` shape
+(1/8-treasury pot, v2 leaf scheme, live contract addresses), the fail-closed 404s, and serves a
+fixture `claims-1.json` built with the real scoring-engine tree (`rewards/engine/merkle.js`, the v2
+leaf scheme): a known-vector merkle root recomputed independently, proof verification, and the
+served `/rewards/claim` shape including the `index` the contract's `claim()` needs — then deletes
+the fixtures. It wipes
 `data/db.json` first so every run starts clean.
 
 ## Environment variables
@@ -116,10 +117,10 @@ served `/rewards/claim` shape — then deletes the fixtures. It wipes
 - `GET /api/v1/mint/stats` — live `{relayer, chain_id, contract, claims_remaining, holder_remaining}` read from the contract (remaining counts as strings; the contract has no pause mechanism, so there is no pause state).
 - `GET /api/v1/receipt/{registration_id}` — tx hash + token id (stub: pending until distribution).
 - `GET /api/v1/rewards/config` — holder-rewards mechanics: 7-day epochs, daily 00:00 UTC snapshots,
-  weekly payouts from 3.5% of resale royalties, the publisher and rewards contract (honestly `TBD`
-  until set), and the merkle leaf scheme.
-- `GET /api/v1/rewards/claim?epoch={epochId}&holder={address}` — the holder's `{amount, proof}`
-  plus `{root, totalAmount}` for `claim(epochId, amount, proof)`; 404 when the epoch is
+  weekly payouts of 1/8 of the treasury MUSEBOOK per epoch (100% to holders), 1/7-per-day vesting,
+  the publisher (treasury EOA) and the v2 rewards contract, and the merkle leaf scheme.
+- `GET /api/v1/rewards/claim?epoch={epochId}&holder={address}` — the holder's `{index, amount, proof}`
+  plus `{root, totalAllocated}` for `claim(epochId, index, account, amount, proof)`; 404 when the epoch is
   unpublished or the holder has no claim. Fails closed, never invents data.
 - `GET /.well-known/muse-dog.json` — machine-readable discovery doc for autonomous muses.
 
@@ -160,13 +161,13 @@ curl localhost:3000/api/v1/status/<registration_id>
 curl localhost:3000/api/v1/receipt/<registration_id>
 curl localhost:3000/.well-known/muse-dog.json
 
-# 7. holder rewards: snapshot a day, publish a week, read a claim
-#    (rewards scripts are read-only; they never deploy or spend)
-node scripts/rewards-snapshot.js --nft 0x... --rpc https://rpc.mainnet.chain.robinhood.com --day 2026-09-14
-#    then, once all 7 daily snapshots exist:
-node scripts/rewards-publish.js --week 2026-09-14 --pot 1000000000000000000
+# 7. holder rewards: run the scoring engine, publish a week, read a claim
+#    (rewards/engine is read-only; it never deploys or spends)
+cd ../rewards/engine && node run-epoch.js --epoch-id 1 --out ../api
+#    then copy the claims file into the API's data dir so /rewards/claim serves it:
+cp ../api/claims-1.json ../../api/data/rewards/claims-1.json
 #    serve the claim for claim():
-curl 'localhost:3000/api/v1/rewards/claim?epoch=1789344000&holder=0x...'
+curl 'localhost:3000/api/v1/rewards/claim?epoch=1&holder=0x...'
 ```
 
 ## Error codes (stable)
@@ -231,11 +232,8 @@ MDOG holder check happens on-chain at mint time, never in the API.
    server.
 6. **Receipt** — `tx_hash`/`token_id` stay null until the distribution runner
    writes them.
-7. **Rewards publishing** — `scripts/rewards-snapshot.js` (daily 00:00 UTC
-   holder balances from Transfer events) and `scripts/rewards-publish.js`
-   (weekly time-weighted pro-rata shares, sorted-pair merkle tree, exact
-   `publishRoot` calldata) are live and self-verifying, and the API serves
-   `/api/v1/rewards/config` + `/api/v1/rewards/claim`. But no root has been
-   published on-chain yet: `REWARDS_CONTRACT` is unset and the rewards
-   contract is not deployed. The claim endpoint 404s until a real epoch file
-   exists.
+7. **Rewards publishing** — `rewards/engine/` (snapshot → score → merkle → publish bundle) is live and
+   self-verifying, and the API serves `/api/v1/rewards/config` + `/api/v1/rewards/claim` from the
+   engine's `claims-<epochId>.json` output. But no root has been published on-chain yet: the v2
+   distributor is deployed and verified, unfunded, with no epoch root. The claim endpoint 404s until
+   a real epoch file is copied into `api/data/rewards/` and deployed.
