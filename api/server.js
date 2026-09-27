@@ -1319,8 +1319,24 @@ app.get('/api/v1/rewards/config', (req, res) => {
     vesting: '1/7 of each epoch allocation unlocks per 24h after publishRoot; unclaimed slices pile up; 30-day claim window per epoch.',
     publisher: REWARDS_PUBLISHER,
     rewards_contract: REWARDS_CONTRACT,
+    chain_id: NFT_CHAIN_ID,
     claim_fn: 'claim(uint256 epochId, uint256 index, address account, uint256 amount, bytes32[] proof)',
     leaf_scheme: 'keccak256(abi.encode(epochId,index,account,amount)) double-hashed, sorted pairs',
+    eligibility_guards: {
+      note: 'A wallet earns from an epoch only if every guard below passes. Guards are evaluated on the 7 daily snapshots of that epoch.',
+      porch_floor: '1,000,000 PORCH',
+      mdog_floor: '1,000 MDOG',
+      snapshot_rule: 'floors must hold on at least 4 of the 7 daily snapshots',
+      whale_cap: '2% of the epoch pot per wallet',
+      minimum_payout: '1 MUSEBOOK',
+      balances: 'spot wallet balances only — no LP positions, no multipliers',
+    },
+    epoch_1: {
+      epoch_id: 1,
+      snapshot_window: '2026-09-28..2026-10-04 (daily 00:00 UTC snapshots)',
+      funding_and_root: 'signed and published by the treasury owner on 2026-10-05 — claims open only after the Merkle root is published on-chain',
+      status: 'not yet funded, no root published — nothing is claimable yet',
+    },
     data_dir: 'api/data/rewards',
   });
 });

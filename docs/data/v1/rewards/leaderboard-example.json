@@ -1,1 +1,42 @@
-{"epochId":1,"note":"Codenames only — the board never exposes wallet addresses. One combined score per wallet (PORCH 50%, MDOG 30%); no separate categories.","rows":[{"claimed":false,"codename":"Bark Knight","rank":1,"rewardDisplay":"≈ 106,955 MUSEBOOK","score":"8420000000"},{"claimed":false,"codename":"Snout Scout","rank":2,"rewardDisplay":"≈ 64,917 MUSEBOOK","score":"5110000000"},{"claimed":false,"codename":"Howl Runner","rank":3,"rewardDisplay":"≈ 71,362 MUSEBOOK","score":"2940000000"},{"claimed":false,"codename":"Treat Bandit","rank":4,"rewardDisplay":"≈ 15,244 MUSEBOOK","score":"1200000000"},{"claimed":false,"codename":"Wag Captain","rank":5,"rewardDisplay":"≈ 19,706 MUSEBOOK","score":"812000000"}],"status":"preview — epoch 1 not scheduled yet"}
+{
+  "epochId": 1,
+  "note": "Codenames only \u2014 the board never exposes wallet addresses. One combined score per wallet (PORCH 50%, MDOG 30%); no separate categories.",
+  "rows": [
+    {
+      "claimed": false,
+      "codename": "Bark Knight",
+      "rank": 1,
+      "rewardDisplay": "opens with epoch 1",
+      "score": "8420000000"
+    },
+    {
+      "claimed": false,
+      "codename": "Snout Scout",
+      "rank": 2,
+      "rewardDisplay": "opens with epoch 1",
+      "score": "5110000000"
+    },
+    {
+      "claimed": false,
+      "codename": "Howl Runner",
+      "rank": 3,
+      "rewardDisplay": "opens with epoch 1",
+      "score": "2940000000"
+    },
+    {
+      "claimed": false,
+      "codename": "Treat Bandit",
+      "rank": 4,
+      "rewardDisplay": "opens with epoch 1",
+      "score": "1200000000"
+    },
+    {
+      "claimed": false,
+      "codename": "Wag Captain",
+      "rank": 5,
+      "rewardDisplay": "opens with epoch 1",
+      "score": "812000000"
+    }
+  ],
+  "status": "preview \u2014 epoch 1 scheduled Oct 5, 2026"
+}
