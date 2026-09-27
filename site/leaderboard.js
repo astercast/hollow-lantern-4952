@@ -147,15 +147,11 @@
     $("my-rank").textContent = "Estimated position on the preview board: #" + mine.rank + " (" + classLabel(mine.cls) + ").";
   }
 
-  function providerFor(readOnly) {
-    if (!readOnly && window.ethereum) {
-      return new ethers.BrowserProvider(window.ethereum);
-    }
-    return new ethers.JsonRpcProvider(RPC_URL, CHAIN_ID);
-  }
-
+  /* Reads always go through the dedicated Robinhood Chain RPC — never through
+   * the wallet's provider, so a wallet sitting on the wrong chain can't skew
+   * the numbers. The wallet is only ever asked for an address. */
   function readBalances(addr, onDone) {
-    var provider = providerFor(false);
+    var provider = new ethers.JsonRpcProvider(RPC_URL, CHAIN_ID);
     var keys = ["porch", "mdog"];
     var results = {};
     var chain = Promise.resolve();
@@ -200,7 +196,7 @@
   }
 
   function onConnect() {
-    setStatus("Reading balances… (read-only, nothing is signed)");
+    setStatus("Your wallet will pop up its own standard connect prompt asking to share your address — that's the safe, familiar one. Nothing is signed, no transaction.");
     if (window.ethereum) {
       window.ethereum.request({ method: "eth_requestAccounts" }).then(function (accounts) {
         if (!accounts || !accounts.length) { setStatus("No wallet account shared."); return; }
