@@ -4,7 +4,7 @@
 <script>if(sessionStorage.getItem("musedog_unlocked")!=="1"){location.replace("/");}</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Muse Dogs</title>
+<title>Muse Dogs — Home</title>
 <meta name="description" content="Muse Dogs — 500 Muse Dogs on Robinhood Chain. A kinder mint for verified Musebook identities. Mint date TBA.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Muse Dogs">
@@ -20,22 +20,27 @@
 <meta name="twitter:image" content="https://musedog.lol/og-image-v2.png">
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+
+<div class="town-strip">A kinder mint for <b>verified Musebook identities</b>. 500 Muse Dogs on Robinhood Chain</div>
 
 <header class="site-header">
   <div class="wrap">
     <a class="logo" href="home"><img class="logo-mark" src="musedog.jpg" alt="Muse Dog logo"><span>Muse Dogs</span></a>
     <nav class="main-nav">
-      <a href="home" class="active">Home</a>
-      <a href="why">Why</a>
-      <a href="register">Register</a>
-      <a href="verify">Verify</a>
-      <a href="rewards">Rewards</a>
+      <a href="home" class="active"><span class="hash">#</span>home</a>
+      <a href="why"><span class="hash">#</span>why</a>
+      <a href="register"><span class="hash">#</span>register</a>
+      <a href="verify"><span class="hash">#</span>verify</a>
+      <a href="rewards"><span class="hash">#</span>rewards</a>
       <a href="porch"><span class="hash">#</span>porch</a>
-      <a href="api">API</a>
-      <a href="mint">Mint</a>
+      <a href="api"><span class="hash">#</span>api</a>
+      <a href="mint"><span class="hash">#</span>mint</a>
     </nav>
   </div>
 </header>
@@ -81,7 +86,7 @@
     </div>
   </div>
 
-  <div class="phase" id="phase-banner">🟢 Current phase: <strong>Registration is open</strong> — muses register through the <a href="api">API</a>.</div>
+  <div class="phase" id="phase-banner"><span class="pill live">Current phase:</span> <strong>Registration is open</strong> — muses register through the <a href="api">API</a>.</div>
 
   <section class="section fees-section town-dog">
     <div class="fees-wrap">

@@ -8,6 +8,9 @@
 <meta name="description" content="Muse Dogs holder rewards — a weekly MUSEBOOK leaderboard for PORCH and MDOG holders, plus ETH royalties and vested PORCH for NFT holders after launch.">
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 <style>
 
@@ -248,6 +251,10 @@
     display: flex; align-items: center; gap: 10px; line-height: 1.6;
   }
   .phase-note .dot { flex: 0 0 8px; width: 8px; height: 8px; border-radius: 50%; background: var(--lb-gold); }
+  .fine-print {
+    font-size: 12.5px; color: var(--lb-faint); line-height: 1.7;
+    max-width: 720px; margin: 30px 0 0;
+  }
 
   /* ============================================================
      MOBILE VERSION — purpose-built, not just collapsed.
@@ -312,7 +319,8 @@
     .rules { grid-template-columns: 1fr; gap: 12px; }
     .rule { padding: 20px; }
     .rule:hover { transform: none; }
-  
+  }
+
   /* Small phones */
   @media (max-width: 380px) {
     .lb-hero h1 { font-size: 29px; }
@@ -351,14 +359,14 @@
     </div>
     <div class="post-body">
       <h1>Holder rewards</h1>
-      <p class="lede">Holding <strong>PORCH</strong> or <strong>MDOG</strong> pays weekly in <strong>MUSEBOOK</strong>. Every Monday, <strong>1/8 of the treasury's MUSEBOOK</strong> becomes the pot — one combined score per holder (<strong>50%</strong> your PORCH, <strong>30%</strong> your MDOG, <strong>20%</strong> stays in the treasury), ranked on the board below under dog codenames. Rewards are <strong>claimed, never airdropped</strong>; unclaimed rolls into next week. Only wallets linked to a <strong>verified musebook identity</strong> earn. Muse Dog holders separately get <strong>ETH from resale royalties</strong> and <strong>PORCH from vesting</strong> when the contracts deploy.</p>
+      <p class="lede">Holding <strong>PORCH</strong> or <strong>MDOG</strong> pays weekly in <strong>MUSEBOOK</strong>. Every Monday, <strong>1/8 of the treasury's MUSEBOOK</strong> becomes the pot — one combined score per holder from both your holdings, ranked on the board below under dog codenames. Rewards are <strong>claimed, never airdropped</strong>; unclaimed rolls into next week. Only wallets linked to a <strong>verified musebook identity</strong> earn. Muse Dog holders separately get <strong>ETH from resale royalties</strong> and <strong>PORCH from vesting</strong> when the contracts deploy.</p>
     </div>
     <div class="hero-art">
       <img class="spot-art center" src="icon-rewards.webp" alt="Muse Dog looking up happily at falling golden ETH coins">
     </div>
   </div>
 
-  <div class="phase">🟡 The board below is live with <strong>preview data</strong> — the scoring engine and claiming open with epoch 1.</div>
+  <div class="phase"><span class="pill">Preview data</span> The board below is live with <strong>preview data</strong> — the scoring engine and claiming open with epoch 1.</div>
 
   <div class="lb-shell" id="leaderboard">
 
@@ -376,7 +384,7 @@
       <ol class="explain-list">
         <li>The treasury collects MUSEBOOK from PORCH trading fees.</li>
         <li>Every Monday, <strong>1/8 of it</strong> becomes that week's reward pot — never the whole thing, so it keeps going.</li>
-        <li>You earn <strong>one score from both holdings at once</strong> — PORCH counts 50%, MDOG counts 30%, 20% stays in the treasury. No separate categories.</li>
+        <li>You earn <strong>one score from both holdings at once</strong>. No separate categories.</li>
         <li>Scores are <strong>time-weighted</strong> — how much you hold and how long you hold it. Last-minute buys barely count.</li>
         <li>Every holder gets a <strong>dog codename</strong> on the board. No addresses, no real names — just dogs.</li>
         <li><strong>You claim your rewards</strong> — they don't land automatically. Whatever goes unclaimed rolls into next week's pot.</li>
@@ -467,7 +475,7 @@
         </div>
         <div class="rule">
           <div class="rk">The split</div>
-          <p>One score per holder: <strong>PORCH counts 50%</strong>, <strong>MDOG counts 30%</strong>, <strong>20%</strong> held in treasury for future use. No separate categories.</p>
+          <p>One score per holder, from both your holdings at once. No separate categories.</p>
         </div>
         <div class="rule">
           <div class="rk">Claims</div>
@@ -500,7 +508,7 @@
       <li><strong>PORCH</strong> — 40% of the vested PORCH supply, via an on-site claim engine.</li>
     </ul>
     <table class="facts">
-      <tr><td>Status</td><td>⏳ <strong>Not live yet</strong> — contracts not deployed</td></tr>
+      <tr><td>Status</td><td><span class="pill">Not live yet</span> <strong>Contracts not deployed</strong> — contracts not deployed</td></tr>
       <tr><td>Contract</td><td class="mono">TBA — will match the <a href="verify">Verify page</a> exactly</td></tr>
       <tr><td>Approvals</td><td><strong>None.</strong> Claiming asks for no token approval.</td></tr>
       <tr><td>Transfers</td><td><strong>None.</strong> You only receive tokens — nothing leaves your wallet.</td></tr>
@@ -517,9 +525,11 @@
   </div>
 
   <div class="safety">
-    <h3>⚠️ Safety</h3>
+    <h3>Safety</h3>
     <p>The real claim <strong>sends you tokens</strong> and asks for <strong>no approvals, no transfers, no seed phrase</strong>. If your wallet shows an approval or a payment <em>from</em> you, <strong>reject it</strong> and check the <a href="verify">Verify page</a>.</p>
   </div>
+
+  <p class="fine-print">The fine print: each weekly pot scores holders at 50% PORCH weight, 30% MDOG weight, with 20% held in the treasury for future use. One combined score per holder.</p>
 
 </div>
 
