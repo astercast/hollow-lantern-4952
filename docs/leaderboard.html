@@ -58,39 +58,6 @@
   }
   .lb-lede strong { color: var(--lb-text); }
 
-  .lb-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
-  .lb-stat {
-    background: var(--lb-card);
-    border: 1px solid var(--lb-line);
-    border-radius: 16px;
-    padding: 22px 22px 20px;
-    display: flex; flex-direction: column; gap: 8px;
-    transition: border-color .2s ease, transform .2s ease;
-  }
-  .lb-stat:hover { border-color: rgba(212, 169, 78, .4); transform: translateY(-2px); }
-  .lb-stat.hero {
-    background: linear-gradient(135deg, rgba(212, 169, 78, .2), rgba(212, 169, 78, .05));
-    border-color: rgba(212, 169, 78, .45);
-  }
-  .lb-stat .k {
-    font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
-    color: var(--lb-faint); font-weight: 700; line-height: 1.5;
-  }
-  .lb-stat .v {
-    font-size: 30px; font-weight: 800; color: #fff;
-    letter-spacing: -.8px; line-height: 1.1;
-    font-variant-numeric: tabular-nums;
-  }
-  .lb-stat .v small {
-    font-size: 13px; font-weight: 600; color: var(--lb-muted);
-    letter-spacing: 1px; margin-left: 4px;
-  }
-  .lb-stat .s { font-size: 12.5px; color: var(--lb-faint); line-height: 1.5; }
-  .lb-stat .s .live-pill {
-    display: inline-block; font-size: 10px; font-weight: 800; letter-spacing: 1.5px;
-    color: #0f0e0c; background: #7bc47f; border-radius: 999px;
-    padding: 2px 8px; margin-right: 6px; vertical-align: 1px;
-  }
   .lb-epoch {
     display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
     margin-top: 26px; font-size: 13.5px; color: var(--lb-muted);
@@ -289,16 +256,9 @@
   @media (max-width: 860px) {
     .lb-shell { margin: 20px 0; border-radius: 20px; }
 
-    /* Mobile hero: tighter, bigger numbers, 2x2 stat cards */
     .lb-hero { padding: 36px 22px 30px; }
     .lb-hero h1 { font-size: 34px; letter-spacing: -1px; }
     .lb-lede { font-size: 15px; margin-bottom: 24px; }
-    .lb-stats { grid-template-columns: 1fr 1fr; gap: 10px; }
-    .lb-stat { padding: 16px 15px 14px; border-radius: 14px; gap: 6px; }
-    .lb-stat .k { font-size: 9.5px; letter-spacing: 1.5px; }
-    .lb-stat .v { font-size: 23px; letter-spacing: -.5px; }
-    .lb-stat .v small { font-size: 11px; display: block; margin: 2px 0 0; letter-spacing: 1px; }
-    .lb-stat .s { font-size: 11px; }
     .lb-epoch { font-size: 12.5px; margin-top: 20px; }
 
     /* Mobile sections */
@@ -358,10 +318,9 @@
     .phase-note { font-size: 12px; }
   }
 
-  /* Small phones: keep the 2x2 stats from squeezing */
+  /* Small phones */
   @media (max-width: 380px) {
     .lb-hero h1 { font-size: 29px; }
-    .lb-stat .v { font-size: 20px; }
     .lb-meta { grid-template-columns: 1fr 1fr; }
     .lb-status { grid-column: 1 / -1; text-align: left; }
   }
@@ -396,28 +355,6 @@
       <div class="lb-eyebrow">Muse Dogs · Holder Rewards</div>
       <h1>Leaderboard</h1>
       <p class="lb-lede">Weekly <strong>MUSEBOOK</strong> rewards for <strong>PORCH</strong> and <strong>MDOG</strong> holders, funded by PORCH trading fees. Every holder appears under a dog codename — no addresses on the board, ever.</p>
-      <div class="lb-stats">
-        <div class="lb-stat hero">
-          <div class="k">Epoch pot</div>
-          <div class="v"><span id="stat-pot-v">398,000</span><small>MUSEBOOK</small></div>
-          <div class="s" id="stat-pot-s">1/8 of treasury · preview figure</div>
-        </div>
-        <div class="lb-stat">
-          <div class="k">PORCH holders · 50%</div>
-          <div class="v"><span id="stat-porch-v">199,000</span><small>MUSEBOOK</small></div>
-          <div class="s">time-weighted scores</div>
-        </div>
-        <div class="lb-stat">
-          <div class="k">MDOG holders · 30%</div>
-          <div class="v"><span id="stat-mdog-v">119,400</span><small>MUSEBOOK</small></div>
-          <div class="s">time-weighted scores</div>
-        </div>
-        <div class="lb-stat">
-          <div class="k">Treasury reserve · 20%</div>
-          <div class="v"><span id="stat-reserve-v">79,600</span><small>MUSEBOOK</small></div>
-          <div class="s">held for future use</div>
-        </div>
-      </div>
       <div class="lb-epoch"><span class="dot"></span><span id="epoch-line">Epoch 1 · weekly cycle, Monday 00:00 UTC</span></div>
     </div>
 
@@ -436,7 +373,7 @@
     </div>
 
     <div class="lb-section">
-      <div class="phase-note"><span class="dot"></span><span>Codenames and scores below are preview data. The epoch pot and any balances you check read live from Robinhood Chain.</span></div>
+      <div class="phase-note"><span class="dot"></span><span>Codenames and scores below are preview data. Any balances you check read live from Robinhood Chain.</span></div>
       <div class="sec-eyebrow">This week's board</div>
       <h2>Top holders</h2>
       <p class="sub">Ranked by time-weighted score this epoch.</p>

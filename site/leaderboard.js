@@ -1,7 +1,7 @@
 /* Holder leaderboard — READ ONLY. No transactions, no signatures, no money moves.
- * The epoch pot reads LIVE from the treasury's MUSEBOOK balance on Robinhood Chain
- * (pot = balance / 8). Board rows use dog-inspired codenames — no wallet addresses,
- * no emojis next to codenames. Row scores are preview data until the engine is live. */
+ * Board rows use dog-inspired codenames — no wallet addresses,
+ * no emojis next to codenames. Row scores are preview data until the engine is live.
+ * The wallet checker reads live token balances from Robinhood Chain. */
 
 (function () {
   "use strict";
@@ -10,12 +10,11 @@
   var RPC_URL = "https://rpc.mainnet.chain.robinhood.com";
   var TREASURY = "0xEac12759e1Bb4A3c1455Ea3FE03b668c493BFb25";
 
-  /* Preview epoch pot (MUSEBOOK) — replaced by the live figure on load.
+  /* Preview epoch pot (MUSEBOOK) used for the est. reward column.
    * 50% PORCH holders / 30% MDOG holders / 20% held in treasury for future use. */
   var EPOCH_POT = 398000;
   var CLASS_WEIGHTS = { porch: 0.50, mdog: 0.30 };
   var TREASURY_RESERVE = 0.20;
-  var POT_LIVE = false;
 
   var TOKENS = {
     porch:    { address: "0x4B434541873f171aB70D7d2F3a48b0f0b0f13ba3", symbol: "PORCH",    min: 1000000 },
@@ -131,28 +130,6 @@
     }
   }
 
-  /* Live epoch pot: 1/8 of the treasury's MUSEBOOK balance, read from chain.
-   * Falls back to the preview figure if the RPC is unreachable. */
-  function loadLivePot() {
-    try {
-      var provider = new ethers.JsonRpcProvider(RPC_URL, CHAIN_ID);
-      var c = new ethers.Contract(TOKENS.musebook.address, ERC20_ABI, provider);
-      Promise.all([c.balanceOf(TREASURY), c.decimals()]).then(function (res) {
-        var bal = Number(ethers.formatUnits(res[0], res[1]));
-        if (!(bal > 0)) return;
-        EPOCH_POT = bal / 8;
-        POT_LIVE = true;
-        $("stat-pot-v").textContent = fmt(EPOCH_POT, 0);
-        $("stat-porch-v").textContent = fmt(EPOCH_POT * CLASS_WEIGHTS.porch, 0);
-        $("stat-mdog-v").textContent = fmt(EPOCH_POT * CLASS_WEIGHTS.mdog, 0);
-        $("stat-reserve-v").textContent = fmt(EPOCH_POT * TREASURY_RESERVE, 0);
-        $("stat-pot-s").innerHTML = '<span class="live-pill">LIVE</span>1/8 of treasury balance';
-        $("epoch-line").textContent = "Epoch 1 · weekly cycle, Monday 00:00 UTC · pot updates live from chain";
-        refreshBoard();
-      }).catch(function () { /* keep preview figure */ });
-    } catch (e) { /* keep preview figure */ }
-  }
-
   function estimateRank(rows, bestScore, bestClass) {
     var inserted = false;
     var out = [];
@@ -250,7 +227,6 @@
   document.addEventListener("DOMContentLoaded", function () {
     boardRows = buildPreviewRows();
     renderBoard(boardRows);
-    loadLivePot();
     $("connect-btn").addEventListener("click", onConnect);
     $("lookup-btn").addEventListener("click", onLookup);
   });
