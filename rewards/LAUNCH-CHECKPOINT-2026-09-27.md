@@ -60,6 +60,59 @@ verified on-chain or by test run on 2026-09-27, not asserted from memory.
    on ≥4 of 7 snapshots, 2% whale cap, 1 MUSEBOOK minimum payout. Locked in
    `engine/config.js`. Epoch 1: Monday 2026-09-28 00:00 UTC.
 
+## Deployment v1 — ABANDONED (2026-09-27 ~11:10 PDT)
+
+- Contract: `0x160623692031e1f9f8181a36000b09a54c32d2ab` (Robinhood Chain 4663)
+- Deploy tx: `0x3e20b411bdb39bd8cc0407aeb3431d4066a1c844bafd3801283a111922b44b86`
+  block 74138975, status 1, gas used 1,843,662 (limit 2.2M)
+- NEVER USE: pays a wallet's full epoch allocation on first claim — cannot do
+  the daily unlock Andrew ordered at 11:12 PDT. Left empty, unfunded, no root.
+  Abandoned, not destroyed (no selfdestruct in the contract).
+
+## Deployment v2 — LIVE (2026-09-27 ~11:45 PDT, Andrew's explicit order)
+
+Andrew: "Yes rebuild it all to be like that and let it pile up if they don't
+claim each day." Rebuilt with daily vesting, retested everything, redeployed.
+
+- Contract: `0xc050c5d452a9733a2d951c97166eb3ca7b78e90b` (Robinhood Chain 4663)
+- Deploy tx: `0x1d0d8b48958787a095d259efc0c55d681c53442f74436abb9130eb00edf9288d`
+  block 74149294, status 1, gas used 1,964,400 (limit 2,476,447)
+- Deployer: Spellbook permanent wallet `0xc6e5e180de0cb5fa19b10ba6343cdab5ad868c10`
+  (nonce 1; Andrew's "say the word" was the signing authorization, same as v1)
+- Signing path note: spellbookd v1 only queues PLAIN transfers — it cannot
+  express contract creation. Signed directly with the raw Set-1 EVM key from
+  the paper backup (one-shot script /tmp/deploy_v2.py, deleted after; key
+  never printed or logged, derived address verified 0xc6e5...b10 before
+  signing). Andrew's chat order was the authorization — no daemon
+  self-approval involved.
+- Vesting design (the whole point of v2):
+  - `VESTING_DAYS` = 7. Each full 24h after publishRoot() unlocks another 1/7
+    of every allocation. Day 0: nothing. Day 7: fully vested.
+  - Unclaimed slices PILE UP: claimable = vested-so-far − already-paid.
+    Skip days 1–6, claim on day 7 → whole week at once. Never forfeits.
+  - `vestedAmount(epochId, allocation)` + `claimableNow(epochId, index,
+    allocation)` views for UIs. Per-leaf `claimedAmount` replaces the old
+    claimed-bitmap (leaves are claimed repeatedly as slices unlock).
+  - Off-chain engine UNCHANGED: roots still commit full weekly allocations;
+    vesting is purely claim scheduling on-chain.
+- On-chain verification (all green):
+  - broadcast tx input == tested init code + constructor args byte-for-byte
+    (9,507 bytes; the one runtime-code diff vs the artifact is the single
+    `musebook` immutable slot, expected)
+  - `musebook()` = 0x91A2DAe9699f0B82540B5886b0d8759C22820bA3
+  - `owner()` = 0xEac12759e1Bb4A3c1455Ea3FE03b668c493BFb25 (treasury EOA)
+  - `CLAIM_WINDOW()` = 2,592,000s = 30 days
+  - `VESTING_DAYS()` = 7
+  - `latestEpoch()` = 0, `allocatedUnclaimed()` = 0 (empty, unfunded — correct)
+- Test suite for v2: forge 29/29 (22 carried + 7 new vesting tests), scoring
+  self-tests 15/15, JS-engine fixture cross-check, fork E2E all-pass on a
+  Robinhood fork (day-0 revert, day-1 = exactly 1/7, day-7 pile-up = full,
+  repeat/forged/wrong-epoch/account/index reverts, expiry + finalize + withdraw).
+  - `latestEpoch()` = 0, `allocatedUnclaimed()` = 0 (clean initial state)
+- NOT done (later, separately authorized): funding the distributor with 1/8
+  treasury MUSEBOOK, publishing the epoch-1 root, wiring site DISTRIBUTOR.
+  site/claim.js stays null; passcode gate stays up.
+
 ## Rerunnable checks (another agent can re-verify)
 ```bash
 export PATH=/home/hatch/.foundry/versions/foundry-rs/foundry/v1.8.3:$PATH

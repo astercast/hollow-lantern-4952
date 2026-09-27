@@ -2,8 +2,16 @@
  *   1. Deploys RewardsDistributor against a local anvil fork of Robinhood Chain
  *   2. Impersonates the treasury Safe, funds the distributor with real MUSEBOOK
  *   3. Publishes the dry-run epoch root (rewards/api/dryrun/claims-999.json)
- *   4. Executes a real claim() for the first claimant, verifies MUSEBOOK arrived
- *   5. Verifies double-claim reverts and a stranger with a fake proof reverts
+ *   4. Verifies vesting: day-0 claim reverts, day-1 claim pays 1/7,
+ *      day-7 claim pays the piled-up remainder (6/7), then fully-claimed reverts
+ *   5. Verifies a stranger with a fake proof reverts
+ *   6. Verifies expiry: post-deadline claims revert, finalizeEpoch releases
+ *      the remainder, owner can withdraw it
+ *
+ * Time travel uses evm_setNextBlockTimestamp with ABSOLUTE timestamps
+ * (evm_increaseTime is wall-clock-relative and gets swallowed when the fork
+ * head runs ahead of the clock). Receipts are polled directly by hash —
+ * ethers v6 tx.wait() can deadlock on block polling under anvil automine.
  *
  * Usage: anvil --fork-url https://rpc.mainnet.chain.robinhood.com  (separate shell)
  *        node fork-e2e.js
@@ -15,6 +23,42 @@ const { ethers } = require('ethers');
 const cfg = require('./config');
 
 const ART = require('../out/RewardsDistributor.sol/RewardsDistributor.json');
+const DAY = 86400;
+
+// Poll a receipt directly by hash (never relies on block-gated wait()).
+// Transient fork-RPC transport errors are swallowed and retried.
+async function waitRc(provider, tx, tries = 90) {
+  let lastErr = null;
+  for (let i = 0; i < tries; i++) {
+    try {
+      const rc = await provider.getTransactionReceipt(tx.hash);
+      if (rc) return rc;
+    } catch (e) { lastErr = e; }
+    await new Promise((r) => setTimeout(r, 1000));
+  }
+  throw new Error('no receipt for ' + tx.hash + (lastErr ? ' (last poll error: ' + String(lastErr).slice(0, 100) + ')' : ''));
+}
+
+// Warp forward N days: mines a block exactly at latest + N days.
+async function warpDays(provider, n) {
+  const cur = (await provider.getBlock('latest')).timestamp;
+  const target = cur + n * DAY;
+  await provider.send('evm_setNextBlockTimestamp', [target]);
+  await provider.send('evm_mine', []); // materialize — latest block now carries `target`
+  return { from: cur, to: target };
+}
+
+// Expect a claim-shaped call to revert with a reason matching `want`.
+async function expectClaimRevert(contract, args, want, label) {
+  try {
+    await contract.claim.staticCall(...args, { gasLimit: 500000 });
+  } catch (e) {
+    if (!want.test(e.message)) throw new Error(label + ' reverted unexpectedly: ' + e.message.slice(0, 160));
+    console.log(label, 'reverts: OK');
+    return;
+  }
+  throw new Error(label.toUpperCase() + ' DID NOT REVERT');
+}
 
 async function main() {
   const provider = new ethers.JsonRpcProvider('http://127.0.0.1:8545', cfg.CHAIN_ID, { staticNetwork: true });
@@ -28,9 +72,9 @@ async function main() {
   console.log('deploying distributor on fork…');
   const factory = new ethers.ContractFactory(ART.abi, ART.bytecode.object, depSigner);
   // NOTE: explicit gasLimit — anvil-fork estimateGas is unreliable for
-  // contract creation (returns empty revert). 2.2M covers the 1.86M estimate.
-  const dist = await factory.deploy(cfg.TOKENS.musebook, deployer, { gasLimit: 2200000 });
-  await dist.waitForDeployment();
+  // contract creation (returns empty revert). 2.2M covers the ~1.9M estimate.
+  const dist = await factory.deploy(cfg.TOKENS.musebook, deployer, { gasLimit: 2400000 });
+  await waitRc(provider, dist.deploymentTransaction());
   const distAddr = await dist.getAddress();
   console.log('distributor:', distAddr);
 
@@ -42,12 +86,15 @@ async function main() {
     treasury);
   const pot = BigInt(epoch.potMusebook);
   console.log('funding', ethers.formatUnits(pot, 18), 'MUSEBOOK from treasury…');
-  await (await musebook.transfer(distAddr, pot)).wait();
+  await waitRc(provider, await musebook.transfer(distAddr, pot));
 
   console.log('publishing root', dry.root);
-  await (await dist.publishRoot(dry.epochId, dry.root, dry.totalAllocated)).wait();
+  const pubTx = await dist.publishRoot(dry.epochId, dry.root, dry.totalAllocated);
+  await waitRc(provider, pubTx);
+  const pubTime = (await provider.getBlock('latest')).timestamp;
+  console.log('published at', pubTime);
 
-  // Claim #1: real claim() for the first claimant.
+  // ---- vesting checks ----
   const c0 = dry.claims[0];
   await provider.send('anvil_impersonateAccount', [c0.account]);
   // Fund claimer with ETH for gas (fork accounts may hold none).
@@ -57,85 +104,77 @@ async function main() {
   const mbAsView = new ethers.Contract(cfg.TOKENS.musebook,
     ['function balanceOf(address) view returns (uint256)'], provider);
   const before = await mbAsView.balanceOf(c0.account);
-  const tx = await distAsClaimer.claim(dry.epochId, c0.index, c0.account, c0.amount, c0.proof);
-  const rc = await tx.wait();
+
+  // Day 0: nothing unlocked yet.
+  await expectClaimRevert(distAsClaimer,
+    [dry.epochId, c0.index, c0.account, c0.amount, c0.proof], /nothing vested yet/, 'day-zero claim');
+
+  // Day 1: exactly 1/7 unlocks.
+  await warpDays(provider, 1);
+  const rc1 = await waitRc(provider,
+    await distAsClaimer.claim(dry.epochId, c0.index, c0.account, c0.amount, c0.proof, { gasLimit: 300000 }));
+  if (rc1.status !== 1) throw new Error('DAY-1 CLAIM TX REVERTED ON CHAIN');
   const after = await mbAsView.balanceOf(c0.account);
-  console.log('claim gas used:', rc.gasUsed.toString());
-  console.log('claimant received:', ethers.formatUnits(after - before, 18), 'MUSEBOOK');
-  if (after - before !== BigInt(c0.amount)) throw new Error('PAYOUT MISMATCH');
+  console.log('day-1 claim gas used:', rc1.gasUsed.toString());
+  const expectDay1 = BigInt(c0.amount) / 7n;
+  if (after - before !== expectDay1)
+    throw new Error('DAY-1 PAYOUT MISMATCH: got ' + (after - before).toString() + ', want ' + expectDay1.toString());
+  console.log('day-1 payout = 1/7: OK', '(' + ethers.formatUnits(after - before, 18) + ' MUSEBOOK)');
 
-  // Double claim must revert.
-  try {
-    const tx2 = await distAsClaimer.claim(dry.epochId, c0.index, c0.account, c0.amount, c0.proof, { gasLimit: 500000 });
-    const rc2 = await tx2.wait();
-    console.log('double claim tx status:', rc2.status);
-    if (rc2.status === 1) throw new Error('DOUBLE CLAIM DID NOT REVERT (status 1)');
-    console.log('double claim reverts: OK (status 0)');
-  } catch (e) {
-    if (/DOUBLE CLAIM DID NOT REVERT/.test(e.message)) throw e;
-    if (!/already claimed/.test(e.message) && !/reverted/.test(e.message)) throw e;
-    console.log('double claim reverts: OK');
-  }
+  // Skip days 2-6 without claiming: day-7 claim pays the piled-up remainder.
+  await warpDays(provider, 6);
+  const rc7 = await waitRc(provider,
+    await distAsClaimer.claim(dry.epochId, c0.index, c0.account, c0.amount, c0.proof, { gasLimit: 300000 }));
+  if (rc7.status !== 1) throw new Error('DAY-7 CLAIM TX REVERTED ON CHAIN');
+  const afterPileup = await mbAsView.balanceOf(c0.account);
+  if (afterPileup - before !== BigInt(c0.amount)) throw new Error('PILE-UP PAYOUT MISMATCH');
+  console.log('day-7 pile-up payout: OK', '(' + ethers.formatUnits(afterPileup - before, 18) + ' MUSEBOOK total)');
 
-  // Fake proof must revert.
+  // Fully claimed: another claim must revert.
+  await expectClaimRevert(distAsClaimer,
+    [dry.epochId, c0.index, c0.account, c0.amount, c0.proof], /nothing vested yet/, 'repeat claim');
+
+  // ---- proof checks (c1 unclaimed; proof check fires before vesting) ----
   const c1 = dry.claims[1] || c0;
-  try {
-    await distAsClaimer.claim(dry.epochId, c1.index, c1.account, (BigInt(c1.amount) + 1n).toString(), c1.proof);
-    throw new Error('FORGED CLAIM DID NOT REVERT');
-  } catch (e) {
-    console.log('forged amount reverts: OK');
-  }
+  await expectClaimRevert(distAsClaimer,
+    [dry.epochId, c1.index, c1.account, (BigInt(c1.amount) + 1n).toString(), c1.proof],
+    /bad proof/, 'forged amount');
 
   // Wrong epoch / account / index must all revert (leaf binds all four fields).
-  // NOTE: c0.index is already claimed, so the bitmap check fires before the
-  // proof check — use c1 (unclaimed) for the wrong-account/wrong-index cases.
   const badCases = [
     ['wrong epoch', dry.epochId + 1, c0.index, c0.account, c0.amount, c0.proof, /no epoch/],
     ['wrong account', dry.epochId, c1.index, c0.account, c1.amount, c1.proof, /bad proof/],
     ['wrong index', dry.epochId, c1.index, c0.account, c0.amount, c0.proof, /bad proof/],
   ];
   for (const [name, e, i, a, amt, proof, want] of badCases) {
-    try {
-      await distAsClaimer.claim(e, i, a, amt, proof);
-      throw new Error(name.toUpperCase() + ' DID NOT REVERT');
-    } catch (err) {
-      if (err.message.includes('DID NOT REVERT')) throw err;
-      if (!want.test(err.message)) throw new Error(name + ' reverted unexpectedly: ' + err.message.slice(0, 120));
-      console.log(name, 'reverts: OK');
-    }
+    await expectClaimRevert(distAsClaimer, [e, i, a, amt, proof], want, name);
   }
 
   const unclaimed = await dist.epochUnclaimed(dry.epochId);
   console.log('epoch unclaimed (carryover):', ethers.formatUnits(unclaimed, 18));
 
-  // Expiration: warp past the 30-day claim window; claims must revert,
-  // finalizeEpoch must release the remainder to free funds.
-  const WINDOW = 30 * 86400;
-  const cur = (await provider.getBlock('latest')).timestamp;
-  await provider.send('evm_increaseTime', [WINDOW + 1]);
-  await provider.send('evm_mine', []);
-  console.log('warped to', (await provider.getBlock('latest')).timestamp, '(was', cur + ')');
+  // ---- expiry: warp past the 30-day claim window ----
+  const w = await warpDays(provider, 31); // publish + 7 (vested) + 31 > 30-day window
+  console.log('warped to', w.to, '(was', w.from + ')');
   const c2 = dry.claims[1] || c0;
   await provider.send('anvil_impersonateAccount', [c2.account]);
   await provider.send('anvil_setBalance', [c2.account, '0xDE0B6B3A7640000']); // 1 ETH
   const claimer2 = await provider.getSigner(c2.account);
   const distAsClaimer2 = new ethers.Contract(distAddr, ART.abi, claimer2);
-  try {
-    await distAsClaimer2.claim(dry.epochId, c2.index, c2.account, c2.amount, c2.proof);
-    throw new Error('POST-DEADLINE CLAIM DID NOT REVERT');
-  } catch (e) {
-    if (!/claim window closed/.test(e.message)) throw e;
-    console.log('post-deadline claim reverts: OK');
-  }
+  await expectClaimRevert(distAsClaimer2,
+    [dry.epochId, c2.index, c2.account, c2.amount, c2.proof], /claim window closed/, 'post-deadline claim');
+
   const liabBefore = await dist.allocatedUnclaimed();
-  await (await distAsClaimer2.finalizeEpoch(dry.epochId, { gasLimit: 200000 })).wait();
+  const finRc = await waitRc(provider, await distAsClaimer2.finalizeEpoch(dry.epochId, { gasLimit: 200000 }));
+  if (finRc.status !== 1) throw new Error('FINALIZE TX REVERTED ON CHAIN');
   const liabAfter = await dist.allocatedUnclaimed();
   console.log('allocatedUnclaimed before/after finalize:',
     ethers.formatUnits(liabBefore, 18), '->', ethers.formatUnits(liabAfter, 18));
   if (liabAfter !== 0n) throw new Error('FINALIZE DID NOT RELEASE ALL');
   // Owner (deployer here) can now withdraw the released remainder.
   const depBalBefore = await mbAsView.balanceOf(deployer);
-  await (await dist.withdraw(deployer, liabBefore, { gasLimit: 200000 })).wait();
+  const wdRc = await waitRc(provider, await dist.withdraw(deployer, liabBefore, { gasLimit: 200000 }));
+  if (wdRc.status !== 1) throw new Error('WITHDRAW TX REVERTED ON CHAIN');
   const depBalAfter = await mbAsView.balanceOf(deployer);
   if (depBalAfter - depBalBefore !== liabBefore) throw new Error('WITHDRAW AFTER FINALIZE MISMATCH');
   console.log('withdraw of finalized remainder: OK');

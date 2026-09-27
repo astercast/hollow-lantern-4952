@@ -1,4 +1,28 @@
-# Deploying the RewardsDistributor — click-by-click (Andrew)
+# RewardsDistributor — deployed (v2, daily vesting)
+
+**Status 2026-09-27 ~11:45 PDT: v2 is LIVE at
+`0xc050c5d452a9733a2d951c97166eb3ca7b78e90b`** (Robinhood Chain 4663),
+deployed directly with Andrew's signing authorization — the Remix walkthrough
+below is kept for reference only. v1 (`0x160623...2ab`) is abandoned (it paid
+full allocations on first claim; cannot do the daily unlock).
+
+V2 behavior: each epoch's allocation unlocks 1/7 per 24h after publishRoot()
+(`VESTING_DAYS = 7`); unclaimed slices pile up (claimable = vested − paid).
+Full verification in `LAUNCH-CHECKPOINT-2026-09-27.md`.
+
+## What happens next (separate signing session — not now)
+
+- Epoch 1 runs 2026-09-28 → 2026-10-04. On Monday 2026-10-05 the epoch is
+  scored, the Merkle root is built, and Andrew gets a second signing
+  session: (1) transfer 1/8 of treasury MUSEBOOK into the v2 contract,
+  (2) call `publishRoot` with the epoch root. Same owner wallet, and I'll
+  walk him through the clicks then.
+- Nothing is live until funding + root. The site still has
+  `DISTRIBUTOR = null`.
+
+---
+
+# Original Remix walkthrough (reference only — already executed directly)
 
 The contract is built and tested. This machine can't sign a contract
 deployment, so the deploy signature comes from your wallet. Easiest path

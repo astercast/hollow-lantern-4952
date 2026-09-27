@@ -64,18 +64,30 @@ contract RewardsDistributorTest is Test {
         bytes32 root = _leaf(EPOCH, 0, alice, AMT);
         _fundAndPublish(EPOCH, root, AMT);
 
+        // Nothing unlocked at publish; full allocation vested after 7 days.
+        vm.warp(block.timestamp + 7 days);
         bytes32[] memory proof;
         dist.claim(EPOCH, 0, alice, AMT, proof);
         assertEq(mb.balanceOf(alice), AMT);
         assertEq(dist.allocatedUnclaimed(), 0);
     }
 
-    function test_double_claim_reverts() public {
+    function test_claim_before_day_one_reverts() public {
         bytes32 root = _leaf(EPOCH, 0, alice, AMT);
         _fundAndPublish(EPOCH, root, AMT);
         bytes32[] memory proof;
+        vm.expectRevert("nothing vested yet");
         dist.claim(EPOCH, 0, alice, AMT, proof);
-        vm.expectRevert("already claimed");
+    }
+
+    function test_double_claim_same_day_reverts() public {
+        bytes32 root = _leaf(EPOCH, 0, alice, AMT);
+        _fundAndPublish(EPOCH, root, AMT);
+        vm.warp(block.timestamp + 2 days);
+        bytes32[] memory proof;
+        dist.claim(EPOCH, 0, alice, AMT, proof);
+        // Second claim with nothing newly vested reverts.
+        vm.expectRevert("nothing vested yet");
         dist.claim(EPOCH, 0, alice, AMT, proof);
     }
 
@@ -94,8 +106,9 @@ contract RewardsDistributorTest is Test {
         bytes32 root2 = _leaf(2, 0, alice, AMT);
         _fundAndPublish(2, root2, AMT);
         bytes32[] memory proof;
+        vm.warp(block.timestamp + 7 days);
         dist.claim(1, 0, alice, AMT, proof); // epoch 1 fine
-        // Epoch 2 / index 0 is a fresh claimed-bit AND a different leaf
+        // Epoch 2 / index 0 is a fresh leaf AND a different leaf
         // (epochId is in the leaf), so this must succeed — no cross-epoch replay.
         dist.claim(2, 0, alice, AMT, proof);
         assertEq(mb.balanceOf(alice), 2 * AMT);
@@ -142,6 +155,7 @@ contract RewardsDistributorTest is Test {
             : keccak256(abi.encodePacked(l1, l0));
         _fundAndPublish(EPOCH, root, 2 * AMT);
 
+        vm.warp(block.timestamp + 7 days);
         bytes32[] memory p0 = new bytes32[](1); p0[0] = l1;
         dist.claim(EPOCH, 0, alice, AMT, p0);
         assertEq(dist.epochUnclaimed(EPOCH), AMT);
@@ -163,6 +177,7 @@ contract RewardsDistributorTest is Test {
         uint256 total = vm.parseJsonUint(json, ".totalAllocated");
         _fundAndPublish(epochId, root, total);
 
+        vm.warp(block.timestamp + 7 days); // fully vested before claiming
         uint256 n = 5;
         for (uint256 i = 0; i < n; i++) {
             string memory base = string.concat(".claims[", vm.toString(i), "]");
@@ -205,6 +220,7 @@ contract RewardsDistributorTest is Test {
             : keccak256(abi.encodePacked(l1, l0));
         _fundAndPublish(EPOCH, root, 2 * AMT);
 
+        vm.warp(block.timestamp + 7 days); // fully vested, alice claims all of hers
         bytes32[] memory p0 = new bytes32[](1); p0[0] = l1;
         dist.claim(EPOCH, 0, alice, AMT, p0); // bob never claims
         assertEq(dist.allocatedUnclaimed(), AMT);
@@ -296,6 +312,7 @@ contract RewardsDistributorTest is Test {
         bad.mint(address(d2), AMT); // funded, so publishRoot passes
         vm.prank(owner);
         d2.publishRoot(1, _leaf(1, 0, alice, AMT), AMT);
+        vm.warp(block.timestamp + 7 days); // reach the transfer step
         bytes32[] memory proof;
         vm.expectRevert("transfer failed");
         d2.claim(1, 0, alice, AMT, proof);
@@ -309,6 +326,7 @@ contract RewardsDistributorTest is Test {
         bad.mint(address(d2), AMT);
         vm.prank(owner);
         d2.publishRoot(1, _leaf(1, 0, alice, AMT), AMT);
+        vm.warp(block.timestamp + 7 days); // reach the transfer step
         bytes32[] memory proof;
         vm.expectRevert(); // bubbles the token's revert
         d2.claim(1, 0, alice, AMT, proof);
@@ -332,6 +350,7 @@ contract RewardsDistributorTest is Test {
             : keccak256(abi.encodePacked(l1, l0));
         _fundAndPublish(9, root, 10 ether);
 
+        vm.warp(block.timestamp + 7 days); // fully vested before claiming
         bytes32[] memory p0 = new bytes32[](1); p0[0] = l1;
         dist.claim(9, 0, nft1, 7 ether, p0);
         assertEq(mb.balanceOf(nft1), 7 ether);
@@ -340,5 +359,93 @@ contract RewardsDistributorTest is Test {
         dist.claim(9, 1, nft2, 3 ether, p1);
         assertEq(mb.balanceOf(nft2), 3 ether);
         assertEq(dist.allocatedUnclaimed(), 0);
+    }
+
+    /* ---- daily vesting: 1/7 per day, unclaimed slices pile up ---- */
+
+    function test_day_one_unlocks_one_seventh() public {
+        bytes32 root = _leaf(EPOCH, 0, alice, AMT);
+        _fundAndPublish(EPOCH, root, AMT);
+        vm.warp(block.timestamp + 1 days);
+        bytes32[] memory proof;
+        dist.claim(EPOCH, 0, alice, AMT, proof);
+        assertEq(mb.balanceOf(alice), AMT / 7, "day 1 = exactly 1/7");
+        assertEq(dist.claimedAmount(EPOCH, 0), AMT / 7);
+    }
+
+    function test_unclaimed_slices_pile_up() public {
+        // Skip days 1-2 entirely; first claim on day 3 takes 3/7 at once.
+        bytes32 root = _leaf(EPOCH, 0, alice, AMT);
+        _fundAndPublish(EPOCH, root, AMT);
+        vm.warp(block.timestamp + 3 days);
+        bytes32[] memory proof;
+        dist.claim(EPOCH, 0, alice, AMT, proof);
+        assertEq(mb.balanceOf(alice), (AMT * 3) / 7, "days 1-3 piled up");
+    }
+
+    function test_claim_each_day_sums_to_full() public {
+        bytes32 root = _leaf(EPOCH, 0, alice, AMT);
+        _fundAndPublish(EPOCH, root, AMT);
+        bytes32[] memory proof;
+        uint256 t0 = block.timestamp;
+
+        vm.warp(t0 + 1 days);
+        dist.claim(EPOCH, 0, alice, AMT, proof);
+        vm.warp(t0 + 3 days);
+        dist.claim(EPOCH, 0, alice, AMT, proof);
+        vm.warp(t0 + 7 days);
+        dist.claim(EPOCH, 0, alice, AMT, proof);
+
+        assertEq(mb.balanceOf(alice), AMT, "partial claims sum to the full allocation");
+        assertEq(dist.allocatedUnclaimed(), 0);
+        // Nothing left: further claims revert.
+        vm.expectRevert("nothing vested yet");
+        dist.claim(EPOCH, 0, alice, AMT, proof);
+    }
+
+    function test_vested_amount_view_steps() public {
+        bytes32 root = _leaf(EPOCH, 0, alice, AMT);
+        _fundAndPublish(EPOCH, root, AMT);
+        uint256 t0 = block.timestamp;
+        assertEq(dist.vestedAmount(EPOCH, AMT), 0, "t=0: nothing");
+        vm.warp(t0 + 1 days - 1);
+        assertEq(dist.vestedAmount(EPOCH, AMT), 0, "just under 24h: still nothing");
+        vm.warp(t0 + 1 days);
+        assertEq(dist.vestedAmount(EPOCH, AMT), AMT / 7, "day 1");
+        vm.warp(t0 + 3 days + 12 hours);
+        assertEq(dist.vestedAmount(EPOCH, AMT), (AMT * 3) / 7, "day 3.5 floors to 3/7");
+        vm.warp(t0 + 7 days);
+        assertEq(dist.vestedAmount(EPOCH, AMT), AMT, "day 7: full");
+        vm.warp(t0 + 30 days);
+        assertEq(dist.vestedAmount(EPOCH, AMT), AMT, "never exceeds allocation");
+    }
+
+    function test_claimable_now_view() public {
+        bytes32 root = _leaf(EPOCH, 0, alice, AMT);
+        _fundAndPublish(EPOCH, root, AMT);
+        assertEq(dist.claimableNow(EPOCH, 0, AMT), 0, "nothing vested at publish");
+        vm.warp(block.timestamp + 2 days);
+        assertEq(dist.claimableNow(EPOCH, 0, AMT), (AMT * 2) / 7, "2/7 claimable");
+        bytes32[] memory proof;
+        dist.claim(EPOCH, 0, alice, AMT, proof);
+        assertEq(dist.claimableNow(EPOCH, 0, AMT), 0, "zero right after claiming");
+    }
+
+    function test_vesting_two_leaves_independent() public {
+        bytes32 l0 = _leaf(EPOCH, 0, alice, AMT);
+        bytes32 l1 = _leaf(EPOCH, 1, bob, AMT);
+        bytes32 root = l0 <= l1
+            ? keccak256(abi.encodePacked(l0, l1))
+            : keccak256(abi.encodePacked(l1, l0));
+        _fundAndPublish(EPOCH, root, 2 * AMT);
+        vm.warp(block.timestamp + 1 days);
+        bytes32[] memory p0 = new bytes32[](1); p0[0] = l1;
+        dist.claim(EPOCH, 0, alice, AMT, p0); // alice takes day 1
+        // Bob skipping day 1 doesn't affect his pile: day 2 claim = 2/7.
+        vm.warp(block.timestamp + 1 days);
+        bytes32[] memory p1 = new bytes32[](1); p1[0] = l0;
+        dist.claim(EPOCH, 1, bob, AMT, p1);
+        assertEq(mb.balanceOf(bob), (AMT * 2) / 7, "bob's unclaimed day piled up");
+        assertEq(dist.allocatedUnclaimed(), 2 * AMT - AMT / 7 - (AMT * 2) / 7);
     }
 }

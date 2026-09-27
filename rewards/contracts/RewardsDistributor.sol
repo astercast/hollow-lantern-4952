@@ -7,6 +7,13 @@ pragma solidity ^0.8.24;
 /// (epochId, index, account, amount) leaves. Holders claim pull-style —
 /// anyone may submit a claim for any account, the claimer pays their own gas.
 ///
+/// The owner funds once per week (one transfer). Each epoch's allocation
+/// unlocks in daily slices: 1/7th per 24h after publishRoot(), fully unlocked
+/// after 7 days. Unclaimed slices PILE UP — claimable is always
+/// (vested so far − already paid), so skipping days never forfeits value;
+/// a holder claiming first on day 3 receives 3/7ths at once. Nobody can take
+/// the whole week on day one.
+///
 /// Claim window: each epoch's claims stay open for CLAIM_WINDOW (30 days)
 /// after its root is published. After the deadline, claims for that epoch
 /// revert, and anyone may call finalizeEpoch() to release the epoch's
@@ -36,18 +43,25 @@ contract RewardsDistributor {
     /// is not lost — it rolls into the next epoch's pot via carryover.
     uint256 public constant CLAIM_WINDOW = 30 days;
 
+    /// @notice Daily unlock schedule: each full 24h after publishRoot()
+    /// unlocks another 1/VESTING_DAYS of every allocation. Fully vested
+    /// after VESTING_DAYS days.
+    uint256 public constant VESTING_DAYS = 7;
+
     struct Epoch {
         bytes32 root;
         uint256 totalAllocated;
         uint256 totalClaimed;
+        uint64 publishTime;
         uint64 claimDeadline;
         bool finalized;
         bool exists;
     }
 
     mapping(uint256 => Epoch) public epochs;
-    // epochId => word index => bitmask of claimed leaf indexes
-    mapping(uint256 => mapping(uint256 => uint256)) private claimedBits;
+    // epochId => leaf index => MUSEBOOK already paid out for that leaf.
+    // A leaf may be claimed repeatedly; total paid never exceeds vested.
+    mapping(uint256 => mapping(uint256 => uint256)) public claimedAmount;
 
     /// @notice Allocated-but-unclaimed across every epoch. Free funds =
     /// balanceOf(this) - allocatedUnclaimed. Finalizing an expired epoch
@@ -73,7 +87,8 @@ contract RewardsDistributor {
 
     /// @notice Publish one epoch's claim root. Epoch ids must strictly increase.
     /// @dev totalAllocated must already be funded: the contract's balance must
-    /// cover it, so a root can never promise more than is here.
+    /// cover it, so a root can never promise more than is here. The daily
+    /// unlock clock starts at this transaction.
     function publishRoot(uint256 epochId, bytes32 root, uint256 totalAllocated) external onlyOwner {
         require(epochId > latestEpoch, "epoch order");
         require(root != bytes32(0), "zero root");
@@ -82,22 +97,39 @@ contract RewardsDistributor {
             musebook.balanceOf(address(this)) >= allocatedUnclaimed + totalAllocated,
             "underfunded"
         );
-        uint64 deadline = uint64(block.timestamp + CLAIM_WINDOW);
+        uint64 published = uint64(block.timestamp);
         epochs[epochId] = Epoch({
             root: root,
             totalAllocated: totalAllocated,
             totalClaimed: 0,
-            claimDeadline: deadline,
+            publishTime: published,
+            claimDeadline: uint64(published + CLAIM_WINDOW),
             finalized: false,
             exists: true
         });
         allocatedUnclaimed += totalAllocated;
         latestEpoch = epochId;
-        emit RootPublished(epochId, root, totalAllocated, deadline);
+        emit RootPublished(epochId, root, totalAllocated, uint64(published + CLAIM_WINDOW));
     }
 
-    /// @notice Claim one leaf. Callable by anyone for any account.
-    /// Reverts once the epoch's claim window has closed.
+    /// @notice How much of one leaf's allocation has unlocked so far.
+    /// Discrete daily steps: 0 before 24h, 1/7 after day 1, …, full after day 7.
+    function vestedAmount(uint256 epochId, uint256 allocation) public view returns (uint256) {
+        Epoch storage e = epochs[epochId];
+        if (!e.exists) return 0;
+        uint256 daysElapsed = (block.timestamp - e.publishTime) / 1 days;
+        if (daysElapsed >= VESTING_DAYS) return allocation;
+        return (allocation * daysElapsed) / VESTING_DAYS;
+    }
+
+    /// @notice How much of one leaf is claimable right now (for UIs).
+    function claimableNow(uint256 epochId, uint256 index, uint256 allocation) external view returns (uint256) {
+        return vestedAmount(epochId, allocation) - claimedAmount[epochId][index];
+    }
+
+    /// @notice Claim one leaf's newly-unlocked slice. Callable by anyone for
+    /// any account, as often as new slices unlock. Reverts once the epoch's
+    /// claim window has closed, or when nothing new has unlocked.
     function claim(
         uint256 epochId,
         uint256 index,
@@ -109,21 +141,22 @@ contract RewardsDistributor {
         require(e.exists, "no epoch");
         require(block.timestamp <= e.claimDeadline, "claim window closed");
 
-        uint256 word = index / 256;
-        uint256 bit = index % 256;
-        require((claimedBits[epochId][word] & (1 << bit)) == 0, "already claimed");
-        claimedBits[epochId][word] |= (1 << bit);
-
         // Double-hashed leaf (prevents second-preimage attacks on the tree).
         bytes32 leaf = keccak256(bytes.concat(keccak256(abi.encode(epochId, index, account, amount))));
         require(_verify(proof, e.root, leaf), "bad proof");
 
-        e.totalClaimed += amount;
-        require(e.totalClaimed <= e.totalAllocated, "over allocation");
-        allocatedUnclaimed -= amount;
+        uint256 vested = vestedAmount(epochId, amount);
+        uint256 paid = claimedAmount[epochId][index];
+        require(vested > paid, "nothing vested yet");
+        uint256 payout = vested - paid;
+        claimedAmount[epochId][index] = vested;
 
-        require(musebook.transfer(account, amount), "transfer failed");
-        emit Claimed(epochId, index, account, amount);
+        e.totalClaimed += payout;
+        require(e.totalClaimed <= e.totalAllocated, "over allocation");
+        allocatedUnclaimed -= payout;
+
+        require(musebook.transfer(account, payout), "transfer failed");
+        emit Claimed(epochId, index, account, payout);
     }
 
     /// @notice After an epoch's claim window closes, release its unclaimed
@@ -145,11 +178,6 @@ contract RewardsDistributor {
         Epoch storage e = epochs[epochId];
         require(e.exists, "no epoch");
         return e.totalAllocated - e.totalClaimed;
-    }
-
-    /// @notice Whether a leaf index was already claimed (for UIs).
-    function isClaimed(uint256 epochId, uint256 index) external view returns (bool) {
-        return (claimedBits[epochId][index / 256] & (1 << (index % 256))) != 0;
     }
 
     /// @notice Owner-only: move free funds (e.g. back to treasury).
