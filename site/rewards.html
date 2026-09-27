@@ -277,29 +277,42 @@
     .pod-name { font-size: 19px; }
     .pod-reward { font-size: 26px; }
 
-    /* Mobile rows: card-style, NOT hidden columns.
-       Line 1: rank + name + tag. Line 2: score / est. reward / status. */
+    /* Mobile rows: vertical cards.
+       Line 1: rank + name (+ you tag). Line 2: holdings.
+       Line 3: score / est. reward / status in a roomy row. */
     .lb-head { display: none; }
     .lb-row {
-      grid-template-columns: 34px 1fr;
-      gap: 4px 10px;
+      display: block;
       background: var(--lb-card);
       border: 1px solid rgba(212, 169, 78, .12);
       border-radius: 14px;
-      padding: 16px;
-      margin-bottom: 10px;
+      padding: 18px;
+      margin-bottom: 12px;
     }
     .lb-row:hover { background: var(--lb-card2); }
     .lb-row.you { border: 1px solid rgba(212, 169, 78, .55); background: var(--lb-gold-soft); }
-    .lb-rank { font-size: 14px; grid-row: span 2; align-self: start; padding-top: 3px; }
-    .lb-holder { gap: 8px; }
-    .lb-name { font-size: 15.5px; }
+    .lb-rank { display: inline-block; font-size: 13px; margin-right: 10px; }
+    .lb-holder { display: contents; }
+    .lb-name { font-size: 16.5px; }
+    .lb-hold { margin-top: 8px; font-size: 12.5px; line-height: 1.5; }
+    .lb-meta {
+      display: flex;
+      align-items: baseline;
+      flex-wrap: wrap;
+      gap: 6px 22px;
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid rgba(212, 169, 78, .1);
+    }
+    .lb-score, .lb-reward { text-align: left; font-size: 15.5px; }
+    .lb-status { margin-left: auto; text-align: right; }
+    /* Mobile checker: stack the two cards instead of squeezing them side by side */
+    .check-grid { grid-template-columns: 1fr; }
   
   /* Small phones */
   @media (max-width: 380px) {
     .lb-hero h1 { font-size: 29px; }
-    .lb-meta { grid-template-columns: 1fr 1fr; }
-    .lb-status { grid-column: 1 / -1; text-align: left; }
+    .lb-status { margin-left: 0; text-align: left; }
   }
 
 </style>
