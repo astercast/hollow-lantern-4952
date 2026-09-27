@@ -1,0 +1,60 @@
+{
+  "epochId": 7,
+  "root": "0x5bfee1a85111dfa211bc9337c78f5d3e2a6daff0dc8faebca31c55e44837bf65",
+  "totalAllocated": "870000000000000000000",
+  "claims": [
+    {
+      "epochId": 7,
+      "index": 0,
+      "account": "0x1111111111111111111111111111111111111111",
+      "amount": "100000000000000000000",
+      "proof": [
+        "0x1ff5ff53b5823de1d49ccbb20d9a0a4860b40fbec541ce20de475a9951bc8c89",
+        "0xe5c688acc5098aa1b0da6a4769c4427231eda162626f33afdc1b09af7b586778",
+        "0x6a8d35d99857ecd3ac3c690cfbf947ab48b52dae3473eedec8923957a241c8cf"
+      ]
+    },
+    {
+      "epochId": 7,
+      "index": 1,
+      "account": "0x2222222222222222222222222222222222222222",
+      "amount": "137000000000000000000",
+      "proof": [
+        "0x5afcbd04f643584a91f085b89cc6b2d2d95c1abce444b5692771cb87108b46bc",
+        "0xe5c688acc5098aa1b0da6a4769c4427231eda162626f33afdc1b09af7b586778",
+        "0x6a8d35d99857ecd3ac3c690cfbf947ab48b52dae3473eedec8923957a241c8cf"
+      ]
+    },
+    {
+      "epochId": 7,
+      "index": 2,
+      "account": "0x3333333333333333333333333333333333333333",
+      "amount": "174000000000000000000",
+      "proof": [
+        "0x50c05656a665e02e066ba357e981c2778a8a8de5d4445bbe8f772c54294d8ac4",
+        "0xb77a9bd72809d5148ddfe50b933a505661ac253eb76b93d19e4b539db567f67f",
+        "0x6a8d35d99857ecd3ac3c690cfbf947ab48b52dae3473eedec8923957a241c8cf"
+      ]
+    },
+    {
+      "epochId": 7,
+      "index": 3,
+      "account": "0x4444444444444444444444444444444444444444",
+      "amount": "211000000000000000000",
+      "proof": [
+        "0x118ecdc64fa3c01bd3700e3303c61405b0bd1229233c5cf9d5f5c3ba8bc5b6d1",
+        "0xb77a9bd72809d5148ddfe50b933a505661ac253eb76b93d19e4b539db567f67f",
+        "0x6a8d35d99857ecd3ac3c690cfbf947ab48b52dae3473eedec8923957a241c8cf"
+      ]
+    },
+    {
+      "epochId": 7,
+      "index": 4,
+      "account": "0x5555555555555555555555555555555555555555",
+      "amount": "248000000000000000000",
+      "proof": [
+        "0xa2f6a5fab8d71d7d89118ccaef75d75b28f334ab2de1cac986caf9ddf5797ae5"
+      ]
+    }
+  ]
+}

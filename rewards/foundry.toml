@@ -1,0 +1,13 @@
+[profile.default]
+src = "contracts"
+test = "test"
+out = "out"
+libs = ["lib"]
+solc_version = "0.8.24"
+evm_version = "cancun"
+ffi = false
+fs_permissions = [{ access = "read", path = "./test" }]
+
+# Robinhood Chain (id 4663) for fork tests
+[rpc_endpoints]
+robinhood = "https://rpc.mainnet.chain.robinhood.com"

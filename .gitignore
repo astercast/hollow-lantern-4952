@@ -7,3 +7,13 @@ metadata-final/
 ipfs/
 irys-upload/
 _staging/
+
+# Rewards system: never commit wallet addresses (dry-run outputs), build
+# artifacts, or vendored deps. Restore with: cd rewards && forge install
+rewards/api/dryrun/
+rewards/out/
+rewards/cache/
+rewards/lib/
+# node_modules is a SYMLINK here (-> ../../site/node_modules); the dir
+# pattern above does not match symlinks, so ignore it explicitly.
+rewards/engine/node_modules

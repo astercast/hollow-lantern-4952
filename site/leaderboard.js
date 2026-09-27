@@ -1,8 +1,9 @@
 /* Holder leaderboard — READ ONLY. No transactions, no signatures, no money moves.
  * Board rows use dog-inspired codenames — no wallet addresses,
  * no emojis next to codenames. Row scores are preview data until the engine is live.
- * One combined score per holder: PORCH holdings weigh 50%, MDOG holdings 30%,
- * 20% of the pot stays in the treasury. No separate categories.
+ * One combined score per holder: PORCH holdings weigh 50, MDOG holdings
+ * weigh 30, so PORCH counts about 1.7x more. 100% of the pot goes to holders.
+ * No separate categories.
  * The wallet checker reads live token balances from Robinhood Chain. */
 
 (function () {
@@ -13,12 +14,11 @@
   var TREASURY = "0xEac12759e1Bb4A3c1455Ea3FE03b668c493BFb25";
 
   /* Preview epoch pot (MUSEBOOK) used for the est. reward column.
-   * One combined score per holder: PORCH counts 50%, MDOG counts 30%,
-   * 20% of every pot stays in the treasury for future use. */
+   * One combined score per holder: PORCH weighs 50, MDOG weighs 30.
+   * 100% of every pot goes to holders. */
   var EPOCH_POT = 398000;
-  var WEIGHT_PORCH_BPS = 5000;
-  var WEIGHT_MDOG_BPS = 3000;
-  var TREASURY_RESERVE = 0.20;
+  var WEIGHT_PORCH = 50;
+  var WEIGHT_MDOG = 30;
 
   var TOKENS = {
     porch:    { address: "0x4B434541873f171aB70D7d2F3a48b0f0b0f13ba3", symbol: "PORCH",    min: 1000000 },
@@ -61,12 +61,12 @@
     ["Bone Baron",      45000000,   30000, false]
   ];
 
-  /* Combined score in pot basis points (5000 + 3000 = 8000 max):
-   * reward = score / 10000 * EPOCH_POT. Same weighting as the engine. */
+  /* Combined score (50 + 30 = 80 max):
+   * reward = score / 80 * EPOCH_POT. Same weighting as the engine. */
   function combinedScore(porchBal, mdogBal, totals) {
     var s = 0;
-    if (totals.porch > 0 && porchBal > 0) s += WEIGHT_PORCH_BPS * (porchBal / totals.porch);
-    if (totals.mdog > 0 && mdogBal > 0) s += WEIGHT_MDOG_BPS * (mdogBal / totals.mdog);
+    if (totals.porch > 0 && porchBal > 0) s += WEIGHT_PORCH * (porchBal / totals.porch);
+    if (totals.mdog > 0 && mdogBal > 0) s += WEIGHT_MDOG * (mdogBal / totals.mdog);
     return s;
   }
 
@@ -91,7 +91,7 @@
 
   /* Estimated MUSEBOOK reward for a row, from its share of the combined score. */
   function estReward(r) {
-    return (r.score / 10000) * EPOCH_POT;
+    return (r.score / 80) * EPOCH_POT;
   }
 
   function holdingsLine(r) {
@@ -179,7 +179,6 @@
       lines.push("<li><strong>" + t.symbol + ":</strong> " + fmt(bal, 0) +
         (ok ? " — meets the proposed " + fmt(t.min, 0) + " minimum ✓" : " — below the proposed " + fmt(t.min, 0) + " minimum") + "</li>");
     });
-    lines.push("<li><strong>Treasury reserve:</strong> 20% of every epoch pot is held for future use.</li>");
     return "<ul>" + lines.join("") + "</ul>";
   }
 
