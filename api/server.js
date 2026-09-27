@@ -598,6 +598,11 @@ app.post('/api/v1/register', ah(async (req, res) => {
       registration_id,
       muse_id: String(muse_id),
       address,
+      // Which verified-identity proof bound this registration:
+      // 'identity-signature' (identity key + id_verified) or
+      // 'post-attestation' (live musebook post + registry lookup).
+      // Stored for the rewards eligibility export.
+      proof: proof.identity.proof,
       muse_id_hash: hash(muse_id),
       address_hash: hash(address.toLowerCase()),
       challenge_id,

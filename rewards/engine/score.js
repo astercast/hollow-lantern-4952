@@ -10,7 +10,7 @@
  *     multiplier, no replay, no LP eligibility (Andrew 2026-09-27).
  *   - claimed by holders, never airdropped; one wallet per verified muse ID;
  *     unlinked wallets earn nothing
- * Proposed guards (defaults; change in config.js before epoch 1):
+ * Guards (decided by Andrew 2026-09-27; locked in config.js):
  *   - floor on >= 4/7 snapshots (1M PORCH / 1K MDOG); a wallet earns from a
  *     token only if it clears that token's floor
  *   - whale cap: score <= 2% of class total supply
@@ -48,7 +48,7 @@ function scoreEpoch({ epochId, startTs, endTs, snapshots, registryJson, treasury
     for (const w of linked.keys()) {
       let spotSum = 0n, floorDays = 0;
       for (const s of snapshots) {
-        // SPOT ONLY — s.lp is ignored entirely (LP removed from rewards 2026-09-27).
+        // SPOT ONLY — snapshots carry no LP data at all (LP removed from rewards 2026-09-27).
         const sp = BigInt((s.spot[w] && s.spot[w][cls]) || '0');
         if (sp >= floor) floorDays++;
         spotSum += sp;
@@ -136,7 +136,7 @@ function scoreEpoch({ epochId, startTs, endTs, snapshots, registryJson, treasury
       floorPorch: cfg.FLOOR.porch.toString(), floorMdog: cfg.FLOOR.mdog.toString(),
       floorDays: cfg.FLOOR_DAYS, whaleCapBps: cfg.WHALE_CAP_BP,
       lp: 'removed 2026-09-27 — spot balances only, no multiplier, no replay',
-      note: 'guard values are PROPOSED until Andrew rules',
+      note: 'guard values decided by Andrew 2026-09-27',
     },
     publishedTx: null,
   };

@@ -1,6 +1,7 @@
 /* Rewards engine config — Robinhood Chain (id 4663).
- * Proposed-but-undecided params are marked PROPOSED: change them here before
- * running an epoch; no contract redeploy is ever needed. */
+ * Guard params were decided by Andrew on 2026-09-27 and are locked here.
+ * Changing them later requires Andrew's word + a rescore; no contract
+ * redeploy is ever needed (guards live in the engine, not the contract). */
 'use strict';
 
 module.exports = {
@@ -34,17 +35,23 @@ module.exports = {
   // 100% of every epoch pot goes to holders. No reserve, no treasury cut.
   WEIGHTS: { porch: 50, mdog: 30 },
 
-  // ---- Scoring guards (PROPOSED — Andrew has not ruled) ----
-  FLOOR: { porch: 1000000n * 10n ** 18n, mdog: 1000n * 10n ** 18n }, // min holding
-  FLOOR_DAYS: 4,             // must clear the floor on >= this many of 7 snapshots
-  WHALE_CAP_BP: 200,         // score capped at 200 bps (2%) of class total supply
-  MIN_PAYOUT_WEI: 10n ** 18n, // dust threshold: 1 MUSEBOOK
+  // ---- Scoring guards (DECIDED by Andrew 2026-09-27; locked) ----
+  // A wallet earns from a token class only if it holds at least the floor
+  // for that token on at least FLOOR_DAYS of the 7 daily snapshots.
+  FLOOR: { porch: 1000000n * 10n ** 18n, mdog: 1000n * 10n ** 18n }, // 1M PORCH / 1K MDOG
+  FLOOR_DAYS: 4,             // must clear the floor on >= 4 of 7 snapshots
+  WHALE_CAP_BP: 200,         // no wallet's score may exceed 2% of its class total
+  MIN_PAYOUT_WEI: 10n ** 18n, // dust threshold: payouts below 1 MUSEBOOK stay as carryover
   // NOTE (2026-09-27): LP tracking REMOVED from rewards by Andrew's order.
   // Scoring uses PORCH/MDOG spot wallet balances only. No LP multiplier,
   // no replay, no LP eligibility. POOLS/POSM/STATEVIEW kept for reference
   // (other tooling) but are not consulted by the rewards engine.
 
-  // ---- Chain scan bounds ----
+  // ---- Epoch calendar ----
+  // Epochs begin Monday 00:00 UTC. Epoch 1 runs 2026-09-28 .. 2026-10-04
+  // (root published after the 2026-10-04 snapshot; 30-day claim window).
+  EPOCH_1_START: '2026-09-28',
+  EPOCH_SECONDS: 7 * 86400,
   // PORCH launched 2026-09-23; MDOG earlier. Conservative scan starts:
   SCAN_START_TS: Math.floor(new Date('2026-09-01T00:00:00Z').getTime() / 1000),
   LOG_CHUNK: 10000,          // blocks per getLogs chunk

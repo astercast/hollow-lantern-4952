@@ -34,7 +34,7 @@ Weekly MUSEBOOK holder rewards (Andrew's locked design, 2026-09-26):
 | `contracts/RewardsDistributor.sol` | The claim contract. No dependencies. |
 | `test/RewardsDistributor.t.sol` | 16 forge tests incl. JS-engine cross-check + claim-window/finalize. |
 | `script/Deploy.s.sol` | Deploy script (**do not run without Andrew's order**). |
-| `engine/config.js` | All addresses + tunable params (floors, caps marked PROPOSED). |
+| `engine/config.js` | All addresses + guard params (decided 2026-09-27; epoch-1 start 2026-09-28). |
 | `engine/snapshot.js` | Holder enumeration + daily snapshots (spot only). Read-only. |
 | `engine/score.js` | Time-weighted spot scoring, floors, whale cap, splits, merkle input. |
 | `engine/merkle.js` | Tree builder — must match the contract (proven by test). |
@@ -48,9 +48,13 @@ Weekly MUSEBOOK holder rewards (Andrew's locked design, 2026-09-26):
 ## Running a real epoch (operator checklist)
 
 1. **Export the identity registry** from the registration backend:
-   `{"0xabc…": {"muse_id": "muse_…", "linked_at": 1695…}, …}` — one wallet per muse.
-2. **Run the epoch** (the Monday after the epoch ends):
-   `node engine/run-epoch.js --start 2026-10-05 --epoch-id 1 --registry /path/to/registry.json --carryover 0 --distributor 0x… --out ./api`
+   `node engine/export-registry.js --out identity-registry.json`
+   (reads `api/data/db.json` locally, or Postgres when `DATABASE_URL` is set —
+   production registrations live in Postgres on Render).
+   Output: `{"0xabc…": {"muse_id": "muse_…", "linked_at": 1695…}, …}` —
+   one wallet per verified muse identity.
+2. **Run the epoch** (on the Monday after the epoch week ends):
+   `node engine/run-epoch.js --start 2026-09-28 --epoch-id 1 --registry ./identity-registry.json --carryover 0 --distributor 0x… --out ./api`
 3. **Review** `api/epoch-1.json` (pot, split, root, guard values) and `api/board-1.json`.
 4. **Build the Safe bundle**: `node engine/publish.js --epoch 1 --api ./api` →
    `api/safe-bundle-epoch-1.json`. Execute both txs from the treasury Safe, in order.
@@ -97,11 +101,14 @@ Next epoch's `--carryover` = distributor's free balance
   requires a `to` address (no contract-creation path). No EOA key exists on
   this machine. Andrew runs `forge script script/Deploy.s.sol` (or the
   init bytecode in the launch checkpoint) from his own wallet in the morning.
-- Guard params (1M PORCH / 1K MDOG floors, 2% whale cap) are
-  **proposed** — Andrew rules before epoch 1.
-- Identity registry export from the registration backend is still TODO
-  (registration must accept any EVM address — Spellbook included). Without
-  it, a real epoch cannot exclude unlinked wallets per the locked model.
+- Guard params (1M PORCH / 1K MDOG floors on ≥4 of 7 snapshots, 2% whale
+  cap, 1 MUSEBOOK minimum payout) were **decided by Andrew 2026-09-27** —
+  locked in `engine/config.js`. Epoch 1 starts Monday 2026-09-28 00:00 UTC.
+- Identity registry export: `engine/export-registry.js` is built and ready;
+  it will emit zero rows until real registrations exist in the production
+  backend (Postgres on Render; `api/data/db.json` locally has zero rows).
+  Without it, epoch 1 cannot satisfy "verified identity required" —
+  unlinked wallets earn nothing, and the scoring is exactly that strict.
 - Epoch-1 funding moves MUSEBOOK out of Andrew's EOA 0xEac12759… — only he
   holds that key.
 - The old `site/claim.js` three-token stub is replaced by the real claim engine;

@@ -2,10 +2,12 @@
  *
  * For each snapshot day (00:00 UTC):
  *   1. Find the block closest to that timestamp (binary search).
- *   2. Enumerate every holder from Transfer logs (spot) and V4 position
- *      ownership (LP), then read balanceOf / position value AT that block.
- *   3. LP-held PORCH/MDOG are valued with concentrated-liquidity math
- *      (tickmath.js) from StateView.getSlot0 at the same block.
+ *   2. Enumerate every holder from Transfer logs (spot only),
+ *      then read balanceOf AT that block.
+ *
+ * LP tracking was REMOVED 2026-09-27 by Andrew's order: snapshots and
+ * scoring use spot wallet balances only. No LP discovery, no LP valuation,
+ * no multiplier.
  *
  * Read-only. Never signs, never sends.
  */
@@ -13,20 +15,11 @@
 
 const { ethers } = require('ethers');
 const cfg = require('./config');
-const { getAmountsForLiquidity } = require('./tickmath');
 
 const ERC20_ABI = [
   'function balanceOf(address) view returns (uint256)',
   'function totalSupply() view returns (uint256)',
   'event Transfer(address indexed from, address indexed to, uint256 value)',
-];
-const POSM_ABI = [
-  'function getPoolAndPositionInfo(uint256 tokenId) view returns (tuple(address currency0, address currency1, uint24 fee, int24 tickSpacing, address hooks) poolKey, uint256 info)',
-  'function getPositionLiquidity(uint256 tokenId) view returns (uint128)',
-  'event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)',
-];
-const STATEVIEW_ABI = [
-  'function getSlot0(bytes32 poolId) view returns (uint160 sqrtPriceX96, int24 tick, uint24 protocolFee, uint24 lpFee)',
 ];
 
 const ZERO = '0x0000000000000000000000000000000000000000';
@@ -83,32 +76,10 @@ async function balancesAt(provider, token, holders, blockTag) {
   return out;
 }
 
-/* Full POSM Transfer timeline: tokenId -> [{block, from, to}] sorted. */
-async function positionTimeline(provider, fromBlock, toBlock) {
-  const c = new ethers.Contract(cfg.POSM, POSM_ABI, provider);
-  const tl = new Map();
-  const chunks = Math.ceil((toBlock - fromBlock + 1) / cfg.LOG_CHUNK);
-  for (let i = 0, s = fromBlock; s <= toBlock; i++, s += cfg.LOG_CHUNK) {
-    const e = Math.min(s + cfg.LOG_CHUNK - 1, toBlock);
-    if (i % 25 === 0) console.log(`  posm chunk ${i + 1}/${chunks}`);
-    const logs = await c.queryFilter(c.filters.Transfer(), s, e);
-    for (const l of logs) {
-      const id = l.args.tokenId.toString();
-      if (!tl.has(id)) tl.set(id, []);
-      tl.get(id).push({ block: l.blockNumber, from: l.args.from.toLowerCase(), to: l.args.to.toLowerCase() });
-    }
-  }
-  return tl;
-}
-
-function ownerAt(transfers, block) {
-  let owner = null;
-  for (const t of transfers) {
-    if (t.block > block) break;
-    owner = t.to === ZERO ? null : t.to;
-  }
-  return owner;
-}
+/* NOTE: LP timeline helpers were deleted 2026-09-27 (Andrew's order: no LP
+ * tracking in rewards). positionTimeline/ownerAt/lpBalancesAt lived here
+ * before; scoring and snapshots are spot-only. The validate-*.js scripts
+ * still import decodeInfo/poolIdOf below. */
 
 function decodeInfo(info) {
   const v = BigInt(info);
@@ -127,65 +98,20 @@ function poolIdOf(key) {
   ));
 }
 
-const SYM = {};
-SYM[cfg.TOKENS.porch.toLowerCase()] = 'porch';
-SYM[cfg.TOKENS.mdog.toLowerCase()] = 'mdog';
-SYM[cfg.TOKENS.musebook.toLowerCase()] = 'musebook';
-
-/* LP-held PORCH/MDOG per owner at blockTag. */
-async function lpBalancesAt(provider, timeline, blockTag) {
-  const posm = new ethers.Contract(cfg.POSM, POSM_ABI, provider);
-  const sv = new ethers.Contract(cfg.STATEVIEW, STATEVIEW_ABI, provider);
-  const out = {}; // owner -> {porch: bigint, mdog: bigint}
-  const add = (o, sym, amt) => {
-    if (amt === 0n || (sym !== 'porch' && sym !== 'mdog')) return;
-    if (!out[o]) out[o] = { porch: 0n, mdog: 0n };
-    out[o][sym] += amt;
-  };
-  const ids = [...timeline.keys()];
-  const slotCache = {};
-  await mapPool(ids, async (id) => {
-    const owner = ownerAt(timeline.get(id), blockTag);
-    if (!owner) return;
-    let key, info, liq;
-    try {
-      [key, info] = await posm.getPoolAndPositionInfo(id, { blockTag });
-      liq = await posm.getPositionLiquidity(id, { blockTag });
-    } catch { return; }
-    if (liq === 0n) return;
-    const pid = poolIdOf(key).toLowerCase();
-    if (!cfg.POOLS[pid]) return; // not a reward-relevant pool
-    const { tickLower, tickUpper } = decodeInfo(info);
-    if (!(tickLower < tickUpper)) return;
-    try {
-      if (!slotCache[pid]) slotCache[pid] = await sv.getSlot0(pid, { blockTag });
-      const sqrtP = slotCache[pid][0];
-      const { amount0, amount1 } = getAmountsForLiquidity(sqrtP, tickLower, tickUpper, liq);
-      add(owner, SYM[key.currency0.toLowerCase()], amount0);
-      add(owner, SYM[key.currency1.toLowerCase()], amount1);
-    } catch { /* skip unreadable positions */ }
-  }, cfg.CALL_CONCURRENCY);
-  const str = {};
-  for (const [o, v] of Object.entries(out)) str[o] = { porch: v.porch.toString(), mdog: v.mdog.toString() };
-  return str;
-}
-
 /* days: [{date: 'YYYY-MM-DD', ts}] -> snapshots written to outDir. */
 async function runSnapshots(provider, days, outDir) {
   const fs = require('fs');
   const nowBlock = await provider.getBlockNumber();
   const startBlock = await blockAtTimestamp(provider, cfg.SCAN_START_TS, 0, nowBlock);
 
-  console.log('enumerating spot holders + V4 positions (parallel)…');
-  const [porchAddrs, mdogAddrs, timeline] = await Promise.all([
+  console.log('enumerating spot holders…');
+  const [porchAddrs, mdogAddrs] = await Promise.all([
     transferAddresses(provider, cfg.TOKENS.porch, startBlock, nowBlock),
     transferAddresses(provider, cfg.TOKENS.mdog, startBlock, nowBlock),
-    positionTimeline(provider, startBlock, nowBlock),
   ]);
   const holders = new Set([...porchAddrs, ...mdogAddrs]);
   const holderList = [...holders];
   console.log('spot holders:', holderList.length);
-  console.log('position NFTs seen:', timeline.size);
 
   const snaps = [];
   for (const d of days) {
@@ -195,13 +121,12 @@ async function runSnapshots(provider, days, outDir) {
       balancesAt(provider, cfg.TOKENS.porch, holderList, block),
       balancesAt(provider, cfg.TOKENS.mdog, holderList, block),
     ]);
-    const lp = await lpBalancesAt(provider, timeline, block);
     const spot = {};
     for (const h of holderList) {
       const p = porchBal[h] || '0', m = mdogBal[h] || '0';
       if (p !== '0' || m !== '0') spot[h] = { porch: p, mdog: m };
     }
-    const snap = { date: d.date, ts: d.ts, block, spot, lp };
+    const snap = { date: d.date, ts: d.ts, block, spot };
     snaps.push(snap);
     if (outDir) fs.writeFileSync(`${outDir}/day-${d.date}.json`, JSON.stringify(snap));
   }
