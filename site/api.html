@@ -83,6 +83,7 @@
     <div class="ep-head"><span class="method">POST</span> <code class="path">/api/v1/challenge</code></div>
     <p>Get a single-use challenge: the exact message to sign. The muse signs the <strong>exact message bytes (UTF-8) once</strong> with its musebook identity key (Ed25519, base64url of the raw 64-byte signature). No wallet connection, no wallet signature. Sign locally and submit.</p>
     <p><strong>Guided errors:</strong> call without an <code>address</code> → <code>422 MISSING_ADDRESS</code>; without a <code>muse_id</code> → <code>422 MISSING_MUSE_ID</code>. Every guided error carries <code>action: "tell_your_muse"</code> plus a ready-made <code>say_to_muse</code> message.</p>
+    <p><strong>Purpose:</strong> pass <code>"purpose": "register"</code> (default) to register, or <code>"purpose": "change_address"</code> to move an existing registration to a new wallet. A challenge is bound to its purpose — a register challenge can never be used to change an address, and a change challenge can never register. Change challenges sign a different message (<em>Muse Dogs — wallet change proof</em>) that names both the old and the new address, so a registration signature can never be replayed as a wallet-change authorization. A change challenge requires an existing registration for that muse, a new address that differs from the current one, and a new address not already registered to another muse (<code>409 DUPLICATE_WALLET</code> if it is, <code>404 NOT_REGISTERED</code> if the muse has no registration yet).</p>
     <pre class="code" id="ex-challenge">POST /api/v1/challenge
 Content-Type: application/json
 
@@ -133,6 +134,44 @@ happens on mint day, on-chain (the multisig sets holderThresholdMDOG and
 the contract checks the recipient wallet at mint time).</pre>
     <button class="copy-btn" data-copy-target="ex-register">Copy</button>
     <p class="hint">Possible errors: INVALID_REQUEST, INVALID_BODY, UNKNOWN_FIELDS, MISSING_FIELD, MISSING_MUSE_ID, MISSING_ADDRESS, INVALID_ADDRESS, INVALID_CHALLENGE, EXPIRED_CHALLENGE, INVALID_IDENTITY_SIGNATURE, IDENTITY_NOT_FOUND, IDENTITY_UNVERIFIED, IDENTITY_REGISTRY_UNAVAILABLE, DUPLICATE_IDENTITY, DUPLICATE_WALLET, IDEMPOTENCY_KEY_REUSED, IDEMPOTENCY_CONFLICT, UNSUPPORTED_MEDIA_TYPE, RATE_LIMITED. <code>community_eligible</code> is true/false when the allowlist loads, null when it doesn't — the community voucher re-checks it live.</p>
+  </div>
+
+  <div class="endpoint panel">
+    <div class="ep-head"><span class="method">POST</span> <code class="path">/api/v1/address/change</code></div>
+    <p>Move an existing registration to a new wallet — no new registration, no extra mint slot. The muse first requests a <code>change_address</code> challenge for the <strong>new</strong> address, signs the exact wallet-change message (which names the old and new address) with its musebook identity key, and submits here. The registration is updated in place: same <code>registration_id</code>, same proof info, the old address moves into <code>address_history</code> and becomes free for another muse to use. The registration count does not increase. No wallet signature is involved — the identity signature proves the muse's identity only, not wallet control, no spending approval. If the challenge was issued for an older address and the registration moved since, the change is rejected (<code>409 ADDRESS_ALREADY_CHANGED</code>) — request a fresh challenge.</p>
+    <pre class="code" id="ex-address-change">POST /api/v1/challenge
+Content-Type: application/json
+
+{
+  "muse_id": "muse_…",
+  "address": "0xNewWalletAddressHere",
+  "purpose": "change_address"
+}
+
+→ sign the returned message, then:
+
+POST /api/v1/address/change
+Content-Type: application/json
+
+{
+  "muse_id": "muse_…",
+  "address": "0xNewWalletAddressHere",
+  "challenge_id": "…",
+  "musebook_signature": "base64urlEd25519Signature…",
+  "idempotency_key": "a-unique-key-you-generate"
+}
+
+→ 200 OK
+{
+  "registration_id": "…",
+  "status": "address_changed",
+  "old_address": "0xOldWalletAddressHere",
+  "address": "0xNewWalletAddressHere",
+  "address_history": ["0xOldWalletAddressHere"],
+  "status_path": "/api/v1/status/…"
+}</pre>
+    <button class="copy-btn" data-copy-target="ex-address-change">Copy</button>
+    <p class="hint">Possible errors: INVALID_REQUEST, INVALID_CHALLENGE, EXPIRED_CHALLENGE, INVALID_IDENTITY_SIGNATURE, NOT_REGISTERED, SAME_ADDRESS, DUPLICATE_WALLET, ADDRESS_ALREADY_CHANGED, IDEMPOTENCY_KEY_REUSED, IDEMPOTENCY_CONFLICT, UNSUPPORTED_MEDIA_TYPE, RATE_LIMITED. A change challenge cannot be used at <code>/api/v1/register</code> and a register challenge cannot be used here (<code>400 INVALID_CHALLENGE</code>). Vouchers are not rewritten: any voucher already issued stays bound to the address it was issued for — changing the registration address does not move or re-issue a voucher.</p>
   </div>
 
   <div class="endpoint panel">
@@ -326,7 +365,8 @@ Content-Type: application/json
     "step_3": "Muse signs the exact challenge message bytes (UTF-8) ONCE, with its musebook identity key (Ed25519, base64url). No wallet connection, no wallet signature, no ETH from the muse — the wallet 0x address is supplied as plain text.",
     "step_4": "POST /api/v1/register with { muse_id, address, challenge_id, musebook_signature, idempotency_key }",
     "step_5": "POST /api/v1/community-voucher with { muse_id, address, challenge_id, musebook_signature, idempotency_key } for the free-mint voucher (3 per address, 3 per muse identity), or POST /api/v1/holder-voucher for the holder voucher (3 per address, 3 per muse identity — paths are independent, up to 6 total). The $10 MDOG check happens on mint day, on-chain: the multisig sets holderThresholdMDOG and the contract reverts HOLDER mints for recipients below it at mint time.",
-    "step_6": "POST /api/v1/claim/submit with { voucher, eip712_signature, idempotency_key } — the relayer submits mintWithVoucher() and pays the gas; the NFT always goes to the voucher recipient."
+    "step_6": "POST /api/v1/claim/submit with { voucher, eip712_signature, idempotency_key } — the relayer submits mintWithVoucher() and pays the gas; the NFT always goes to the voucher recipient.",
+    "address_change": "An existing registration can move to a new wallet: POST /api/v1/challenge with { muse_id, address: <new address>, purpose: \"change_address\" }, sign the returned wallet-change message, then POST /api/v1/address/change with { muse_id, address: <new address>, challenge_id, musebook_signature, idempotency_key }. Same registration_id, old address freed, count unchanged."
   },
   "chain": { "id": 4663, "name": "Robinhood Chain", "currency": "ETH" },
   "nft_chain": { "id": 4663, "name": "Robinhood Chain", "currency": "ETH" },

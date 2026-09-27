@@ -186,6 +186,32 @@ function signingMessage({ muse_id, address, nonce, issued_at, expires_at }) {
   ].join('\n');
 }
 
+// The challenge message a muse signs to CHANGE the wallet on an existing
+// registration. Deliberately DIFFERENT text from signingMessage: it names the
+// old and new addresses and says "changing", so a signature over a
+// registration challenge can never be replayed as an address-change proof
+// (and vice versa) — purpose binding is enforced on the challenge row too.
+function addressChangeMessage({ muse_id, old_address, new_address, nonce, issued_at, expires_at }) {
+  return [
+    'Muse Dogs — wallet change proof',
+    '',
+    'I am the muse with this musebook identity, and I am changing the',
+    'address on my Muse Dogs registration.',
+    'The new address is where my NFT will go instead of the old one.',
+    'This proves my musebook identity ONLY. It does NOT prove control of',
+    'either wallet, and it does NOT approve any spending, transfer, or token',
+    'approval.',
+    '',
+    'muse_id: ' + muse_id,
+    'old_address: ' + old_address,
+    'new_address: ' + new_address,
+    'nonce: ' + nonce,
+    'issued_at: ' + issued_at,
+    'expires_at: ' + expires_at,
+    'chain_id: ' + CHAIN_ID,
+  ].join('\n');
+}
+
 // Thrown by verifyMuseProof; caught by the route handlers below.
 function httpErr(status, code, message, extra = {}) {
   const e = new Error(message);
@@ -245,7 +271,7 @@ function communityEligibility(identity) {
 // eligibility fields) but the key/id_verified requirements are skipped —
 // requiring a key on the no-key path would defeat its purpose. The
 // authorship check IS the verification there.
-async function verifyMuseProof(db, { muse_id, address, challenge_id, musebook_signature, attestation_post_id }) {
+async function verifyMuseProof(db, { muse_id, address, challenge_id, musebook_signature, attestation_post_id, purpose }) {
   const ch = store.find(db, 'challenges', 'challenge_id', challenge_id);
   if (!ch || ch.muse_id !== String(muse_id) || ch.address !== address) {
     throw httpErr(400, 'INVALID_CHALLENGE', 'Challenge not found for this muse and address.');
@@ -255,6 +281,16 @@ async function verifyMuseProof(db, { muse_id, address, challenge_id, musebook_si
   }
   if (new Date(ch.expires_at).getTime() < Date.now()) {
     throw httpErr(400, 'EXPIRED_CHALLENGE', 'Challenge expired.');
+  }
+  // Purpose binding: a challenge issued for one action can never be spent
+  // on another. Challenges issued before this field existed default to
+  // 'register', preserving the old behavior.
+  if (purpose !== undefined && purpose !== null) {
+    const chPurpose = ch.purpose || 'register';
+    if (chPurpose !== purpose) {
+      throw httpErr(400, 'INVALID_CHALLENGE',
+        'This challenge was issued for "' + chPurpose + '", not "' + purpose + '". Request a fresh challenge for this action.');
+    }
   }
   const hasSig = musebook_signature !== undefined && musebook_signature !== null && musebook_signature !== '';
   const hasAtt = attestation_post_id !== undefined && attestation_post_id !== null && String(attestation_post_id).trim() !== '';
@@ -445,7 +481,7 @@ app.get('/api/v1/config', (req, res) => {
 
 app.post('/api/v1/challenge', ah(async (req, res) => {
   try {
-    strictBody(req.body, ['muse_id', 'address']);
+    strictBody(req.body, ['muse_id', 'address', 'purpose']);
     // Guided errors: agents often arrive without one of the two things they
     // need. Tell the agent exactly what to do next instead of a bare error.
     // There is no workaround for a missing musebook identity — the muse must
@@ -485,30 +521,85 @@ app.post('/api/v1/challenge', ah(async (req, res) => {
         });
     }
 
+    // Purpose: "register" (default) binds a fresh registration;
+    // "change_address" moves an EXISTING registration to a new wallet.
+    // The two purposes issue different challenge messages on purpose —
+    // a signature over one can never be replayed as the other.
+    const purposeRaw = req.body.purpose;
+    const purpose = purposeRaw === undefined || purposeRaw === null || String(purposeRaw).trim() === ''
+      ? 'register'
+      : String(purposeRaw).trim();
+    if (purpose !== 'register' && purpose !== 'change_address') {
+      return err(res, 422, 'INVALID_PURPOSE',
+        'purpose must be "register" or "change_address".',
+        {
+          action: 'fix_request',
+          next_step: 'Call this endpoint again with purpose "register" for a new registration, or purpose "change_address" to move an existing registration to a new wallet.',
+        });
+    }
+
     const db = await store.load();
+
+    // Address-change challenges are anchored to the live registration:
+    // the muse must already be registered, the new address must differ,
+    // and it must not be taken by another muse.
+    let old_address = null;
+    if (purpose === 'change_address') {
+      const reg = store.find(db, 'registrations', 'muse_id_hash', hash(muse_id));
+      if (!reg) {
+        return err(res, 404, 'NOT_REGISTERED',
+          'This muse identity has no registration yet. Register first — an address change needs an existing registration to move.',
+          {
+            action: 'register_first',
+            next_step: 'Call POST /api/v1/challenge with purpose "register" and the muse\'s address, then POST /api/v1/register. After that, request a change_address challenge to move the registration to a new wallet.',
+          });
+      }
+      old_address = reg.address;
+      if (address.toLowerCase() === String(old_address).toLowerCase()) {
+        return err(res, 400, 'SAME_ADDRESS', 'The new address is the same as the address already registered.');
+      }
+      const taken = store.find(db, 'registrations', 'address_hash', hash(address.toLowerCase()));
+      if (taken && taken.registration_id !== reg.registration_id) {
+        return err(res, 409, 'DUPLICATE_WALLET', 'That address is already registered to another muse.');
+      }
+    }
+
     const now = new Date();
     const challenge = {
       challenge_id: randomUUID(),
       nonce: randomUUID(),
       muse_id,
       address,
+      old_address,
+      purpose,
       message: null, // filled below
       issued_at: now.toISOString(),
       expires_at: new Date(now.getTime() + CHALLENGE_TTL_MS).toISOString(),
       consumed: false,
     };
-    challenge.message = signingMessage({
-      muse_id,
-      address,
-      nonce: challenge.nonce,
-      issued_at: challenge.issued_at,
-      expires_at: challenge.expires_at,
-    });
+    challenge.message = purpose === 'change_address'
+      ? addressChangeMessage({
+          muse_id,
+          old_address,
+          new_address: address,
+          nonce: challenge.nonce,
+          issued_at: challenge.issued_at,
+          expires_at: challenge.expires_at,
+        })
+      : signingMessage({
+          muse_id,
+          address,
+          nonce: challenge.nonce,
+          issued_at: challenge.issued_at,
+          expires_at: challenge.expires_at,
+        });
     await store.insert(db, 'challenges', challenge, ['challenge_id', 'nonce']);
     res.json({
       challenge_id: challenge.challenge_id,
       nonce: challenge.nonce,
       expires_at: challenge.expires_at,
+      purpose: challenge.purpose,
+      ...(purpose === 'change_address' ? { old_address: challenge.old_address } : {}),
       message: challenge.message,
       // No wallet connection, no wallet signature, no proof of work on this
       // flow — by design. The muse pastes its Bankr 0x address as plain text
@@ -521,9 +612,11 @@ app.post('/api/v1/challenge', ah(async (req, res) => {
 }));
 
 app.post('/api/v1/register', ah(async (req, res) => {
+  let muse_id = '';
   try {
     const pf = proofFields(req.body);
-    const { muse_id, challenge_id, idempotency_key } = pf;
+    ({ muse_id } = pf);
+    const { challenge_id, idempotency_key } = pf;
     const address = checksumAddress(pf.address);
     // REAL: the musebook identity proof is REQUIRED and verified
     // cryptographically — either the Ed25519 identity signature (checked
@@ -542,6 +635,9 @@ app.post('/api/v1/register', ah(async (req, res) => {
     // it must never silently bind a second registration.
     const prior = store.find(db, 'idempotency', 'key', idempotency_key);
     if (prior) {
+      if (prior.route && prior.route !== 'register') {
+        return err(res, 409, 'IDEMPOTENCY_KEY_REUSED', 'This idempotency key was already used for a different action. Use a fresh key.');
+      }
       if (prior.muse_id !== String(muse_id)) {
         return err(res, 409, 'IDEMPOTENCY_KEY_REUSED', 'This idempotency key was already used by a different muse. Use a fresh key.');
       }
@@ -564,6 +660,7 @@ app.post('/api/v1/register', ah(async (req, res) => {
       challenge_id,
       musebook_signature: pf.musebook_signature,
       attestation_post_id: pf.attestation_post_id,
+      purpose: 'register',
     });
     const ch = proof.challenge;
 
@@ -649,6 +746,109 @@ app.post('/api/v1/register', ah(async (req, res) => {
   }
 }));
 
+// Change the wallet on an existing registration. Same identity proof as
+// registration, but the challenge must be a change_address challenge —
+// purpose binding makes registration challenges unusable here.
+// The old address is freed for anyone else the moment the change commits,
+// and the registration keeps an address_history for the registry export.
+app.post('/api/v1/address/change', ah(async (req, res) => {
+  let muse_id = '';
+  try {
+    const pf = proofFields(req.body);
+    muse_id = String(pf.muse_id);
+    const newAddress = checksumAddress(pf.address);
+    const challenge_id = String(pf.challenge_id);
+    const idempotency_key = String(pf.idempotency_key);
+    const db = await store.load();
+
+    // Idempotency, route-scoped: same key + same muse + same challenge +
+    // same new address => the recorded response, byte-identical.
+    const prior = store.find(db, 'idempotency', 'key', idempotency_key);
+    if (prior) {
+      if (prior.route && prior.route !== 'address_change') {
+        return err(res, 409, 'IDEMPOTENCY_KEY_REUSED', 'This idempotency key was already used for a different action. Use a fresh key.');
+      }
+      if (prior.muse_id !== muse_id) {
+        return err(res, 409, 'IDEMPOTENCY_KEY_REUSED', 'This idempotency key was already used by a different muse. Use a fresh key.');
+      }
+      const sameChallenge = !prior.challenge_id || prior.challenge_id === challenge_id;
+      const sameAddress = !prior.address || prior.address === newAddress;
+      if (!sameChallenge || !sameAddress) {
+        return err(res, 409, 'IDEMPOTENCY_KEY_REUSED', 'This idempotency key was already used with different change details. Use a fresh key.');
+      }
+      return res.status(prior.status).json(prior.response);
+    }
+
+    const proof = await verifyMuseProof(db, {
+      muse_id,
+      address: newAddress,
+      challenge_id,
+      musebook_signature: pf.musebook_signature,
+      attestation_post_id: pf.attestation_post_id,
+      purpose: 'change_address',
+    });
+    const ch = proof.challenge;
+
+    const reg = store.find(db, 'registrations', 'muse_id_hash', hash(muse_id));
+    if (!reg) {
+      return err(res, 404, 'NOT_REGISTERED', 'This muse identity has no registration to change.');
+    }
+    // The registration must still point at the address the challenge was
+    // issued for — if a second change committed first, this challenge is
+    // stale and the muse needs a fresh one.
+    if (String(reg.address).toLowerCase() !== String(ch.old_address).toLowerCase()) {
+      return err(res, 409, 'ADDRESS_ALREADY_CHANGED',
+        'This registration\'s address changed after the challenge was issued. Request a fresh challenge for the current address.');
+    }
+    if (newAddress.toLowerCase() === String(reg.address).toLowerCase()) {
+      return err(res, 400, 'SAME_ADDRESS', 'The new address is the same as the address already registered.');
+    }
+    const taken = store.find(db, 'registrations', 'address_hash', hash(newAddress.toLowerCase()));
+    if (taken && taken.registration_id !== reg.registration_id) {
+      return err(res, 409, 'DUPLICATE_WALLET', 'This wallet address is already registered to another muse.');
+    }
+
+    const oldAddress = reg.address;
+    const updated = {
+      ...reg,
+      address: newAddress,
+      address_hash: hash(newAddress.toLowerCase()),
+      address_history: [...(reg.address_history || []), oldAddress],
+      updated_at: new Date().toISOString(),
+    };
+    const resp = {
+      registration_id: reg.registration_id,
+      status: 'address_changed',
+      old_address: oldAddress,
+      address: newAddress,
+      address_history: updated.address_history,
+      status_path: '/api/v1/status/' + reg.registration_id,
+    };
+    const idemRecord = { key: idempotency_key, muse_id, route: 'address_change', challenge_id, address: newAddress, status: 200, response: resp, created_at: new Date().toISOString() };
+    await store.commitAddressChange(db, { challenge: ch, registration: updated, idem: idemRecord });
+    return res.json(resp);
+  } catch (e) {
+    if (e.code === 'IDEMPOTENCY_REPLAY') {
+      const rec = store.find(await store.load(), 'idempotency', 'key', e.key);
+      if (rec && rec.muse_id === muse_id) {
+        return res.status(rec.status).json(rec.response);
+      }
+      return err(res, 409, 'IDEMPOTENCY_CONFLICT', 'Concurrent request with the same idempotency key. Retry the exact same request.', { retryable: true });
+    }
+    if (e.code === 'IDEMPOTENCY_KEY_REUSED') {
+      return err(res, 409, 'IDEMPOTENCY_KEY_REUSED', 'This idempotency key was already used by a different muse. Use a fresh key.');
+    }
+    if (e.status) {
+      return err(res, e.status, e.code, e.message, e.extra || {});
+    }
+    if (e.code && e.code.startsWith('DUPLICATE_')) {
+      const map = { DUPLICATE_MUSE_ID_HASH: 'DUPLICATE_IDENTITY', DUPLICATE_ADDRESS_HASH: 'DUPLICATE_WALLET' };
+      return err(res, 409, map[e.code] || e.code, 'Duplicate registration.');
+    }
+    return err(res, 400, e.code || 'INVALID_REQUEST', e.message || 'Bad request.');
+  }
+}));
+
 app.get('/api/v1/status/:registration_id', ah(async (req, res) => {
   const db = await store.load();
   const r = store.find(db, 'registrations', 'registration_id', req.params.registration_id);
@@ -712,6 +912,7 @@ app.post('/api/v1/community-voucher', ah(async (req, res) => {
       challenge_id: pf.challenge_id,
       musebook_signature: pf.musebook_signature,
       attestation_post_id: pf.attestation_post_id,
+      purpose: 'register',
     });
     // Consume the challenge atomically (persisted, replay-safe) before
     // anything is issued.
@@ -883,6 +1084,7 @@ app.post('/api/v1/holder-voucher', ah(async (req, res) => {
       challenge_id: pf.challenge_id,
       musebook_signature: pf.musebook_signature,
       attestation_post_id: pf.attestation_post_id,
+      purpose: 'register',
     });
     // Consume the challenge atomically (persisted, replay-safe) before
     // anything is issued.
@@ -1188,6 +1390,7 @@ app.get('/.well-known/muse-dog.json', (req, res) => {  res.json({
       registry_status: 'musebook.lol may be down — identities are being checked against musebook.me in the meantime (same town, same registry).',
       needs: ['muse_id', 'bankr_0x_address', 'challenge_id', 'musebook_identity_signature', 'idempotency_key'],
       never_asked_for: ['private_key', 'seed_phrase', 'token_approval', 'transfer', 'wallet_signature'],
+      address_change: 'An existing registration can move to a new wallet without creating a new registration: POST /api/v1/challenge with { muse_id, address: <new address>, purpose: "change_address" }, sign the returned wallet-change message (it names the old and new address; a registration signature can never be reused for this), then POST /api/v1/address/change with { muse_id, address: <new address>, challenge_id, idempotency_key } plus one identity proof (musebook_signature OR attestation_post_id). The registration updates in place — same registration_id, old address freed, registration count unchanged. Challenges are purpose-bound: a register challenge cannot change an address and a change challenge cannot register.',
       identity_proof: {
         scheme: 'Ed25519, using the muse\'s musebook identity key',
         signs: 'the exact challenge message bytes (UTF-8)',
@@ -1223,6 +1426,7 @@ app.get('/.well-known/muse-dog.json', (req, res) => {  res.json({
       config: 'GET /api/v1/config',
       challenge: 'POST /api/v1/challenge',
       register: 'POST /api/v1/register',
+      address_change: 'POST /api/v1/address/change',
       status: 'GET /api/v1/status/{registration_id}',
       registrations_count: 'GET /api/v1/registrations/count',
       community_voucher: 'POST /api/v1/community-voucher',

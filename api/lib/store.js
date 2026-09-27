@@ -328,4 +328,92 @@ async function upsertJob(db, job) {
   return job;
 }
 
-module.exports = { load, save, find, exists, insert, consumeChallenge, commitRegistration, upsertJob, readIdemRecord, blankDb, DB_PATH, USE_PG };
+// Commit an address change atomically: consume the change challenge,
+// update the registration's address (address_hash), append the old address
+// to address_history, and record the idempotency entry — all or nothing.
+// Mirrors commitRegistration: in-memory pre-checks first, then a Postgres
+// transaction with the conditional challenge UPDATE and the unique indexes
+// as the backstop for concurrent writers. A 23505 on the address_hash
+// index maps to DUPLICATE_WALLET via the caller's DUPLICATE_* mapping.
+async function commitAddressChange(db, { challenge, registration, idem }) {
+  const clash = find(db, 'registrations', 'address_hash', registration.address_hash);
+  if (clash && clash.registration_id !== registration.registration_id) {
+    throw duplicateError('address_hash');
+  }
+  const priorKey = find(db, 'idempotency', 'key', idem.key);
+  if (priorKey) {
+    if (priorKey.muse_id === idem.muse_id) throw { code: 'IDEMPOTENCY_REPLAY', key: idem.key };
+    throw { code: 'IDEMPOTENCY_KEY_REUSED', key: idem.key };
+  }
+  if (!USE_PG) {
+    challenge.consumed = true;
+    const i = db.registrations.findIndex((r) => r.registration_id === registration.registration_id);
+    if (i < 0) {
+      const e = new Error('Registration not found.');
+      e.status = 404;
+      e.code = 'NOT_REGISTERED';
+      throw e;
+    }
+    db.registrations[i] = registration;
+    db.idempotency.push(idem);
+    saveJson(db);
+    return registration;
+  }
+  await ensureSchema();
+  const client = await getPool().connect();
+  try {
+    await client.query('BEGIN');
+    const up = await client.query(
+      `UPDATE challenges SET data = $1::jsonb
+       WHERE challenge_id = $2 AND COALESCE((data->>'consumed')::boolean, false) = false`,
+      [JSON.stringify({ ...challenge, consumed: true }), String(challenge.challenge_id)]
+    );
+    if (up.rowCount === 0) {
+      const e = new Error('Challenge already consumed.');
+      e.status = 400;
+      e.code = 'CHALLENGE_CONSUMED';
+      throw e;
+    }
+    const ur = await client.query(
+      `UPDATE registrations SET data = $1::jsonb WHERE registration_id = $2`,
+      [JSON.stringify(registration), String(registration.registration_id)]
+    );
+    if (ur.rowCount === 0) {
+      const e = new Error('Registration not found.');
+      e.status = 404;
+      e.code = 'NOT_REGISTERED';
+      throw e;
+    }
+    await client.query(
+      `INSERT INTO idempotency (key, data) VALUES ($1, $2::jsonb)`,
+      [String(idem.key), JSON.stringify(idem)]
+    );
+    await client.query('COMMIT');
+  } catch (e) {
+    await client.query('ROLLBACK');
+    if (e && e.code === '23505') {
+      const rec = await readIdemRecord(idem.key);
+      if (rec && rec.muse_id === idem.muse_id) throw { code: 'IDEMPOTENCY_REPLAY', key: idem.key };
+      if (rec && rec.muse_id !== idem.muse_id) throw { code: 'IDEMPOTENCY_KEY_REUSED', key: idem.key };
+      const onIdemKey = e.constraint === 'idempotency_pkey' || /Key \(key\)=/.test(String(e.detail || ''));
+      if (onIdemKey) {
+        const r = new Error('Concurrent request with the same idempotency key is committing. Retry the exact same request.');
+        r.status = 409;
+        r.code = 'IDEMPOTENCY_RACE_RETRY';
+        r.extra = { retryable: true };
+        throw r;
+      }
+      throw duplicateError(mapUniqueViolation(e.constraint, e.detail, 'registration_id'));
+    }
+    throw e;
+  } finally {
+    client.release();
+  }
+  challenge.consumed = true;
+  const i = db.registrations.findIndex((r) => r.registration_id === registration.registration_id);
+  if (i >= 0) db.registrations[i] = registration;
+  db.idempotency.push(idem);
+  return registration;
+}
+
+module.exports = { load, save, find, exists, insert, consumeChallenge, commitRegistration, commitAddressChange, upsertJob, readIdemRecord, blankDb, DB_PATH, USE_PG };
