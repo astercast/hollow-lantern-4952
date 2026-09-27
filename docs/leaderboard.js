@@ -13,10 +13,10 @@
   var RPC_URL = "https://rpc.mainnet.chain.robinhood.com";
   var TREASURY = "0xEac12759e1Bb4A3c1455Ea3FE03b668c493BFb25";
 
-  /* Preview epoch pot (MUSEBOOK) used for the est. reward column.
-   * One combined score per holder: PORCH weighs 50, MDOG weighs 30.
+  /* EPOCH_POT is reserved for when the engine goes live (est. rewards
+   * stay hidden until then — no pot figures are shown on the preview board).
    * 100% of every pot goes to holders. */
-  var EPOCH_POT = 398000;
+  var EPOCH_POT = null;
   var WEIGHT_PORCH = 50;
   var WEIGHT_MDOG = 30;
 
@@ -91,6 +91,7 @@
 
   /* Estimated MUSEBOOK reward for a row, from its share of the combined score. */
   function estReward(r) {
+    if (!EPOCH_POT) return null; // hidden until the engine is live
     return (r.score / 80) * EPOCH_POT;
   }
 
@@ -109,7 +110,7 @@
           '<span class="lb-hold">' + esc(holdingsLine(r)) + "</span></div>" +
         '<div class="lb-meta">' +
           '<div class="lb-score">' + fmt(r.score, 1) + "<span>score</span></div>" +
-          '<div class="lb-reward">' + fmt(estReward(r), 0) + "<span>MUSEBOOK</span></div>" +
+          '<div class="lb-reward">—<span>opens with epoch 1</span></div>' +
           '<div class="lb-status ' + (mine ? "you" : r.preview ? "prev" : r.claimed ? "done" : "open") + '">' +
             (mine ? "Your position" : r.preview ? "Preview" : r.claimed ? "Claimed" : "Claimable") + "</div>" +
         "</div>" +

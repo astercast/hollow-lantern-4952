@@ -63,8 +63,9 @@
   function myClaim(address, epochId) {
     return apiGet('claims-' + epochId + '.json').then(function (data) {
       var lower = String(address).toLowerCase();
-      for (var i = 0; i < data.claims.length; i++) {
-        if (String(data.claims[i].account).toLowerCase() === lower) return data.claims[i];
+      var claims = Array.isArray(data) ? data : (data.claims || []);
+      for (var i = 0; i < claims.length; i++) {
+        if (String(claims[i].account).toLowerCase() === lower) return claims[i];
       }
       return null;
     });
@@ -131,9 +132,9 @@
       ]).then(function (res) {
         var epoch = res[0], unclaimed = res[1];
         setText('claim-epoch', 'Epoch ' + epoch.epochId);
-        setText('claim-pot', fmt(epoch.potMusebook) + ' MUSEBOOK');
+        setText('claim-pot', fmt(epoch.pot) + ' MUSEBOOK');
         setText('claim-unclaimed', unclaimed === null ? '—' : fmt(unclaimed) + ' MUSEBOOK');
-        setText('claim-root', String(epoch.merkleRoot).slice(0, 18) + '…');
+        setText('claim-root', String(epoch.root).slice(0, 18) + '…');
         var nn = document.getElementById('claim-notlive-note');
         if (nn) nn.style.display = 'none';
         return connect().then(function (address) {
