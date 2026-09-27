@@ -87,10 +87,12 @@ async function main() {
   }
 
   // Wrong epoch / account / index must all revert (leaf binds all four fields).
+  // NOTE: c0.index is already claimed, so the bitmap check fires before the
+  // proof check — use c1 (unclaimed) for the wrong-account/wrong-index cases.
   const badCases = [
     ['wrong epoch', dry.epochId + 1, c0.index, c0.account, c0.amount, c0.proof, /no epoch/],
-    ['wrong account', dry.epochId, c0.index, c1.account, c0.amount, c0.proof, /bad proof/],
-    ['wrong index', dry.epochId, c1.index, c0.account, c0.amount, c0.proof, /bad proof|already claimed/],
+    ['wrong account', dry.epochId, c1.index, c0.account, c1.amount, c1.proof, /bad proof/],
+    ['wrong index', dry.epochId, c1.index, c0.account, c0.amount, c0.proof, /bad proof/],
   ];
   for (const [name, e, i, a, amt, proof, want] of badCases) {
     try {
@@ -126,14 +128,14 @@ async function main() {
     console.log('post-deadline claim reverts: OK');
   }
   const liabBefore = await dist.allocatedUnclaimed();
-  await (await distAsClaimer2.finalizeEpoch(dry.epochId)).wait();
+  await (await distAsClaimer2.finalizeEpoch(dry.epochId, { gasLimit: 200000 })).wait();
   const liabAfter = await dist.allocatedUnclaimed();
   console.log('allocatedUnclaimed before/after finalize:',
     ethers.formatUnits(liabBefore, 18), '->', ethers.formatUnits(liabAfter, 18));
   if (liabAfter !== 0n) throw new Error('FINALIZE DID NOT RELEASE ALL');
   // Owner (deployer here) can now withdraw the released remainder.
   const depBalBefore = await mbAsView.balanceOf(deployer);
-  await (await dist.withdraw(deployer, liabBefore)).wait();
+  await (await dist.withdraw(deployer, liabBefore, { gasLimit: 200000 })).wait();
   const depBalAfter = await mbAsView.balanceOf(deployer);
   if (depBalAfter - depBalBefore !== liabBefore) throw new Error('WITHDRAW AFTER FINALIZE MISMATCH');
   console.log('withdraw of finalized remainder: OK');
