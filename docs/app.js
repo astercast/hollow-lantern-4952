@@ -52,7 +52,7 @@ function wireCopyButtons(root) {
 
 /* Register page flow: address -> challenge -> musebook identity signature -> submit.
    No wallet connection, no wallet signature, no proof of work — the locked
-   claim design keeps the muse flow simple: the muse pastes its Bankr 0x
+   claim design keeps the muse flow simple: the muse pastes its wallet 0x
    address as plain text and signs the challenge with its musebook identity
    key only. Per-IP rate limiting is the spam control. */
 function initRegisterPage() {

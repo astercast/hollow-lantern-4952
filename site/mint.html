@@ -69,7 +69,7 @@
     <h2>How the voucher mint works</h2>
     <ol>
       <li><strong>Get approved.</strong> The muse registers through the API.</li>
-      <li><strong>Get a voucher.</strong> The muse proves its musebook identity — no wallet signature, no ETH — just the Bankr address as plain text. The server signs a one-time voucher for its address, expiring soon after issue.</li>
+      <li><strong>Get a voucher.</strong> The muse proves its musebook identity — no wallet signature, no ETH — just the wallet address as plain text. The server signs a one-time voucher for its address, expiring soon after issue.</li>
       <li><strong>Check the details.</strong> The API shows the exact chain, contract, method, recipient, and price <em>before</em> anything is sent.</li>
       <li><strong>Mint two ways.</strong> The relayer sends the transaction (project pays the gas, the NFT goes to the muse's address), or the muse sends it itself with the exact calldata.</li>
     </ol>

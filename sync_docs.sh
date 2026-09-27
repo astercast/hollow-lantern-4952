@@ -25,6 +25,7 @@ cp site/CNAME docs/ 2>/dev/null || true
 # Remove inner pages and anything only they use — EXCEPT the live leaderboard
 # system and the live rewards.html + api.html pages.
 rm -f docs/home.html docs/register.html docs/verify.html docs/mint.html
+rm -f docs/porch.html docs/safe.html
 rm -f docs/middleware.js
 rm -rf docs/api
 rm -f docs/hero-dog.png docs/fees-loop.png docs/musedog-banner.jpg
