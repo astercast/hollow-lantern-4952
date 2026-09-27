@@ -1,0 +1,20 @@
+{
+  "epochId": 1,
+  "startsAt": "2026-10-05T00:00:00Z",
+  "endsAt": "2026-10-12T00:00:00Z",
+  "potMusebook": "398000000000000000000000",
+  "potMusebookDisplay": "≈ 398,000 MUSEBOOK",
+  "potRule": "1/8 of treasury MUSEBOOK balance at epoch start",
+  "split": {
+    "porchHolders": "50% (≈ 199,000 MUSEBOOK)",
+    "mdogHolders": "30% (≈ 119,400 MUSEBOOK)",
+    "treasuryReserve": "20% (≈ 79,600 MUSEBOOK, held for future use)"
+  },
+  "enabled": { "porch": true, "mdog": true },
+  "weights": { "porch": 0.50, "mdog": 0.30 },
+  "reserve": 0.20,
+  "merkleRoot": "0x0000000000000000000000000000000000000000000000000000000000000000",
+  "claimContract": null,
+  "contractNote": "not deployed yet — hypothetical",
+  "epochSalt": "preview-salt-epoch-1"
+}

@@ -1,0 +1,13 @@
+{
+  "epochId": 1,
+  "address": "0x1111111111111111111111111111111111111111",
+  "codename": "Bark Knight",
+  "class": "porch",
+  "amount": "106955000000000000000000",
+  "amountDisplay": "106,955 MUSEBOOK",
+  "proof": ["0xaaaa…", "0xbbbb…", "0xcccc…"],
+  "proofNote": "mock proof — the real tree is built at epoch close",
+  "claimed": false,
+  "claimCall": "claim(1, 106955000000000000000000, [proof…])",
+  "notLinkedError": "If your wallet is not linked to a verified musebook identity, this endpoint returns 403 NOT_LINKED — link first via POST /api/v1/rewards/link."
+}

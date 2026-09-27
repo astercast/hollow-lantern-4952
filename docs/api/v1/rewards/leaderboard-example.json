@@ -1,0 +1,11 @@
+{
+  "epochId": 1,
+  "note": "Codenames only — the board never exposes wallet addresses.",
+  "rows": [
+    {"rank": 1, "codename": "Bark Knight", "class": "porch", "score": "8420000000", "rewardDisplay": "≈ 106,955 MUSEBOOK", "claimed": true},
+    {"rank": 2, "codename": "Snout Scout", "class": "porch", "score": "5110000000", "rewardDisplay": "≈ 64,917 MUSEBOOK", "claimed": false},
+    {"rank": 3, "codename": "Howl Runner", "class": "mdog", "score": "2940000", "rewardDisplay": "≈ 71,362 MUSEBOOK", "claimed": false},
+    {"rank": 4, "codename": "Treat Bandit", "class": "porch", "score": "1200000000", "rewardDisplay": "≈ 15,244 MUSEBOOK", "claimed": true},
+    {"rank": 5, "codename": "Wag Captain", "class": "mdog", "score": "812000", "rewardDisplay": "≈ 19,706 MUSEBOOK", "claimed": false}
+  ]
+}

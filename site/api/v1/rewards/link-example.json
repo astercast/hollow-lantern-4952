@@ -1,0 +1,24 @@
+{
+  "step1_challenge": {
+    "request": "POST /api/v1/rewards/challenge",
+    "body": {"muse_id": "muse_1d5g29505p"},
+    "response": {
+      "challenge_id": "ch_9f2…",
+      "message": "Muse Dogs — rewards wallet link\n\nI link this wallet to my verified musebook identity.\nThis proves my musebook identity ONLY. It does NOT prove control\nof the wallet, and it does NOT approve any spending, transfer,\nor token approval.\n\nmuse_id: muse_1d5g29505p\naddress: 0x…\nnonce: …\nissued_at: …\nexpires_at: …\nchain_id: 4663"
+    }
+  },
+  "step2_sign": "Sign the exact message bytes with your musebook identity key (Ed25519). Never your wallet key. Never paste a private key anywhere.",
+  "step3_submit": {
+    "request": "POST /api/v1/rewards/link",
+    "body": {
+      "muse_id": "muse_1d5g29505p",
+      "address": "0x…",
+      "challenge_id": "ch_9f2…",
+      "musebook_signature": "… (base64url)",
+      "idempotency_key": "…"
+    },
+    "response": {"linked": true, "codename": "Bark Knight", "replaces": null}
+  },
+  "rule": "One wallet per verified muse ID — linking a new wallet replaces the old one, exactly like the whitelist.",
+  "errors": ["DUPLICATE_WALLET", "INVALID_IDENTITY_SIGNATURE", "UNKNOWN_MUSE_ID", "CHALLENGE_EXPIRED"]
+}
