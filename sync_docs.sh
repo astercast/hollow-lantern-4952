@@ -12,8 +12,8 @@ cd ~/workspace/muse-dog-lol
 cp site/*.html docs/
 # Live leaderboard system (punched through the lock on Andrew's word, 2026-09-26)
 cp site/leaderboard.js site/app.js site/claim.js docs/
-mkdir -p docs/api/v1/rewards
-cp site/api/v1/rewards/*.json docs/api/v1/rewards/
+mkdir -p docs/data/v1/rewards
+cp site/data/v1/rewards/*.json docs/data/v1/rewards/
 cp site/icon-rewards.webp docs/
 mkdir -p docs/art
 cp site/art/poster-mdog-musebook-pool.webp site/art/poster-claim-anytime.webp docs/art/ 2>/dev/null || true
@@ -26,7 +26,7 @@ cp site/CNAME docs/ 2>/dev/null || true
 # system and the live rewards.html + api.html pages.
 rm -f docs/home.html docs/register.html docs/verify.html docs/mint.html
 rm -f docs/middleware.js
-rm -f docs/api/why.js docs/api/_why-content.js
+rm -rf docs/api
 rm -f docs/hero-dog.png docs/fees-loop.png docs/musedog-banner.jpg
 rm -f docs/media-generation-last-upload-handles.json
 rm -f docs/icon-airdrop.webp docs/icon-mint.webp docs/icon-register.webp docs/icon-verify.webp
