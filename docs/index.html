@@ -83,10 +83,11 @@
 
 <script>
 (function () {
-  // Passcode is verified SERVER-SIDE by /api/unlock (see site/api/unlock.js).
-  // A correct code sets a signed HttpOnly cookie; the rewrite gate
-  // (site/api/gate.js via site/vercel.json) requires that cookie for every inner page.
-  // Nothing here can be bypassed from page source.
+  // TEMPORARY gate while the site is being rebuilt (2026-09-27).
+  // Client-side SHA-256 check of the passcode; a correct entry sets a
+  // session flag that every inner page checks before rendering.
+  // Soft lock for honest visitors while we fix things — not a vault.
+  var PASSCODE_HASH = "3ab8fa69d3458631d1a2727253a277c0145f8554e2d82082fa2b5972e9a15576";
   var pw = document.getElementById("pw");
   var msg = document.getElementById("msg");
   var gate = document.getElementById("gate");
@@ -97,22 +98,30 @@
     void gate.offsetWidth;
     gate.classList.add("shake");
   }
+  function ok() {
+    msg.textContent = "welcome in. 🐕";
+    msg.className = "gate-msg ok";
+    try { sessionStorage.setItem("musedog_unlocked", "1"); } catch (e) {}
+    setTimeout(function () { location.replace("home.html"); }, 600);
+  }
+  function safeEqual(a, b) {
+    if (typeof a !== "string" || typeof b !== "string") return false;
+    if (a.length !== b.length) return false;
+    var diff = 0;
+    for (var i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+    return diff === 0;
+  }
+  function hex(buf) {
+    return Array.prototype.map.call(new Uint8Array(buf), function (x) {
+      return ("0" + x.toString(16)).slice(-2);
+    }).join("");
+  }
   function tryUnlock() {
     var val = pw.value;
     if (!val) { fail(); return; }
-    fetch("/api/unlock", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ passcode: val })
-    }).then(function (r) {
-      if (!r.ok) { fail(); return null; }
-      return r.json();
-    }).then(function (data) {
-      if (!data || !data.ok) { fail(); return; }
-      msg.textContent = "welcome in. 🐕";
-      msg.className = "gate-msg ok";
-      try { sessionStorage.setItem("musedog_unlocked", "1"); } catch (e) {}
-      setTimeout(function () { location.replace("home.html"); }, 600);
+    if (!window.crypto || !crypto.subtle || !window.TextEncoder) { fail(); return; }
+    crypto.subtle.digest("SHA-256", new TextEncoder().encode(val)).then(function (buf) {
+      if (safeEqual(hex(buf), PASSCODE_HASH)) ok(); else fail();
     }).catch(fail);
   }
   document.getElementById("go").addEventListener("click", tryUnlock);

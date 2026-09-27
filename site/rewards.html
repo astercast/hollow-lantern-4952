@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script>if(sessionStorage.getItem("musedog_unlocked")!=="1"){location.replace("index.html");}</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Muse Dogs — Holder Rewards</title>
@@ -40,7 +41,7 @@
     </div>
     <div class="post-body">
       <h1>Holder rewards</h1>
-      <p class="lede">Holding a Muse Dog pays three ways: ETH from resale royalties, PORCH from vesting, MUSEBOOK from PORCH creator fees. All three are claimed here, pro-rata by the dogs you hold.</p>
+      <p class="lede">Holding a Muse Dog pays three ways: ETH from resale royalties, PORCH from vesting, and MUSEBOOK from PORCH creator fees — claimed weekly on the <a href="leaderboard.html">leaderboard</a>. The two NFT-holder claims below open with the contracts, pro-rata by the dogs you hold.</p>
     </div>
     <div class="hero-art">
       <img class="spot-art center" src="icon-rewards.webp" alt="Muse Dog looking up happily at falling golden ETH coins">
@@ -121,21 +122,12 @@
       <p><button class="btn" data-claim="porch" disabled title="Not live yet">Claim PORCH — opens after contracts deploy</button></p>
     </div>
 
-    <div class="claim-token">
-      <div class="claim-token-head"><strong>MUSEBOOK</strong><span>PORCH creator fees, via the treasury</span></div>
-      <table class="facts">
-        <tr><td>Pot this epoch</td><td id="claim-pot-musebook">—</td></tr>
-        <tr><td>Your claimable</td><td id="claim-amount-musebook"><strong>—</strong></td></tr>
-      </table>
-      <p><button class="btn" data-claim="musebook" disabled title="Not live yet">Claim MUSEBOOK — opens after contracts deploy</button></p>
-    </div>
-
     <img class="poster-art" src="art/poster-claim-anytime.webp" alt="Claim anytime — your rewards never expire, nobody else can take them" loading="lazy">
   </div>
 
   <div class="safety">
     <h3>⚠️ Safety</h3>
-    <p>The real claim <strong>sends you ETH, PORCH, or MUSEBOOK</strong> and asks for <strong>no approvals, no transfers, no seed phrase</strong>. If your wallet shows an approval or a payment <em>from</em> you, <strong>reject it</strong> and check the <a href="verify.html">Verify page</a>.</p>
+    <p>The real claim <strong>sends you ETH or PORCH</strong> and asks for <strong>no approvals, no transfers, no seed phrase</strong>. If your wallet shows an approval or a payment <em>from</em> you, <strong>reject it</strong> and check the <a href="verify.html">Verify page</a>.</p>
   </div>
 
 </div>
@@ -145,7 +137,6 @@
 </footer>
 
 <script src="app.js"></script>
-<script src="claim.js"></script>
 <!-- Vercel Web Analytics + Speed Insights -->
 <script>
   window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };

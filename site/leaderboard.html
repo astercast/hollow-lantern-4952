@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script>if(sessionStorage.getItem("musedog_unlocked")!=="1"){location.replace("index.html");}</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Muse Dogs — Holder Leaderboard</title>
@@ -422,6 +423,26 @@
     </div>
 
     <div class="lb-section">
+      <div class="sec-eyebrow">Your rewards</div>
+      <h2>Claim your MUSEBOOK</h2>
+      <p class="sub">Pull only — you pay your own gas. No approvals, nothing leaves your wallet.</p>
+      <div class="check-grid">
+        <div class="check-card">
+          <h3>This epoch</h3>
+          <p><span id="claim-epoch">Epoch —</span> · pot <strong id="claim-pot">—</strong></p>
+          <p>Still unclaimed: <strong id="claim-unclaimed">—</strong></p>
+          <p class="lb-note" id="claim-notlive-note">Claim contracts not deployed yet — the engine is built and tested. Claiming opens with epoch 1.</p>
+        </div>
+        <div class="check-card">
+          <h3>Your claim</h3>
+          <p id="claim-mine">Connect a wallet above to see your share.</p>
+          <p style="margin-top:16px"><button class="btn-gold" data-claim-rewards disabled title="Not live yet">Claim MUSEBOOK</button></p>
+          <p id="claim-status" class="lb-note"></p>
+        </div>
+      </div>
+    </div>
+
+    <div class="lb-section">
       <div class="sec-eyebrow">Plainly stated</div>
       <h2>The rules</h2>
       <p class="sub">Everything above, in rule form.</p>
@@ -458,7 +479,7 @@
 
   <div class="lb-safety">
     <h3>Prototype safety</h3>
-    <p>This page sends <strong>nothing</strong> and signs <strong>nothing</strong>. If any wallet ever asks you to approve a token or send funds on this page, <strong>reject it</strong> — that isn't us.</p>
+    <p>Checking your position sends <strong>nothing</strong> and signs <strong>nothing</strong>. Claiming (once live) sends one claim transaction — never a token approval. If your wallet ever asks for an approval or a payment <em>from</em> you, <strong>reject it</strong> — that isn't us.</p>
   </div>
 
 </div>
@@ -469,6 +490,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
 <script src="leaderboard.js"></script>
+<script src="claim.js"></script>
 <!-- Vercel Web Analytics + Speed Insights -->
 <script>
   window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
