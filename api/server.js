@@ -857,6 +857,7 @@ app.get('/api/v1/status/:registration_id', ah(async (req, res) => {
     registration_id: r.registration_id,
     muse_id: r.muse_id,
     address: r.address,
+    address_history: r.address_history || [],
     allocation: r.allocation,
     recheck_required: r.recheck_required,
     distribution_status: r.distribution_status,
