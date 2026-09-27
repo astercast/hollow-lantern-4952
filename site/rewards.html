@@ -111,44 +111,6 @@
   .explain-list { counter-reset: lb-step; }
   .explain-list strong { color: var(--lb-text); font-weight: 700; }
 
-  /* ---------- DESKTOP: podium ---------- */
-  .podium { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; align-items: stretch; }
-  .pod-card {
-    background: var(--lb-card);
-    border: 1px solid var(--lb-line);
-    border-radius: 18px;
-    padding: 32px 26px 28px;
-    text-align: center;
-    display: flex; flex-direction: column; align-items: center; gap: 10px;
-    transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
-  }
-  .pod-card:hover { transform: translateY(-4px); border-color: rgba(212, 169, 78, .45); box-shadow: 0 14px 34px rgba(0,0,0,.4); }
-  .pod-card.first {
-    background: linear-gradient(180deg, rgba(212, 169, 78, .17), var(--lb-card) 75%);
-    border-color: rgba(212, 169, 78, .6);
-    box-shadow: 0 14px 40px rgba(212, 169, 78, .12);
-  }
-  .pod-rank {
-    font-size: 12px; font-weight: 800; letter-spacing: 4px;
-    color: var(--lb-gold);
-  }
-  .pod-medal {
-    width: 54px; height: 54px; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 20px; font-weight: 800; color: var(--lb-gold);
-    border: 2px solid rgba(212, 169, 78, .5); background: rgba(212, 169, 78, .08);
-  }
-  .pod-card.first .pod-medal {
-    width: 64px; height: 64px; font-size: 24px;
-    background: linear-gradient(135deg, rgba(212,169,78,.35), rgba(212,169,78,.1));
-    border-color: var(--lb-gold); color: #fff;
-  }
-  .pod-name { font-size: 21px; font-weight: 800; color: #fff; letter-spacing: -.3px; }
-  .pod-hold { font-size: 12px; color: var(--lb-faint); font-weight: 600; margin-top: 6px; font-variant-numeric: tabular-nums; }
-  .pod-reward { font-size: 30px; font-weight: 800; color: var(--lb-gold); letter-spacing: -.6px; font-variant-numeric: tabular-nums; }
-  .pod-reward span { display: block; font-size: 10px; letter-spacing: 2.5px; color: var(--lb-faint); font-weight: 700; margin-top: 5px; }
-  .pod-score { font-size: 12.5px; color: var(--lb-faint); }
-
   /* ---------- DESKTOP: ranking rows ---------- */
   .lb-head, .lb-row { padding-left: 12px; padding-right: 12px; }
   .lb-head {
@@ -276,13 +238,6 @@
     .explain-list li { font-size: 14.5px; padding: 14px 0 14px 56px; }
     .explain-list li::before { width: 38px; height: 38px; top: 13px; border-radius: 11px; }
 
-    /* Mobile podium: stacked, #1 on top with gold treatment */
-    .podium { grid-template-columns: 1fr; gap: 12px; }
-    .pod-card { padding: 24px 20px; gap: 8px; }
-    .pod-medal { width: 46px; height: 46px; font-size: 17px; }
-    .pod-card.first .pod-medal { width: 54px; height: 54px; font-size: 20px; }
-    .pod-name { font-size: 19px; }
-    .pod-reward { font-size: 26px; }
 
     /* Mobile rows: vertical cards.
        Line 1: rank + name (+ you tag). Line 2: holdings.
@@ -399,13 +354,6 @@
 
     <div class="lb-section">
       <div class="phase-note"><span class="dot"></span><span>Codenames and scores below are preview data. Any balances you check read live from Robinhood Chain.</span></div>
-      <div class="sec-eyebrow">This week's board</div>
-      <h2>Top holders</h2>
-      <p class="sub">Ranked by time-weighted score this epoch.</p>
-      <div class="podium" id="podium"></div>
-    </div>
-
-    <div class="lb-section">
       <div class="sec-eyebrow">Every earner</div>
       <h2>Full ranking</h2>
       <p class="sub">Every row is a verified musebook identity — one wallet per muse, no anonymous wallets.</p>

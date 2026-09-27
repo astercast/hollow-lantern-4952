@@ -98,24 +98,9 @@
     return "PORCH " + fmt(r.porch, 0) + " · MDOG " + fmt(r.mdog, 0);
   }
 
-  function renderPodium(rows) {
-    var html = "";
-    rows.slice(0, 3).forEach(function (r, i) {
-      html += '<div class="pod-card' + (i === 0 ? " first" : "") + '">' +
-        '<div class="pod-rank">' + ["01", "02", "03"][i] + "</div>" +
-        '<div class="pod-medal">' + (i + 1) + "</div>" +
-        '<div class="pod-name">' + esc(r.name) + "</div>" +
-        '<div class="pod-hold">' + esc(holdingsLine(r)) + "</div>" +
-        '<div class="pod-reward">' + fmt(estReward(r), 0) + "<span>MUSEBOOK</span></div>" +
-        '<div class="pod-score">score ' + fmt(r.score, 1) + "</div>" +
-        "</div>";
-    });
-    $("podium").innerHTML = html;
-  }
-
   function renderRows(rows) {
     var html = "";
-    rows.slice(3).forEach(function (r) {
+    rows.forEach(function (r) {
       var mine = !!r.you;
       html += '<div class="lb-row' + (mine ? " you" : "") + '">' +
         '<div class="lb-rank">' + String(r.rank).padStart(2, "0") + "</div>" +
@@ -134,7 +119,6 @@
   }
 
   function renderBoard(rows) {
-    renderPodium(rows);
     renderRows(rows);
   }
 
