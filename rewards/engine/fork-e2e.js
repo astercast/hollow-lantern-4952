@@ -39,12 +39,28 @@ async function waitRc(provider, tx, tries = 90) {
   throw new Error('no receipt for ' + tx.hash + (lastErr ? ' (last poll error: ' + String(lastErr).slice(0, 100) + ')' : ''));
 }
 
+// Retry an anvil control-plane send (impersonate/setBalance/evm_*).
+// The public RPC behind the fork flakes with transport errors ("could not
+// coalesce", too_many_data_frames); these are safe to retry.
+async function sendRetry(provider, method, params, tries = 8) {
+  let lastErr = null;
+  for (let i = 0; i < tries; i++) {
+    try {
+      return await provider.send(method, params);
+    } catch (e) {
+      lastErr = e;
+      await new Promise((r) => setTimeout(r, 1500 * (i + 1)));
+    }
+  }
+  throw new Error('FORK E2E FAILED: ' + method + ' failed after retries: ' + String(lastErr).slice(0, 200));
+}
+
 // Warp forward N days: mines a block exactly at latest + N days.
 async function warpDays(provider, n) {
   const cur = (await provider.getBlock('latest')).timestamp;
   const target = cur + n * DAY;
-  await provider.send('evm_setNextBlockTimestamp', [target]);
-  await provider.send('evm_mine', []); // materialize — latest block now carries `target`
+  await sendRetry(provider, 'evm_setNextBlockTimestamp', [target]);
+  await sendRetry(provider, 'evm_mine', []); // materialize — latest block now carries `target`
   return { from: cur, to: target };
 }
 
@@ -79,7 +95,7 @@ async function main() {
   console.log('distributor:', distAddr);
 
   // Fund from the real treasury (impersonated — fork only).
-  await provider.send('anvil_impersonateAccount', [cfg.TREASURY]);
+  await sendRetry(provider, 'anvil_impersonateAccount', [cfg.TREASURY]);
   const treasury = await provider.getSigner(cfg.TREASURY);
   const musebook = new ethers.Contract(cfg.TOKENS.musebook,
     ['function transfer(address,uint256) returns (bool)', 'function balanceOf(address) view returns (uint256)'],
@@ -96,9 +112,9 @@ async function main() {
 
   // ---- vesting checks ----
   const c0 = dry.claims[0];
-  await provider.send('anvil_impersonateAccount', [c0.account]);
+  await sendRetry(provider, 'anvil_impersonateAccount', [c0.account]);
   // Fund claimer with ETH for gas (fork accounts may hold none).
-  await provider.send('anvil_setBalance', [c0.account, '0xDE0B6B3A7640000']); // 1 ETH
+  await sendRetry(provider, 'anvil_setBalance', [c0.account, '0xDE0B6B3A7640000']); // 1 ETH
   const claimer = await provider.getSigner(c0.account);
   const distAsClaimer = new ethers.Contract(distAddr, ART.abi, claimer);
   const mbAsView = new ethers.Contract(cfg.TOKENS.musebook,
@@ -157,8 +173,8 @@ async function main() {
   const w = await warpDays(provider, 31); // publish + 7 (vested) + 31 > 30-day window
   console.log('warped to', w.to, '(was', w.from + ')');
   const c2 = dry.claims[1] || c0;
-  await provider.send('anvil_impersonateAccount', [c2.account]);
-  await provider.send('anvil_setBalance', [c2.account, '0xDE0B6B3A7640000']); // 1 ETH
+  await sendRetry(provider, 'anvil_impersonateAccount', [c2.account]);
+  await sendRetry(provider, 'anvil_setBalance', [c2.account, '0xDE0B6B3A7640000']); // 1 ETH
   const claimer2 = await provider.getSigner(c2.account);
   const distAsClaimer2 = new ethers.Contract(distAddr, ART.abi, claimer2);
   await expectClaimRevert(distAsClaimer2,
@@ -180,7 +196,7 @@ async function main() {
   console.log('withdraw of finalized remainder: OK');
 
   console.log('FORK E2E: ALL CHECKS PASSED');
-  await provider.send('anvil_stopImpersonatingAccount', [cfg.TREASURY]);
+  await sendRetry(provider, 'anvil_stopImpersonatingAccount', [cfg.TREASURY]);
 }
 
 main().catch((e) => { console.error('FORK E2E FAILED:', e.message); process.exit(1); });
