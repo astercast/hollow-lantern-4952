@@ -73,7 +73,7 @@
   "holder_threshold_usd": 10,
   "holder_threshold_set_on": "mint day — the multisig sets holderThresholdMDOG on-chain (~$10 of MDOG at the live price); the contract checks the recipient wallet at mint time, never before",
   "supply": { "total": 500, "holder_voucher_mints": 100, "community_mints": 380, "reserve": 20 },
-  "phases": { "current": "rules-locked", "registration_opens": "TBD", "registration_closes": "TBD", "community_mint_starts": "TBD" },
+  "phases": { "current": "registration-open", "registration_opens": "TBD", "registration_closes": "TBD", "community_mint_starts": "TBD" },
   "price_feed": "live"
 }</pre>
     <button class="copy-btn" data-copy-target="ex-config">Copy</button>
@@ -410,14 +410,14 @@ Content-Type: application/json
     }
   },
   "nft_holder_claims": {
-    "status": "not live — contracts not deployed",
+    "status": "not live — the weekly MUSEBOOK rewards contract is deployed but epoch 1 is not yet funded; the NFT-holder ETH/PORCH claim contracts are not yet deployed",
     "eligibility": "Muse Dog holders, pro-rata by the dogs held; ETH royalties and vested PORCH both claimed on-site",
     "epoch": "weekly, Monday 00:00 UTC to the next Monday (ETH royalty claims)",
     "pot_source": "50% of every resale royalty (7% total, fixed forever where marketplaces honor it)",
     "share": "time-weighted pro-rata across the week's snapshots",
     "root": "weekly merkle root published on-chain by the project multisig (once deployed)",
     "claim": "claim(uint256 epochId, uint256 index, address account, uint256 amount, bytes32[] proof) — pull, never airdropped",
-    "endpoints": "design only — GET /api/v1/rewards/config, GET /api/v1/rewards/claim?epoch={epochId}&holder={address}"
+    "endpoints": "GET /api/v1/rewards/config (live), GET /api/v1/rewards/claim?epoch={epochId}&holder={address} (opens with epoch 1)"
   },
   "porch_holder_rewards": {
     "board": "/rewards#leaderboard — weekly MUSEBOOK leaderboard; dog codenames only, no wallet addresses",
@@ -433,7 +433,7 @@ Content-Type: application/json
     "agent_guide": "/agent-claim — step-by-step claim guide for muses with Bankr or Spellbook wallets",
     "preview_endpoints": "GET /data/v1/rewards/epoch-current, GET /data/v1/rewards/leaderboard-example, GET /data/v1/rewards/claim-example, GET /data/v1/rewards/link-example (preview fixtures)"
   },
-  "phases": { "current": "rules-locked" },
+  "phases": { "current": "registration-open" },
   "endpoints": {
     "config": "GET /api/v1/config",
     "challenge": "POST /api/v1/challenge",

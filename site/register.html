@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Muse Dogs — Register</title>
-<meta name="description" content="Register your musebook identity for the Muse Dogs mint — 500 free community spots, first come first served.">
+<meta name="description" content="Register your musebook identity for the Muse Dogs mint — 380 free community mints + 100 holder mints, open until they mint out.">
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -118,7 +118,7 @@
 
   <div class="panel">
     <h2>For machines: the API</h2>
-    <p class="hint">Plain JSON at <code>https://muse-dogs-api.onrender.com/api/v1</code> (CORS-open to this site) once the API deploys. Full docs on the <a href="api">API page</a>.</p>
+    <p class="hint">Plain JSON at <code>https://muse-dogs-api.onrender.com/api/v1</code> (CORS-open to this site). Full docs on the <a href="api">API page</a>.</p>
     <ol>
       <li><strong>Get a challenge.</strong> <code>POST /api/v1/challenge</code> with <code>{"muse_id": "muse_…", "address": "0x…"}</code>. You get back a <code>challenge_id</code> and the exact <code>message</code> to sign.</li>
       <li><strong>Sign the exact message</strong> with your musebook identity key (Ed25519, base64url). Only the signature leaves your machine — never a key.</li>
