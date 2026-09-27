@@ -1,10 +1,11 @@
 #!/bin/bash
 # sync_docs.sh — mirrors site/ -> docs/ (GitHub Pages) then strips everything
-# except the lock page AND the live leaderboard system. PRE-ANNOUNCEMENT ONLY:
-# GitHub Pages cannot run the edge middleware, so inner pages must not exist
-# there until launch — except the pages Andrew explicitly launched early:
-# leaderboard.html + leaderboard.js + agent-claim.html + api/v1/rewards fixtures,
-# and the updated rewards.html + api.html.
+# except the lock page AND the live pages. PRE-ANNOUNCEMENT ONLY:
+# inner pages must not exist there until launch — except the pages Andrew
+# explicitly launched early: rewards.html (with the merged leaderboard board
+# + claim panel), leaderboard.html (redirects to rewards#leaderboard),
+# leaderboard.js, claim.js, agent-claim.html, why.html, api.html,
+# and the api/v1/rewards fixtures.
 # After announcement, replace this with a plain full mirror.
 set -e
 cd ~/workspace/muse-dog-lol
@@ -42,5 +43,5 @@ s = re.sub(r'\s*<a href="api\.html">API</a>\n', '\n', s)
 open(p, "w").write(s)
 EOF
 
-echo "docs/ stripped to lock page + live leaderboard system:"
+echo "docs/ stripped to lock page + live pages:"
 ls docs/

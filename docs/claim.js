@@ -1,124 +1,204 @@
-/* Muse Dogs — holder rewards claim engine.
+/* Muse Dogs — holder rewards claim engine (real).
  *
- * Status: NOT LIVE. The rewards contracts are not deployed yet.
+ * How it works:
+ *   1. Each weekly epoch, the scoring engine publishes epoch-<id>.json and
+ *      claims-<id>.json under api/v1/rewards/ (see rewards/engine/).
+ *   2. The treasury Safe funds the RewardsDistributor contract and publishes
+ *      the epoch's merkle root on-chain via publishRoot().
+ *   3. This page: holder connects (standard wallet prompt — address only, no
+ *      signature, no approval), finds their leaf + proof in the claims file,
+ *      and calls claim(epochId, index, account, amount, proof).
+ *   4. The contract verifies the proof and sends MUSEBOOK. Pull only — the
+ *      claimer pays their own gas. Claiming never asks for a token approval
+ *      and never moves anything OUT of the holder's wallet.
  *
- * At deploy, the ONLY changes needed are in CLAIM_TOKENS below:
- *   1. Fill in each token's `contract` address (must match the Verify page exactly).
- *   2. Confirm each token's `claimFn` entrypoint name against the deployed ABI.
- * Everything else — the three claim cards, the per-token pots and claimable
- * amounts, the buttons — lights up on its own once the addresses are set.
- *
- * Safety invariants the engine enforces (and the page states):
- *   - Claiming never asks for a token approval.
- *   - Claiming never moves anything OUT of the holder's wallet.
- *     The holder only receives tokens.
+ * Until DISTRIBUTOR is set (contract not deployed yet), the claim buttons
+ * stay disabled and the page says so plainly.
  */
 
 (function () {
   'use strict';
 
   var CHAIN_ID = 4663; // Robinhood Chain
+  var RPC_URL = 'https://rpc.mainnet.chain.robinhood.com';
 
-  var CLAIM_TOKENS = {
-    eth: {
-      label: 'ETH',
-      source: '50% of resale royalties · weekly',
-      contract: null,          // TBA — rewards vault
-      claimFn: 'claim',        // placeholder — confirm against the deployed ABI
-      decimals: 18
-    },
-    porch: {
-      label: 'PORCH',
-      source: '40% of the vested PORCH supply',
-      contract: null,          // TBA — PORCH claim engine
-      claimFn: 'claim',        // placeholder — confirm against the deployed ABI
-      decimals: 18
-    },
-    musebook: {
-      label: 'MUSEBOOK',
-      source: 'PORCH creator fees, via the treasury',
-      contract: null,          // TBA — MUSEBOOK distributor
-      claimFn: 'claim',        // placeholder — confirm against the deployed ABI
-      decimals: 18
-    }
-  };
+  var DISTRIBUTOR = null; // TBA — set to the deployed RewardsDistributor address
+  var API_BASE = 'api/v1/rewards/';
 
-  var ORDER = ['eth', 'porch', 'musebook'];
+  // Minimal ABI for the distributor.
+  var DIST_ABI = [
+    'function claim(uint256 epochId, uint256 index, address account, uint256 amount, bytes32[] proof)',
+    'function isClaimed(uint256 epochId, uint256 index) view returns (bool)',
+    'function epochUnclaimed(uint256 epochId) view returns (uint256)',
+    'function latestEpoch() view returns (uint256)'
+  ];
 
-  function isLive() {
-    return ORDER.every(function (k) { return !!CLAIM_TOKENS[k].contract; });
-  }
+  function isLive() { return !!DISTRIBUTOR; }
 
-  function getProvider() {
-    if (window.ethereum) return window.ethereum;
-    return null;
-  }
+  function getWallet() { return window.ethereum || null; }
 
-  // Connect the holder's wallet on Robinhood Chain. Returns the address,
-  // or null when no wallet is available / the user declines.
+  // Standard connection: the wallet's own familiar popup. Address only —
+  // no signature, no approval, no transaction.
   function connect() {
-    var eth = getProvider();
+    var eth = getWallet();
     if (!eth) return Promise.resolve(null);
     return eth.request({ method: 'eth_requestAccounts' }).then(function (accounts) {
       return accounts && accounts[0] ? accounts[0] : null;
     }).catch(function () { return null; });
   }
 
-  // When live: read each token's epoch pot and the holder's claimable amount
-  // from its contract, then fill the matching card. Until then this is a
-  // no-op — the cards show "—" and the buttons stay disabled.
-  function refresh() {
-    if (!isLive()) return Promise.resolve(false);
-    // Deploy-time wiring: for each token, call its contract's view functions
-    // (e.g. epochPot() and claimable(address)) and write the results into
-    // #claim-pot-<token> and #claim-amount-<token>.
-    return Promise.resolve(true);
+  function apiGet(path) {
+    return fetch(API_BASE + path, { cache: 'no-store' }).then(function (r) {
+      if (!r.ok) throw new Error('api ' + r.status);
+      return r.json();
+    });
   }
 
-  // Send the claim transaction for one token. Guards:
-  //   - refuses to run until that token's contract address is set,
-  //   - sends a plain claim call — no approval, no token movement out.
-  function claim(kind) {
-    var cfg = CLAIM_TOKENS[kind];
-    if (!cfg || !cfg.contract) {
-      if (window.console) window.console.warn('Claim not live yet: no contract for ' + kind);
-      return Promise.resolve(null);
-    }
-    // Deploy-time wiring: build the claim calldata for cfg.claimFn and send
-    // it from the connected wallet. The call must be receive-only.
-    return connect().then(function (address) {
-      if (!address) return null;
-      // TODO(deploy): send tx { to: cfg.contract, data: claimCalldata } via the wallet.
+  // Latest published epoch: manifest.json -> { latestEpochId: N }.
+  function latestEpoch() {
+    return apiGet('manifest.json').then(function (m) { return m.latestEpochId; });
+  }
+
+  function myClaim(address, epochId) {
+    return apiGet('claims-' + epochId + '.json').then(function (data) {
+      var lower = String(address).toLowerCase();
+      for (var i = 0; i < data.claims.length; i++) {
+        if (String(data.claims[i].account).toLowerCase() === lower) return data.claims[i];
+      }
       return null;
     });
   }
 
+  // Read-only provider that always talks to Robinhood Chain directly,
+  // so a wallet sitting on the wrong network can't mislead the page.
+  function readProvider() {
+    return new ethers.JsonRpcProvider(RPC_URL, CHAIN_ID, { staticNetwork: true });
+  }
+
+  function distRead() {
+    return new ethers.Contract(DISTRIBUTOR, DIST_ABI, readProvider());
+  }
+
+  // Send the claim transaction from the holder's wallet.
+  // Shows the exact amount first; the wallet previews the tx before signing.
+  function claim() {
+    if (!isLive()) return Promise.resolve({ ok: false, reason: 'not-live' });
+    return connect().then(function (address) {
+      if (!address) return { ok: false, reason: 'no-wallet' };
+      return latestEpoch().then(function (epochId) {
+        return myClaim(address, epochId).then(function (c) {
+          if (!c) return { ok: false, reason: 'no-claim', epochId: epochId };
+          var provider = new ethers.BrowserProvider(getWallet());
+          return provider.send('eth_requestAccounts', []).then(function () {
+            return provider.getNetwork().then(function (net) {
+              if (Number(net.chainId) !== CHAIN_ID) {
+                return { ok: false, reason: 'wrong-chain' };
+              }
+              var signer = provider.getSigner();
+              var dist = new ethers.Contract(DISTRIBUTOR, DIST_ABI, signer);
+              // Pre-check: already claimed?
+              return distRead().isClaimed(epochId, c.index).then(function (done) {
+                if (done) return { ok: false, reason: 'already-claimed', epochId: epochId };
+                return signer.sendTransaction({
+                  to: DISTRIBUTOR,
+                  data: dist.interface.encodeFunctionData('claim', [
+                    epochId, c.index, c.account, c.amount, c.proof
+                  ])
+                }).then(function (tx) {
+                  return { ok: true, hash: tx.hash, amount: c.amount, epochId: epochId };
+                });
+              });
+            });
+          });
+        });
+      });
+    });
+  }
+
+  function fmt(n) {
+    try { return Number(ethers.formatUnits(n, 18)).toLocaleString('en-US', { maximumFractionDigits: 2 }); }
+    catch (e) { return '—'; }
+  }
+
+  // Fill the claim panel: pot, epoch, and (once connected) the holder's share.
+  function refresh() {
+    if (!isLive()) return Promise.resolve(false);
+    return latestEpoch().then(function (epochId) {
+      return Promise.all([
+        apiGet('epoch-' + epochId + '.json'),
+        distRead().epochUnclaimed(epochId).catch(function () { return null; })
+      ]).then(function (res) {
+        var epoch = res[0], unclaimed = res[1];
+        setText('claim-epoch', 'Epoch ' + epoch.epochId);
+        setText('claim-pot', fmt(epoch.potMusebook) + ' MUSEBOOK');
+        setText('claim-unclaimed', unclaimed === null ? '—' : fmt(unclaimed) + ' MUSEBOOK');
+        setText('claim-root', String(epoch.merkleRoot).slice(0, 18) + '…');
+        var nn = document.getElementById('claim-notlive-note');
+        if (nn) nn.style.display = 'none';
+        return connect().then(function (address) {
+          if (!address) { setText('claim-mine', 'Connect a wallet to see your share.'); return true; }
+          return myClaim(address, epochId).then(function (c) {
+            if (!c) { setText('claim-mine', 'No claim for this wallet in epoch ' + epochId + '.'); return true; }
+            return distRead().isClaimed(epochId, c.index).then(function (done) {
+              setText('claim-mine', done
+                ? 'Claimed. ' + fmt(c.amount) + ' MUSEBOOK received.'
+                : 'You can claim ' + fmt(c.amount) + ' MUSEBOOK.');
+              var btn = document.querySelector('[data-claim-rewards]');
+              if (btn && !done) { btn.disabled = false; btn.removeAttribute('title'); }
+              return true;
+            });
+          });
+        });
+      });
+    }).catch(function () { return false; });
+  }
+
+  function setText(id, text) {
+    var el = document.getElementById(id);
+    if (el) el.textContent = text;
+  }
+
   function wireButtons() {
-    var buttons = document.querySelectorAll('[data-claim]');
+    var buttons = document.querySelectorAll('[data-claim-rewards]');
     Array.prototype.forEach.call(buttons, function (btn) {
-      var kind = btn.getAttribute('data-claim');
-      var cfg = CLAIM_TOKENS[kind];
-      if (cfg && cfg.contract) {
-        btn.disabled = false;
-        btn.removeAttribute('title');
-        btn.textContent = 'Claim ' + cfg.label;
-      }
       btn.addEventListener('click', function (e) {
         e.preventDefault();
-        claim(kind);
+        if (!isLive()) return;
+        btn.disabled = true;
+        setText('claim-status', 'Check your wallet to confirm the claim…');
+        claim().then(function (res) {
+          if (res.ok) {
+            setText('claim-status', 'Claim sent: ' + res.hash);
+          } else if (res.reason === 'no-claim') {
+            setText('claim-status', 'No claim for this wallet this epoch.');
+          } else if (res.reason === 'already-claimed') {
+            setText('claim-status', 'Already claimed for this epoch.');
+          } else if (res.reason === 'wrong-chain') {
+            setText('claim-status', 'Switch your wallet to Robinhood Chain and try again.');
+          } else if (res.reason === 'no-wallet') {
+            setText('claim-status', 'No wallet connected.');
+          }
+          btn.disabled = false;
+          refresh();
+        }).catch(function (err) {
+          setText('claim-status', 'Claim failed: ' + (err && err.message ? err.message : err));
+          btn.disabled = false;
+        });
       });
     });
   }
 
   function init() {
     wireButtons();
-    // Expose for the deploy step and for debugging.
-    window.ClaimEngine = {
-      tokens: CLAIM_TOKENS,
+    refresh();
+    window.RewardsClaim = {
       isLive: isLive,
       connect: connect,
+      claim: claim,
       refresh: refresh,
-      claim: claim
+      myClaim: myClaim,
+      latestEpoch: latestEpoch,
+      distributor: function () { return DISTRIBUTOR; }
     };
   }
 

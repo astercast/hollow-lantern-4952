@@ -1,6 +1,8 @@
 /* Holder leaderboard — READ ONLY. No transactions, no signatures, no money moves.
  * Board rows use dog-inspired codenames — no wallet addresses,
  * no emojis next to codenames. Row scores are preview data until the engine is live.
+ * One combined score per holder: PORCH holdings weigh 50%, MDOG holdings 30%,
+ * 20% of the pot stays in the treasury. No separate categories.
  * The wallet checker reads live token balances from Robinhood Chain. */
 
 (function () {
@@ -11,9 +13,11 @@
   var TREASURY = "0xEac12759e1Bb4A3c1455Ea3FE03b668c493BFb25";
 
   /* Preview epoch pot (MUSEBOOK) used for the est. reward column.
-   * 50% PORCH holders / 30% MDOG holders / 20% held in treasury for future use. */
+   * One combined score per holder: PORCH counts 50%, MDOG counts 30%,
+   * 20% of every pot stays in the treasury for future use. */
   var EPOCH_POT = 398000;
-  var CLASS_WEIGHTS = { porch: 0.50, mdog: 0.30 };
+  var WEIGHT_PORCH_BPS = 5000;
+  var WEIGHT_MDOG_BPS = 3000;
   var TREASURY_RESERVE = 0.20;
 
   var TOKENS = {
@@ -42,40 +46,56 @@
   }
 
   /* Deterministic mock leaderboard so the layout is stable every load.
-   * [codename, class, score, claimed?] — no emojis next to codenames. */
+   * [codename, PORCH holding, MDOG holding, claimed?] — no emojis next to
+   * codenames. One combined score per pup, same 50/30 weighting as the engine. */
   var PREVIEW_SEED = [
-    ["Bark Knight",   "porch", 8420000000, true ],
-    ["Snout Scout",   "porch", 5110000000, false],
-    ["Howl Runner",   "mdog",     2940000, false],
-    ["Treat Bandit",  "porch", 1200000000, true ],
-    ["Wag Captain",   "mdog",      812000, false],
-    ["Paw Patroller", "porch",  640000000, false],
-    ["Drool Duke",    "mdog",      405000, true ],
-    ["Leash Legend",  "porch",  210000000, false],
-    ["Tail Chaser",   "mdog",      152000, false],
-    ["Bone Baron",    "porch",   88000000, false]
+    ["Bark Knight",   8400000000, 2900000, true ],
+    ["Snout Scout",   5100000000, 1200000, false],
+    ["Howl Runner",   1200000000, 2940000, false],
+    ["Treat Bandit",  2100000000,  800000, true ],
+    ["Wag Captain",    640000000,  812000, false],
+    ["Paw Patroller",  880000000,  405000, false],
+    ["Drool Duke",     210000000,  152000, true ],
+    ["Leash Legend",   120000000,   95000, false],
+    ["Tail Chaser",     88000000,   61000, false],
+    ["Bone Baron",      45000000,   30000, false]
   ];
 
+  /* Combined score in pot basis points (5000 + 3000 = 8000 max):
+   * reward = score / 10000 * EPOCH_POT. Same weighting as the engine. */
+  function combinedScore(porchBal, mdogBal, totals) {
+    var s = 0;
+    if (totals.porch > 0 && porchBal > 0) s += WEIGHT_PORCH_BPS * (porchBal / totals.porch);
+    if (totals.mdog > 0 && mdogBal > 0) s += WEIGHT_MDOG_BPS * (mdogBal / totals.mdog);
+    return s;
+  }
+
+  function previewTotals(extra) {
+    var t = { porch: 0, mdog: 0 };
+    PREVIEW_SEED.forEach(function (r) { t.porch += r[1]; t.mdog += r[2]; });
+    if (extra) { t.porch += extra.porch || 0; t.mdog += extra.mdog || 0; }
+    return t;
+  }
+
   function buildPreviewRows() {
+    var totals = previewTotals(null);
     return PREVIEW_SEED.map(function (r, i) {
-      return { rank: i + 1, name: r[0], cls: r[1], score: r[2], claimed: r[3], preview: true };
-    });
+      return {
+        rank: i + 1, name: r[0], porch: r[1], mdog: r[2],
+        score: combinedScore(r[1], r[2], totals),
+        claimed: r[3], preview: true
+      };
+    }).sort(function (a, b) { return b.score - a.score; })
+      .map(function (r, i) { r.rank = i + 1; return r; });
   }
 
-  function classLabel(cls) {
-    return cls === "mdog" ? "MDOG holders" : "PORCH holders";
+  /* Estimated MUSEBOOK reward for a row, from its share of the combined score. */
+  function estReward(r) {
+    return (r.score / 10000) * EPOCH_POT;
   }
 
-  function classTag(cls) {
-    return '<span class="tag tag-' + cls + '">' + (cls === "mdog" ? "MDOG" : "PORCH") + "</span>";
-  }
-
-  /* Estimated MUSEBOOK reward for a row, from its share of its class score. */
-  function estReward(rows, r) {
-    var total = 0;
-    rows.forEach(function (x) { if (x.cls === r.cls) total += x.score; });
-    if (!total) return 0;
-    return (r.score / total) * EPOCH_POT * (CLASS_WEIGHTS[r.cls] || 0);
+  function holdingsLine(r) {
+    return "PORCH " + fmt(r.porch, 0) + " · MDOG " + fmt(r.mdog, 0);
   }
 
   function renderPodium(rows) {
@@ -85,9 +105,9 @@
         '<div class="pod-rank">' + ["01", "02", "03"][i] + "</div>" +
         '<div class="pod-medal">' + (i + 1) + "</div>" +
         '<div class="pod-name">' + esc(r.name) + "</div>" +
-        '<div class="pod-class">' + classTag(r.cls) + "</div>" +
-        '<div class="pod-reward">' + fmt(estReward(rows, r), 0) + "<span>MUSEBOOK</span></div>" +
-        '<div class="pod-score">score ' + fmt(r.score, 0) + "</div>" +
+        '<div class="pod-hold">' + esc(holdingsLine(r)) + "</div>" +
+        '<div class="pod-reward">' + fmt(estReward(r), 0) + "<span>MUSEBOOK</span></div>" +
+        '<div class="pod-score">score ' + fmt(r.score, 1) + "</div>" +
         "</div>";
     });
     $("podium").innerHTML = html;
@@ -101,12 +121,12 @@
         '<div class="lb-rank">' + String(r.rank).padStart(2, "0") + "</div>" +
         '<div class="lb-holder">' +
           '<span class="lb-name">' + esc(r.name) + (mine ? ' <em>· you</em>' : "") + "</span>" +
-          classTag(r.cls) + "</div>" +
+          '<span class="lb-hold">' + esc(holdingsLine(r)) + "</span></div>" +
         '<div class="lb-meta">' +
-          '<div class="lb-score">' + fmt(r.score, 0) + "<span>score</span></div>" +
-          '<div class="lb-reward">' + fmt(estReward(rows, r), 0) + "<span>MUSEBOOK</span></div>" +
-          '<div class="lb-status ' + (mine ? "you" : r.claimed ? "done" : "open") + '">' +
-            (mine ? "Your position" : r.claimed ? "Claimed" : "Claimable") + "</div>" +
+          '<div class="lb-score">' + fmt(r.score, 1) + "<span>score</span></div>" +
+          '<div class="lb-reward">' + fmt(estReward(r), 0) + "<span>MUSEBOOK</span></div>" +
+          '<div class="lb-status ' + (mine ? "you" : r.preview ? "prev" : r.claimed ? "done" : "open") + '">' +
+            (mine ? "Your position" : r.preview ? "Preview" : r.claimed ? "Claimed" : "Claimable") + "</div>" +
         "</div>" +
         "</div>";
     });
@@ -121,8 +141,7 @@
   function refreshBoard() {
     if (currentAddr) {
       readBalances(currentAddr, function (results) {
-        var b = bestClass(results);
-        estimateRank(buildPreviewRows(), b.score, b.cls);
+        estimateRank(buildPreviewRows(), results);
       });
     } else {
       boardRows = buildPreviewRows();
@@ -130,21 +149,21 @@
     }
   }
 
-  function estimateRank(rows, bestScore, bestClass) {
-    var inserted = false;
-    var out = [];
-    rows.forEach(function (r) {
-      if (!inserted && bestScore > r.score) {
-        out.push({ name: "Your pup", cls: bestClass, score: bestScore, claimed: false, preview: true, you: true });
-        inserted = true;
-      }
-      out.push(r);
-    });
-    if (!inserted) out.push({ name: "Your pup", cls: bestClass, score: bestScore, claimed: false, preview: true, you: true });
+  function estimateRank(rows, results) {
+    var totals = previewTotals(results);
+    var mine = {
+      name: "Your pup",
+      porch: results.porch || 0, mdog: results.mdog || 0,
+      score: combinedScore(results.porch || 0, results.mdog || 0, totals),
+      claimed: false, preview: true, you: true
+    };
+    // Re-score the mock rows against the same totals so the ranking is fair.
+    rows.forEach(function (r) { r.score = combinedScore(r.porch, r.mdog, totals); });
+    var out = rows.concat([mine]).sort(function (a, b) { return b.score - a.score; });
     out.forEach(function (r, i) { r.rank = i + 1; });
     renderBoard(out);
-    var mine = out.filter(function (r) { return r.you; })[0];
-    $("my-rank").textContent = "Estimated position on the preview board: #" + mine.rank + " (" + classLabel(mine.cls) + ").";
+    var myRank = out.filter(function (r) { return r.you; })[0].rank;
+    $("my-rank").textContent = "Estimated position on the preview board: #" + myRank + ".";
   }
 
   /* Reads always go through the dedicated Robinhood Chain RPC — never through
@@ -180,18 +199,11 @@
     return "<ul>" + lines.join("") + "</ul>";
   }
 
-  function bestClass(results) {
-    var best = { cls: "porch", score: results.porch || 0 };
-    if ((results.mdog || 0) >= (results.porch || 0)) best = { cls: "mdog", score: results.mdog || 0 };
-    return best;
-  }
-
   function setStatus(msg) { $("status").textContent = msg; }
 
   function afterBalances(addr, results, note) {
     $("eligibility").innerHTML = eligibilityText(results);
-    var b = bestClass(results);
-    estimateRank(buildPreviewRows(), b.score, b.cls);
+    estimateRank(buildPreviewRows(), results);
     setStatus("Done. " + note);
   }
 

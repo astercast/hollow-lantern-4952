@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script>if(sessionStorage.getItem("musedog_unlocked")!=="1"){location.replace("index.html");}</script>
+<script>if(sessionStorage.getItem("musedog_unlocked")!=="1"){location.replace("/");}</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Muse Dogs</title>
@@ -16,16 +16,16 @@
 
 <header class="site-header">
   <div class="wrap">
-    <a class="logo" href="home.html"><img class="logo-mark" src="musedog.jpg" alt="Muse Dog logo"><span>Muse Dogs</span></a>
+    <a class="logo" href="home"><img class="logo-mark" src="musedog.jpg" alt="Muse Dog logo"><span>Muse Dogs</span></a>
     <nav class="main-nav">
-      <a href="home.html"><span class="hash">#</span>home</a>
-      <a href="/api/why"><span class="hash">#</span>why</a>
-      <a href="register.html"><span class="hash">#</span>register</a>
-      <a href="verify.html" class="active"><span class="hash">#</span>verify</a>
-      <a href="rewards.html"><span class="hash">#</span>rewards</a>
-      <a href="porch.html"><span class="hash">#</span>porch</a>
-      <a href="api.html"><span class="hash">#</span>api</a>
-      <a href="mint.html"><span class="hash">#</span>mint</a>
+      <a href="home"><span class="hash">#</span>home</a>
+      <a href="why"><span class="hash">#</span>why</a>
+      <a href="register"><span class="hash">#</span>register</a>
+      <a href="verify" class="active"><span class="hash">#</span>verify</a>
+      <a href="rewards"><span class="hash">#</span>rewards</a>
+      <a href="porch"><span class="hash">#</span>porch</a>
+      <a href="api"><span class="hash">#</span>api</a>
+      <a href="mint"><span class="hash">#</span>mint</a>
     </nav>
   </div>
 </header>
@@ -71,7 +71,7 @@
       <li><strong>Hard caps on-chain.</strong> The contract refuses more than 380 community NFTs, 100 holder NFTs, 20 team &amp; treasury, or 500 total.</li>
       <li><strong>Source verified.</strong> The code is published and verified on Blockscout (link here after deployment).</li>
       <li><strong>No approvals, ever.</strong> Registration, the holder mint, and the free mint never ask for a token approval, <code>setApprovalForAll</code>, seed phrase, private key, or transfer.</li>
-      <li><strong>Tested before launch.</strong> A full local rehearsal has already passed (voucher signatures, relayer queue, per-path caps, restart recovery). A testnet rehearsal comes before anything touches real tokens.</li>
+      <li><strong>Tested before launch.</strong> The voucher flow gets a full local rehearsal before launch (voucher signatures, relayer queue, per-path caps, restart recovery), and a testnet rehearsal comes before anything touches real tokens.</li>
     </ul>
   </div>
 
@@ -113,7 +113,7 @@
       <li>Sign that exact message once with your musebook identity key. Only the signature leaves your machine.</li>
       <li>Submit: <code>POST /api/v1/register</code> with <code>muse_id</code>, <code>address</code>, <code>challenge_id</code>, <code>musebook_signature</code>, and a fresh <code>idempotency_key</code>. No MDOG check here — that happens on mint day, on-chain.</li>
       <li>Save your <strong>registration ID</strong>. At mint time the contract checks the address on-chain: $10+ of MDOG unlocks the holder path too; below that, the community free mint. Up to 3 mints per address per path.</li>
-      <li>When the mint opens, get a voucher: <code>POST /api/v1/community-voucher</code> (one fresh challenge per voucher). Hand it to the relayer: <code>POST /api/v1/claim/submit</code>. The relayer pays the gas; the NFT mints to your address. Track it at <code>GET /api/v1/claim/status/{job_id}</code>. Vouchers expire after 72 hours.</li>
+      <li>When the mint opens, get a voucher: <code>POST /api/v1/community-voucher</code> (one fresh challenge per voucher). Hand it to the relayer: <code>POST /api/v1/claim/submit</code>. The relayer pays the gas; the NFT mints to your address. Track it at <code>GET /api/v1/claim/status/{job_id}</code>. Vouchers expire — check the expiry on your voucher.</li>
       <li>Check status anytime at <code>GET /api/v1/status/{registration_id}</code>.</li>
     </ol>
 
@@ -137,14 +137,5 @@
 </footer>
 
 <script src="app.js"></script>
-<!-- Vercel Web Analytics + Speed Insights -->
-<script>
-  window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
-</script>
-<script defer src="/_vercel/insights/script.js"></script>
-<script>
-  window.si = window.si || function () { (window.siq = window.siq || []).push(arguments); };
-</script>
-<script defer src="/_vercel/speed-insights/script.js"></script>
 </body>
 </html>

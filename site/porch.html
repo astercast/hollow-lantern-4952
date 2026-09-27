@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script>if(sessionStorage.getItem("musedog_unlocked")!=="1"){location.replace("index.html");}</script>
+<script>if(sessionStorage.getItem("musedog_unlocked")!=="1"){location.replace("/");}</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Muse Dogs — P.O.R.C.H · Pools of Rare Coin Holdings</title>
-<meta name="description" content="personal notes">
+<meta name="description" content="PORCH — the Muse Dogs treasury token on Robinhood Chain. Fees, pools, vesting, and the holder-rewards engine.">
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="stylesheet" href="styles.css">
@@ -16,16 +16,16 @@
 
 <header class="site-header">
   <div class="wrap">
-    <a class="logo" href="home.html"><img class="logo-mark" src="musedog.jpg" alt="Muse Dog logo"><span>Muse Dogs</span></a>
+    <a class="logo" href="home"><img class="logo-mark" src="musedog.jpg" alt="Muse Dog logo"><span>Muse Dogs</span></a>
     <nav class="main-nav">
-      <a href="home.html"><span class="hash">#</span>home</a>
-      <a href="/api/why"><span class="hash">#</span>why</a>
-      <a href="register.html"><span class="hash">#</span>register</a>
-      <a href="verify.html"><span class="hash">#</span>verify</a>
-      <a href="rewards.html"><span class="hash">#</span>rewards</a>
-      <a href="porch.html" class="active"><span class="hash">#</span>porch</a>
-      <a href="api.html"><span class="hash">#</span>api</a>
-      <a href="mint.html"><span class="hash">#</span>mint</a>
+      <a href="home"><span class="hash">#</span>home</a>
+      <a href="why"><span class="hash">#</span>why</a>
+      <a href="register"><span class="hash">#</span>register</a>
+      <a href="verify"><span class="hash">#</span>verify</a>
+      <a href="rewards"><span class="hash">#</span>rewards</a>
+      <a href="porch" class="active"><span class="hash">#</span>porch</a>
+      <a href="api"><span class="hash">#</span>api</a>
+      <a href="mint"><span class="hash">#</span>mint</a>
     </nav>
   </div>
 </header>
@@ -83,7 +83,7 @@
     <p>Two sources, both real:</p>
     <ul>
       <li><strong>Trading fees.</strong> Every swap pays the pool. No volume, no fees — deeper pools mean less slippage, less slippage attracts traders, more traders means more fees. That loop is the engine.</li>
-      <li><strong>Incentives.</strong> 15B PORCH vests to the treasury over one year (30-day cliff). Half of it funds Merkl incentive campaigns on the pools — LPs earn fees <em>plus</em> PORCH. Campaigns launch when announced.</li>
+      <li><strong>Incentives.</strong> 15B PORCH vests to the locked launch wallet over one year (30-day cliff). Half of it is earmarked for Merkl incentive campaigns on the pools — LPs earn fees <em>plus</em> PORCH. Campaigns launch when announced.</li>
     </ul>
   </div>
 
@@ -103,7 +103,7 @@
   <div class="panel">
     <h2>What it means for you</h2>
     <ul>
-      <li><strong>Hold a Muse Dog:</strong> the weekly ETH rewards vault gains a second income stream — PORCH creator fees flowing into the treasury in MUSEBOOK. The other half of the vested PORCH funds an on-site claim engine: hold the dog, claim PORCH directly. Coming soon.</li>
+      <li><strong>Hold a Muse Dog:</strong> once the contracts launch, the weekly ETH rewards vault gains a second income stream — PORCH creator fees flowing into the treasury in MUSEBOOK. The other half of the vested PORCH funds an on-site claim engine: hold the dog, claim PORCH directly. Coming soon.</li>
       <li><strong>LP:</strong> earn swap fees plus Merkl PORCH incentives — Merkl can boost NFT holders, so loyalty pays more.</li>
       <li><strong>Trade:</strong> deeper pools mean less slippage on every MDOG or PORCH trade.</li>
       <li><strong>Watch:</strong> the treasury, the pools, and the Merkl campaigns are all on-chain. Every claim on this page is auditable.</li>
@@ -117,14 +117,5 @@
 </footer>
 
 <script src="app.js"></script>
-<!-- Vercel Web Analytics + Speed Insights -->
-<script>
-  window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
-</script>
-<script defer src="/_vercel/insights/script.js"></script>
-<script>
-  window.si = window.si || function () { (window.siq = window.siq || []).push(arguments); };
-</script>
-<script defer src="/_vercel/speed-insights/script.js"></script>
 </body>
 </html>

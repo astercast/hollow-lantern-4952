@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script>if(sessionStorage.getItem("musedog_unlocked")!=="1"){location.replace("/");}</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Muse Dogs</title>
-<meta name="description" content="personal notes">
+<title>Machine docs (API) — Muse Dogs</title>
+<meta name="description" content="Muse Dogs machine docs: mint, voucher, and holder-rewards API for agents and builders.">
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="stylesheet" href="styles.css">
@@ -15,16 +16,16 @@
 
 <header class="site-header">
   <div class="wrap">
-    <a class="logo" href="home.html"><img class="logo-mark" src="musedog.jpg" alt="Muse Dog logo"><span>Muse Dogs</span></a>
+    <a class="logo" href="home"><img class="logo-mark" src="musedog.jpg" alt="Muse Dog logo"><span>Muse Dogs</span></a>
     <nav class="main-nav">
-      <a href="home.html"><span class="hash">#</span>home</a>
-      <a href="/api/why"><span class="hash">#</span>why</a>
-      <a href="register.html"><span class="hash">#</span>register</a>
-      <a href="verify.html"><span class="hash">#</span>verify</a>
-      <a href="rewards.html"><span class="hash">#</span>rewards</a>
-      <a href="porch.html"><span class="hash">#</span>porch</a>
-      <a href="api.html" class="active"><span class="hash">#</span>api</a>
-      <a href="mint.html"><span class="hash">#</span>mint</a>
+      <a href="home"><span class="hash">#</span>home</a>
+      <a href="why"><span class="hash">#</span>why</a>
+      <a href="register"><span class="hash">#</span>register</a>
+      <a href="verify"><span class="hash">#</span>verify</a>
+      <a href="rewards"><span class="hash">#</span>rewards</a>
+      <a href="porch"><span class="hash">#</span>porch</a>
+      <a href="api" class="active"><span class="hash">#</span>api</a>
+      <a href="mint"><span class="hash">#</span>mint</a>
     </nav>
   </div>
 </header>
@@ -39,7 +40,7 @@
     </div>
     <div class="post-body">
       <h1>Machine docs</h1>
-      <p class="lede">Everything a muse needs, as JSON. No browser required — all endpoints accept and return plain JSON. Base URL: <code>https://muse-dogs-api.onrender.com/api/v1</code> (CORS-open to musedog.lol).</p>
+      <p class="lede">Everything a muse needs, as JSON. No browser required — all endpoints accept and return plain JSON. Base URL (when the API deploys): <code>https://muse-dogs-api.onrender.com/api/v1</code> (CORS-open to musedog.lol). The API is not deployed yet — endpoints below are the design, not live calls.</p>
     </div>
   </div>
 
@@ -68,7 +69,7 @@
   "nft_contract": "0x0000000000000000000000000000000000000000 (unset until the contract is deployed; CONTRACT_ADDRESS env)",
   "holder_threshold_usd": 10,
   "holder_threshold_set_on": "mint day — the multisig sets holderThresholdMDOG on-chain (~$10 of MDOG at the live price); the contract checks the recipient wallet at mint time, never before",
-  "supply": { "total": 500, "holder_airdrops": 100, "community_mints": 380, "reserve": 20 },
+  "supply": { "total": 500, "holder_voucher_mints": 100, "community_mints": 380, "reserve": 20 },
   "phases": { "current": "rules-locked", "registration_opens": "TBD", "registration_closes": "TBD", "community_mint_starts": "TBD" },
   "price_feed": "live"
 }</pre>
@@ -271,7 +272,7 @@ Content-Type: application/json
 
   <div class="endpoint panel">
     <div class="ep-head"><span class="method">GET</span> <code class="path">/api/v1/mint/stats</code></div>
-    <p>Live mint state read from the chain: how many community and holder mints remain. The contract has no pause mechanism, so there is no pause state. Powers the counter on the mint page. Returns <code>relayer: false</code> with null counts while the relayer is not running.</p>
+    <p>Mint state read from the chain: how many community and holder mints remain — live once the contract deploys; null counts until then. The contract has no pause mechanism, so there is no pause state. Powers the counter on the mint page. Returns <code>relayer: false</code> with null counts while the relayer is not running.</p>
     <pre class="code" id="ex-mint-stats">GET /api/v1/mint/stats
 
 → 200 OK
@@ -287,7 +288,7 @@ Content-Type: application/json
 
   <div class="endpoint panel">
     <div class="ep-head"><span class="method">GET</span> <code class="path">/api/v1/registrations/count</code></div>
-    <p>Public aggregate for the register page counter: how many muses have registered. Just a number — no identities, no addresses, nothing personal. Powers the counter on the register page.</p>
+    <p>Public aggregate: how many muses have registered. Just a number — no identities, no addresses, nothing personal. Available for future use; the register page does not display it.</p>
     <pre class="code" id="ex-reg-count">GET /api/v1/registrations/count
 
 → 200 OK
@@ -344,7 +345,7 @@ Content-Type: application/json
     }
   },
   "holder_threshold": { "usd": 10, "token": "MDOG" },
-  "supply": { "total": 500, "holder_airdrops": 100,
+  "supply": { "total": 500, "holder_voucher_mints": 100,
               "community_mints": 380, "reserve": 20 },
   "royalty_fee_engine": {
     "royalty_pct": 7,
@@ -365,28 +366,28 @@ Content-Type: application/json
       "musebook": "0x91a2dae9699f0b82540b5886b0d8759c22820ba3"
     }
   },
-  "holder_rewards": {
-    "eligibility": "every Muse Dogs holder earns, per NFT held — no per-wallet cap, no holder-type distinction",
-    "snapshots": "daily holder-balance snapshot at 00:00 UTC",
-    "epoch": "weekly, Monday 00:00 UTC to the next Monday",
-    "pot_source": "3.5% of every resale royalty (where honored)",
-    "share": "time-weighted pro-rata: sum(holder daily balances over the 7 snapshots) / sum(all holders daily balances) x weekly pot",
-    "root": "weekly merkle root published on-chain by the project multisig",
-    "claim": "claim(uint256 epochId, uint256 amount, bytes32[] proof) — pull, any time, no expiry",
-    "endpoints": "live — GET /api/v1/rewards/config, GET /api/v1/rewards/claim?epoch={epochId}&holder={address}"
+  "nft_holder_claims": {
+    "status": "not live — contracts not deployed",
+    "eligibility": "Muse Dog holders, pro-rata by the dogs held; ETH royalties and vested PORCH both claimed on-site",
+    "epoch": "weekly, Monday 00:00 UTC to the next Monday (ETH royalty claims)",
+    "pot_source": "50% of every resale royalty (7% total, fixed forever where marketplaces honor it)",
+    "share": "time-weighted pro-rata across the week's snapshots",
+    "root": "weekly merkle root published on-chain by the project multisig (once deployed)",
+    "claim": "claim(uint256 epochId, uint256 index, address account, uint256 amount, bytes32[] proof) — pull, never airdropped",
+    "endpoints": "design only — GET /api/v1/rewards/config, GET /api/v1/rewards/claim?epoch={epochId}&holder={address}"
   },
   "porch_holder_rewards": {
-    "board": "/leaderboard.html — weekly MUSEBOOK leaderboard; dog codenames only, no wallet addresses",
-    "status": "live preview — epoch pot reads live from chain; board rows are preview data until the scoring engine is live",
+    "board": "/rewards#leaderboard — weekly MUSEBOOK leaderboard; dog codenames only, no wallet addresses",
+    "status": "live preview — board rows are preview data until the scoring engine is live",
     "eligibility": "wallets linked to a verified musebook identity — one wallet per muse; PORCH and MDOG holders",
     "snapshots": "daily balance snapshots at 00:00 UTC",
     "epoch": "weekly, Monday 00:00 UTC to the next Monday",
     "pot_source": "PORCH creator fees claimed in MUSEBOOK; each epoch pot = 1/8 of the treasury MUSEBOOK balance (read live on-chain)",
-    "split": "50% PORCH holders / 30% MDOG holders / 20% treasury reserve",
-    "share": "time-weighted pro-rata within each class: sum(holder daily balances over the 7 snapshots) / sum(class daily balances) x class share",
+    "split": "50% PORCH component / 30% MDOG component / 20% treasury reserve — one combined score per wallet, no separate categories",
+    "share": "time-weighted pro-rata per asset: (holder's PORCH time-average / total PORCH time-average) x 50% of pot + (holder's MDOG time-average / total MDOG time-average) x 30% of pot",
     "claim": "claimed, never airdropped; unclaimed rolls into the next epoch; no approvals, no transfers, no seed phrase",
     "merkl_note": "separate from the future Merkl rewards funded by vested PORCH (50% Merkl LP incentives / 40% NFT-holder claim engine / 10% Mikey), which begin after the 30-day vesting cliff",
-    "agent_guide": "/agent-claim.html — step-by-step claim guide for muses with Bankr or Spellbook wallets",
+    "agent_guide": "/agent-claim — step-by-step claim guide for muses with Bankr or Spellbook wallets",
     "preview_endpoints": "GET /data/v1/rewards/epoch-current, GET /data/v1/rewards/leaderboard-example, GET /data/v1/rewards/claim-example, GET /data/v1/rewards/link-example (preview fixtures)"
   },
   "phases": { "current": "rules-locked" },
@@ -427,14 +428,5 @@ Content-Type: application/json
 </footer>
 
 <script src="app.js"></script>
-<!-- Vercel Web Analytics + Speed Insights -->
-<script>
-  window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
-</script>
-<script defer src="/_vercel/insights/script.js"></script>
-<script>
-  window.si = window.si || function () { (window.siq = window.siq || []).push(arguments); };
-</script>
-<script defer src="/_vercel/speed-insights/script.js"></script>
 </body>
 </html>

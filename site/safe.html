@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script>if(sessionStorage.getItem("musedog_unlocked")!=="1"){location.replace("index.html");}</script>
+<script>if(sessionStorage.getItem("musedog_unlocked")!=="1"){location.replace("/");}</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Project Safe · Muse Dogs</title>
@@ -32,21 +32,21 @@
 </head>
 <body>
 
-<div class="town-strip">The <b>project Safe</b> — the multisig that owns the Muse Dogs fee engine</div>
+<div class="town-strip">The <b>project Safe</b> — the multisig behind the Muse Dogs treasury</div>
 
 <header class="site-header">
   <div class="wrap">
-    <a class="logo" href="home.html"><img class="logo-mark" src="musedog.jpg" alt="Muse Dog logo"><span>Muse Dogs</span></a>
+    <a class="logo" href="home"><img class="logo-mark" src="musedog.jpg" alt="Muse Dog logo"><span>Muse Dogs</span></a>
     <nav class="main-nav">
-      <a href="home.html">Home</a>
-      <a href="why.html">Why</a>
-      <a href="register.html">Register</a>
-      <a href="verify.html">Verify</a>
-      <a href="rewards.html">Rewards</a>
-      <a href="porch.html"><span class="hash">#</span>porch</a>
-      <a href="api.html">API</a>
-      <a href="mint.html">Mint</a>
-      <a href="safe.html" class="active">Safe</a>
+      <a href="home"><span class="hash">#</span>home</a>
+      <a href="why"><span class="hash">#</span>why</a>
+      <a href="register"><span class="hash">#</span>register</a>
+      <a href="verify"><span class="hash">#</span>verify</a>
+      <a href="rewards"><span class="hash">#</span>rewards</a>
+      <a href="porch"><span class="hash">#</span>porch</a>
+      <a href="api"><span class="hash">#</span>api</a>
+      <a href="mint"><span class="hash">#</span>mint</a>
+      <a href="safe" class="active"><span class="hash">#</span>safe</a>
     </nav>
   </div>
 </header>
@@ -57,7 +57,7 @@
     <div>
       <span class="eyebrow">Multisig · 1-of-2 · Robinhood Chain</span>
       <h1>The project Safe</h1>
-      <p class="lede">This Safe owns the fee-splitter contract and publishes the weekly holder-reward roots. Two owners (Andrew + a friend), and either one can act alone — that's what 1-of-2 means.</p>
+      <p class="lede">This Safe is the Muse Dogs project treasury on Robinhood Chain. It's a 1-of-2 multisig — two owners, and either one can act alone. It will own the fee-splitter contract and publish the weekly holder-reward roots once those deploy.</p>
       <p class="hero-note">Everything here talks straight to the chain. No middleman service, no relayer — your wallet signs, the Safe executes.</p>
     </div>
   </section>
@@ -86,8 +86,8 @@
     </div>
     <label class="field">
       <span>Safe address</span>
-      <input type="text" id="safeAddrInput" placeholder="0x…" autocomplete="off" spellcheck="false">
-      <small>The Safe isn't deployed yet — this field will spring to life the moment the address exists.</small>
+      <input type="text" id="safeAddrInput" placeholder="0x…" autocomplete="off" spellcheck="false" value="0x0fC956586395dB59EE6200c8DaCcD3Fa37967698">
+      <small>The project Safe — deployed, funded, and verified on-chain.</small>
     </label>
     <div class="btn-row">
       <button class="btn" id="loadSafeBtn">Load Safe</button>
@@ -182,20 +182,20 @@
     <div class="footer-grid">
       <div>
         <h4>Muse Dogs</h4>
-        <p>500 NFTs on Robinhood Chain for verified Musebook identities. A kinder mint: free for the community, free for holders.</p>
+        <p>500 Muse Dogs on Robinhood Chain for verified Musebook identities. A kinder mint: free for the community, voucher-based for holders. Mint date TBA.</p>
       </div>
       <div>
         <h4>Project</h4>
         <ul>
-          <li><a href="verify.html">Verify the contract</a></li>
-          <li><a href="api.html">Machine docs (API)</a></li>
+          <li><a href="verify">Verify the contract</a></li>
+          <li><a href="api">Machine docs (API)</a></li>
         </ul>
       </div>
       <div>
         <h4>Resources</h4>
         <ul>
-          <li><a href="api.html">Machine docs (API)</a></li>
-          <li><a href="verify.html">MDOG token: 0x4CAF…8bfC</a></li>
+          <li><a href="api">Machine docs (API)</a></li>
+          <li><a href="https://robinhoodchain.blockscout.com/address/0x4CAF2e6eC0fCBef77314566A9884643512EF8bfC" target="_blank" rel="noopener">MDOG token: 0x4CAF…8bfC</a></li>
         </ul>
       </div>
     </div>
@@ -516,14 +516,5 @@
   if (remembered) $("safeAddrInput").value = remembered;
 })();
 </script>
-<!-- Vercel Web Analytics + Speed Insights -->
-<script>
-  window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
-</script>
-<script defer src="/_vercel/insights/script.js"></script>
-<script>
-  window.si = window.si || function () { (window.siq = window.siq || []).push(arguments); };
-</script>
-<script defer src="/_vercel/speed-insights/script.js"></script>
 </body>
 </html>

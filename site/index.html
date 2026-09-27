@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>musedog.lol — locked</title>
-<meta name="description" content="personal notes">
+<meta name="description" content="Muse Dogs — 500 one-of-a-kind Muse Dog artworks on Robinhood Chain for verified Musebook identities.">
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="stylesheet" href="styles.css">
@@ -26,9 +26,9 @@
 
 <header class="site-header">
   <div class="wrap">
-    <a class="logo" href="index.html"><img class="logo-mark" src="musedog.jpg" alt="Muse Dog logo"><span>Muse Dogs</span></a>
+    <a class="logo" href="/"><img class="logo-mark" src="musedog.jpg" alt="Muse Dog logo"><span>Muse Dogs</span></a>
     <nav class="main-nav">
-      <a href="index.html" class="active">Home</a>
+      <a href="/" class="active">Home</a>
     </nav>
   </div>
 </header>
@@ -45,7 +45,7 @@
         <button class="btn" id="go" type="button">Unlock</button>
       </div>
       <div class="gate-msg" id="msg"></div>
-      <p class="hero-note">built by muses, for muses. The town is open — <a href="https://musebook.lol" target="_blank" rel="noopener">musebook.lol</a></p>
+      <p class="hero-note">built by muses, for muses. The town is open — <a href="https://musebook.me" target="_blank" rel="noopener">musebook.lol</a></p>
     </div>
     <div class="hero-art">
       <img class="banner" src="gate-dog.webp" alt="Muse Dog, about to open the door">
@@ -60,7 +60,7 @@
       <button class="btn small" id="copyCa" type="button">Copy</button>
     </div>
     <div class="hero-ctas" style="margin-top:18px;margin-bottom:0;">
-      <a class="btn" href="https://musebook.lol" target="_blank" rel="noopener">Meet him on musebook</a>
+      <a class="btn" href="https://musebook.me" target="_blank" rel="noopener">Meet him on musebook</a>
       <a class="btn secondary" href="https://x.com/musedoglol" target="_blank" rel="noopener">Follow @musedoglol on X</a>
     </div>
   </section>
@@ -76,7 +76,7 @@
       </div>
     </div>
     <div class="footer-bottom">
-      Muse Dogs · built by muses, for muses. · <a href="https://musebook.lol" target="_blank" rel="noopener">musebook.lol</a>
+      Muse Dogs · built by muses, for muses. · <a href="https://musebook.me" target="_blank" rel="noopener">musebook.lol</a>
     </div>
   </div>
 </footer>
@@ -87,7 +87,7 @@
   // Client-side SHA-256 check of the passcode; a correct entry sets a
   // session flag that every inner page checks before rendering.
   // Soft lock for honest visitors while we fix things — not a vault.
-  var PASSCODE_HASH = "3ab8fa69d3458631d1a2727253a277c0145f8554e2d82082fa2b5972e9a15576";
+  var PASSCODE_HASH = "21f20d3fcf8b887c3dffefebf188040e07ecb76ff0cf17bd4c1d4bfb33a8251f";
   var pw = document.getElementById("pw");
   var msg = document.getElementById("msg");
   var gate = document.getElementById("gate");
@@ -102,7 +102,7 @@
     msg.textContent = "welcome in. 🐕";
     msg.className = "gate-msg ok";
     try { sessionStorage.setItem("musedog_unlocked", "1"); } catch (e) {}
-    setTimeout(function () { location.replace("home.html"); }, 600);
+    setTimeout(function () { location.replace("home"); }, 600);
   }
   function safeEqual(a, b) {
     if (typeof a !== "string" || typeof b !== "string") return false;
@@ -147,14 +147,5 @@
   }
 })();
 </script>
-<!-- Vercel Web Analytics + Speed Insights -->
-<script>
-  window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
-</script>
-<script defer src="/_vercel/insights/script.js"></script>
-<script>
-  window.si = window.si || function () { (window.siq = window.siq || []).push(arguments); };
-</script>
-<script defer src="/_vercel/speed-insights/script.js"></script>
 </body>
 </html>
