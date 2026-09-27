@@ -12,7 +12,7 @@ const fs = require('fs');
 const path = require('path');
 const { ethers } = require('ethers');
 const cfg = require('./config');
-const { v4Replay, liquidityAt, sqrtPAt, ownerAt } = require('./replay');
+const { v4Replay, liquidityAt, sqrtPAt, ownerAt, getLogsChunked } = require('./replay');
 const { getAmountsForLiquidity } = require('./tickmath');
 
 const SCAN_FROM = 65186314 - 1000;
@@ -39,15 +39,16 @@ async function main() {
   for (const k of v4.liq.keys()) tokenIds.add(k.split(':')[1]);
   console.log('position tokenIds in our pools:', tokenIds.size);
 
-  // Per-token ownership timelines (cheap: topic3-filtered).
+  // Per-token ownership timelines (topic3-filtered, chunked: a full-range
+  // Transfer query times out on the public RPC).
   const timelines = new Map();
   let done = 0;
   for (const tid of tokenIds) {
     const topic3 = '0x' + BigInt(tid).toString(16).padStart(64, '0');
-    const logs = await provider.getLogs({
+    const logs = await getLogsChunked(provider, {
       address: cfg.POSM, topics: [TRANSFER, null, null, topic3],
       fromBlock: SCAN_FROM, toBlock: nowBlock,
-    });
+    }, `tl-${tid}`);
     const tl = logs.map((l) => {
       const ev = posmIface.parseLog(l);
       return { block: l.blockNumber, to: ev.args.to.toLowerCase() };

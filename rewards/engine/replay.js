@@ -255,5 +255,5 @@ async function lpBalancesAtReplay(provider, timeline, v4, poolIds, block) {
 
 module.exports = {
   transferReplay, balanceAt, positionTimeline, ownerAt,
-  v4Replay, liquidityAt, sqrtPAt, lpBalancesAtReplay,
+  v4Replay, liquidityAt, sqrtPAt, lpBalancesAtReplay, getLogsChunked,
 };
