@@ -48,7 +48,7 @@ async function main() {
     const logs = await getLogsChunked(provider, {
       address: cfg.POSM, topics: [TRANSFER, null, null, topic3],
       fromBlock: SCAN_FROM, toBlock: nowBlock,
-    }, `tl-${tid}`);
+    }, `tl-${tid}`, 500000);
     const tl = logs.map((l) => {
       const ev = posmIface.parseLog(l);
       return { block: l.blockNumber, to: ev.args.to.toLowerCase() };

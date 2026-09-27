@@ -46,13 +46,14 @@ const POSM_ABI = [
 const ZERO = '0x0000000000000000000000000000000000000000';
 const CHUNK = cfg.LOG_CHUNK;
 
-async function getLogsChunked(provider, args, label) {
+async function getLogsChunked(provider, args, label, chunkSize) {
   const { fromBlock, toBlock } = args;
-  const chunks = Math.ceil((toBlock - fromBlock + 1) / CHUNK);
+  const size = chunkSize || CHUNK;
+  const chunks = Math.ceil((toBlock - fromBlock + 1) / size);
   const out = [];
   for (let i = 0; i < chunks; i++) {
-    const s = fromBlock + i * CHUNK;
-    const e = Math.min(toBlock, s + CHUNK - 1);
+    const s = fromBlock + i * size;
+    const e = Math.min(toBlock, s + size - 1);
     if (i % 40 === 0) console.log(`  ${label} chunk ${i + 1}/${chunks}`);
     let tries = 0;
     for (;;) {

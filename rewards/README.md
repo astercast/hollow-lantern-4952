@@ -83,6 +83,11 @@ Next epoch's `--carryover` = distributor's free balance
   `ModifyLiquidity` log via an oldest-window-first probe; price comes from
   `Swap` logs with earliest-known fallback. Birth blocks verified:
   MDOG/MUSEBOOK 67856790, PORCH/MDOG 70387195, PORCH/MUSEBOOK 70382066.
+- `relp.js` crash fix (2026-09-27): the first re-replay died on an uncaught
+  `log query timed out` — per-token POSM Transfer timelines used one
+  8.6M-block `getLogs`. Now chunked through the retrying `getLogsChunked`
+  helper. Snapshots are only written after all timelines complete, so a
+  crashed run leaves the previous snapshots untouched.
 - `node engine/validate-replay.js` (PENDING — runs after the LP re-replay
   lands): checks replayed liquidity == `getPositionLiquidity`, replayed
   price == `getSlot0`, replayed owner == `ownerOf`, and tickmath amounts
