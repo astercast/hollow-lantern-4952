@@ -351,7 +351,7 @@ Content-Type: application/json
     <p><strong>Stub — not populated yet.</strong> Mint receipt for a registration. Today it returns the registration's distribution status with <code>tx_hash</code> and <code>token_id</code> as <code>null</code>; the distribution runner writes the real tx hash and token id after minting.</p>
     <pre class="code" id="ex-receipt">GET /api/v1/receipt/…
 
-&rarr; 200 OK
+→ 200 OK
 {
   "registration_id": "…",
   "status": "registered",
@@ -367,7 +367,7 @@ Content-Type: application/json
     <p><strong>Live.</strong> The weekly holder-rewards rules: epoch schedule, pot source (1/8 of the treasury MUSEBOOK balance at epoch start, plus unclaimed carryover), 7-day vesting, 30-day claim window, the distributor contract address, the eligibility guards (PORCH/MDOG floors, whale cap, minimum payout), and the claim function signature. Read this before claiming anything.</p>
     <pre class="code" id="ex-rewards-config">GET /api/v1/rewards/config
 
-&rarr; 200 OK
+→ 200 OK
 {
   "epoch_days": 7,
   "epoch_ids": "integers starting at 1 (1 = 2026-09-28..2026-10-04)",
@@ -404,7 +404,7 @@ Content-Type: application/json
     <p><strong>Opens with epoch 1 (Oct 5, 2026).</strong> Fetch your claim for an epoch: the amount, merkle index, and proof you need to call <code>claim()</code> on the distributor contract. <code>404 NO_CLAIM</code> if the holder has no claim in that epoch; <code>404 NOT_FOUND</code> if the epoch isn't published yet. No signature, no wallet connection — read-only.</p>
     <pre class="code" id="ex-rewards-claim">GET /api/v1/rewards/claim?epoch=1&amp;holder=0x…
 
-&rarr; 200 OK
+→ 200 OK
 {
   "epochId": 1,
   "index": 3,

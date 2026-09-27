@@ -945,3 +945,29 @@ img { max-width: 100%; }
   .cta-band { padding: 40px 22px; margin: 60px 0; }
   .countdown { gap: 8px; }
 }
+
+/* Shared flex button row (register, safe). */
+.btn-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+  align-items: center;
+}
+
+/* Form field blocks (div-based) — mirrors label.field above. */
+.field { display: block; margin: 20px 0; }
+.field > label { display: block; font-weight: 650; margin-bottom: 8px; font-size: 14.5px; }
+.field > .hint, .field > small { margin-top: 8px; }
+
+/* Result boxes (register page class names — matches .result.ok/.no look). */
+.result-ok, .result-err {
+  border-radius: var(--radius-sm);
+  padding: 14px 18px;
+  margin: 20px 0;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--green);
+  background: var(--card);
+}
+.result-err { border-left-color: var(--red); }
+.result-ok p, .result-err p { color: var(--ink-soft); margin: 6px 0 0; }

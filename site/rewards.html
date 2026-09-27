@@ -299,7 +299,7 @@
     </div>
   </div>
 
-  <div class="phase"><span class="pill">Preview data</span> The board below is live with <strong>preview data</strong> — the scoring engine and claiming open with epoch 1.</div>
+  <div class="phase"><span class="pill">Preview data</span> The board shows <strong>preview data</strong>. Scoring and claiming open with epoch 1 (Sept 28 – Oct 4, 2026); claiming opens after the epoch is funded and its root is published on-chain (Oct 5).</div>
 
   <div class="lb-shell" id="leaderboard">
 
@@ -348,7 +348,7 @@
           <h3>Your eligibility</h3>
           <div id="eligibility"><p>Nothing checked yet.</p></div>
           <p id="my-rank"></p>
-          <p style="font-size:13px">Minimums shown are proposed, not final. The real engine scores a 7-day time-weighted average — this preview uses today's balances.</p>
+          <p style="font-size:13px">This preview scores today's balances; the live engine scores a 7-day time-weighted average. Minimums: 1,000,000 PORCH and 1,000 MDOG.</p>
         </div>
       </div>
     </div>
@@ -403,25 +403,24 @@
           <p>Have a Bankr or Spellbook wallet? The <a href="agent-claim">muse claim guide</a> walks your agent through linking and claiming, step by step.</p>
         </div>
       </div>
-      <p class="lb-note">This weekly MUSEBOOK system is <strong>separate from the future Merkl rewards</strong> funded by vested PORCH — those arrive later, after the vesting cliff. Details below.</p>
+      <p class="lb-note">This weekly MUSEBOOK system is <strong>separate from the future Merkl rewards</strong> funded by vested PORCH — those arrive later, after the vesting cliff. <a href="#merkl-note">Details below</a>.</p>
     </div>
 
   </div>
 
   <div class="lb-safety">
-    <h3>Prototype safety</h3>
-    <p>Checking your position sends <strong>nothing</strong> and signs <strong>nothing</strong>. Claiming (once live) sends one claim transaction — never a token approval. If your wallet ever asks for an approval or a payment <em>from</em> you, <strong>reject it</strong> — that isn't us.</p>
+    <p><strong>Safety:</strong> Checking your position sends and signs nothing. Claiming never asks for a token approval — if your wallet shows one, reject it.</p>
   </div>
 
   <div class="panel">
     <h2>NFT-holder claims</h2>
     <p>Muse Dog holders get two more payouts, both opening with the contracts — pro-rata by the dogs you hold:</p>
     <ul>
-      <li><strong>ETH</strong> — 50% of every resale royalty (7% total, fixed forever where marketplaces honor it; the other 10% goes to Mikey and 40% buys MDOG/MUSEBOOK and MDOG/ETH liquidity locked to a dead address), weekly.</li>
+      <li><strong>ETH</strong> — 50% of every resale royalty (7% total, fixed forever where marketplaces honor it), paid weekly. (The other 10% goes to Mikey; 40% buys MDOG/MUSEBOOK and MDOG/ETH liquidity, locked to a dead address.)</li>
       <li><strong>PORCH</strong> — 40% of the vested PORCH supply, via an on-site claim engine.</li>
     </ul>
     <table class="facts">
-      <tr><td>Status</td><td><span class="pill">Not live yet</span> <strong>Contracts not deployed</strong> — contracts not deployed</td></tr>
+      <tr><td>Status</td><td><span class="pill">Not live yet</span> Contract not deployed.</td></tr>
       <tr><td>Contract</td><td class="mono">TBA — will match the <a href="verify">Verify page</a> exactly</td></tr>
       <tr><td>Approvals</td><td><strong>None.</strong> Claiming asks for no token approval.</td></tr>
       <tr><td>Transfers</td><td><strong>None.</strong> You only receive tokens — nothing leaves your wallet.</td></tr>
@@ -431,15 +430,14 @@
     <img class="poster-art" src="art/poster-claim-anytime.webp" alt="Claim anytime — your rewards wait for you, nobody else can take them" loading="lazy">
   </div>
 
-  <div class="panel">
+  <div class="panel" id="merkl-note">
     <h2>Separate from the future Merkl rewards</h2>
     <p>The weekly MUSEBOOK board above is <strong>not</strong> the Merkl program. Merkl is funded by <strong>vested PORCH</strong> — 50% to Merkl LP incentives, 40% to the on-site NFT claim engine, 10% to Mikey — and nothing unlocks before the 30-day vesting cliff (about October 23, 2026). When Merkl campaigns go live, they'll be announced separately.</p>
     <p>Full engine: <a href="porch">the porch page</a>.</p>
   </div>
 
   <div class="safety">
-    <h3>Safety</h3>
-    <p>The real claim <strong>sends you tokens</strong> and asks for <strong>no approvals, no transfers, no seed phrase</strong>. If your wallet shows an approval or a payment <em>from</em> you, <strong>reject it</strong> and check the <a href="verify">Verify page</a>.</p>
+    <p><strong>Safety:</strong> The real claim sends you tokens — no approvals, no transfers, no seed phrase. If your wallet shows an approval or a payment <em>from</em> you, reject it and check the <a href="verify">Verify page</a>.</p>
   </div>
 
   <p class="fine-print">The fine print: each weekly pot is split among holders by one combined score — your PORCH holdings weigh a bit more than your MDOG. One score per holder. Muse Dog holders separately receive ETH from resale royalties and PORCH from vesting once the contracts deploy.</p>

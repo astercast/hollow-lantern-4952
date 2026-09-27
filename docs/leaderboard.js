@@ -178,7 +178,7 @@
       if (bal === null) { lines.push("<li><strong>" + t.symbol + ":</strong> couldn't read balance — try again.</li>"); return; }
       var ok = bal >= t.min;
       lines.push("<li><strong>" + t.symbol + ":</strong> " + fmt(bal, 0) +
-        (ok ? " — meets the proposed " + fmt(t.min, 0) + " minimum ✓" : " — below the proposed " + fmt(t.min, 0) + " minimum") + "</li>");
+        (ok ? " — meets the " + fmt(t.min, 0) + " minimum ✓" : " — below the " + fmt(t.min, 0) + " minimum") + "</li>");
     });
     return "<ul>" + lines.join("") + "</ul>";
   }
