@@ -2,8 +2,9 @@
 
 **Status: BUILT AND TESTED. NOT DEPLOYED.** The claim contract is written,
 unit-tested (22/22 forge tests), cross-checked against the JS tree builder,
-LP math validated against the keeper's proven Python math, and exercised
-end-to-end on an anvil fork of Robinhood Chain with real chain data.
+and exercised end-to-end on an anvil fork of Robinhood Chain with real chain
+data. Scoring is SPOT-ONLY (LP removed from rewards 2026-09-27 — no LP
+tracking, no multiplier, no replay).
 Deployment is BLOCKED: the Bankr CLI cannot sign or submit contract-creation
 transactions (403 on `wallet sign`, `submit` requires a `to` address) and no
 EOA key is available — Andrew deploys from his machine in the morning
@@ -19,8 +20,8 @@ Weekly MUSEBOOK holder rewards (Andrew's locked design, 2026-09-26):
 - One combined score per wallet: PORCH weighs 50, MDOG weighs 30 (normalized
   by 80) — 100% of every epoch pot goes to eligible holders. No reserve,
   no treasury cut.
-- 7 daily snapshots → time-weighted scores; LP-held tokens count 1.5x
-  (proposed — Andrew rules).
+- 7 daily snapshots → time-weighted spot scores (PORCH/MDOG wallet balances
+  only; no LP — removed 2026-09-27).
 - Claims stay open 30 days after each epoch's root is published; unclaimed
   then finalizes back to free funds and rolls into the next epoch's pot.
 - Pull claims via merkle root published by the treasury Safe. No airdrops.
@@ -33,17 +34,14 @@ Weekly MUSEBOOK holder rewards (Andrew's locked design, 2026-09-26):
 | `contracts/RewardsDistributor.sol` | The claim contract. No dependencies. |
 | `test/RewardsDistributor.t.sol` | 16 forge tests incl. JS-engine cross-check + claim-window/finalize. |
 | `script/Deploy.s.sol` | Deploy script (**do not run without Andrew's order**). |
-| `engine/config.js` | All addresses + tunable params (floors, caps, LP mult marked PROPOSED). |
-| `engine/snapshot.js` | Holder enumeration + daily snapshots + LP valuation. Read-only. |
-| `engine/score.js` | Time-weighted scoring, floors, whale cap, splits, merkle input. |
+| `engine/config.js` | All addresses + tunable params (floors, caps marked PROPOSED). |
+| `engine/snapshot.js` | Holder enumeration + daily snapshots (spot only). Read-only. |
+| `engine/score.js` | Time-weighted spot scoring, floors, whale cap, splits, merkle input. |
 | `engine/merkle.js` | Tree builder — must match the contract (proven by test). |
-| `engine/tickmath.js` | V3/V4 concentrated-liquidity math (validated vs keeper). |
 | `engine/run-epoch.js` | Orchestrates one epoch: snapshots → scores → `api/epoch-N.json` + `api/claims-N.json`. |
 | `engine/publish.js` | Builds the 2-tx Safe bundle (fund + publishRoot). Never signs. |
-| `engine/dry-run.js` | Full pipeline on real data with a TEST registry. |
-| `engine/relp.js` | Re-runs ONLY the LP leg on saved snapshots (fixed replay). |
-| `engine/score-selftest.js` | 12 synthetic scoring checks: 50/30 split exactness, empty/dust scoring, identity dedup, floors. |
-| `engine/validate-replay.js` | Validates LP log-replay vs direct chain reads (liquidity, price, owner, amounts). Read-only. |
+| `engine/dry-run.js` | Full pipeline on real data with a TEST registry (spot only). |
+| `engine/score-selftest.js` | 15 synthetic scoring checks: 50/30 split exactness, empty/dust scoring, identity dedup, floors, LP-ignored. |
 | `engine/fork-e2e.js` | Fork end-to-end: deploy, fund, publish, claim, revert checks. |
 | `api/` | Per-epoch outputs (gitignored until a real epoch runs — see below). |
 
@@ -73,29 +71,16 @@ Next epoch's `--carryover` = distributor's free balance
   proving a new scoring class needs NO distributor change.
 - `test_js_engine_fixture`: JS-built tree verifies on-chain — builder and
   contract agree on leaves, sorting, root.
-- `node engine/score-selftest.js`: 12/12 — PORCH-only wallet gets exactly
+- `node engine/score-selftest.js`: 15/15 — PORCH-only wallet gets exactly
   50/80 of pot, MDOG-only exactly 30/80; empty snapshots → zero root/claims
   (publish.js refuses these); dust-only wallets excluded; one wallet per
-  muse id (latest link wins); below-floor wallets excluded.
-- LP discovery fix (2026-09-27): this chain's PoolManager emits NO
-  `Initialize` event (verified: pool-creation tx contains only
-  `ModifyLiquidity`). Pool birth is now discovered from the first
-  `ModifyLiquidity` log via an oldest-window-first probe; price comes from
-  `Swap` logs with earliest-known fallback. Birth blocks verified:
-  MDOG/MUSEBOOK 67856790, PORCH/MDOG 70387195, PORCH/MUSEBOOK 70382066.
-- `relp.js` crash fix (2026-09-27): the first re-replay died on an uncaught
-  `log query timed out` — per-token POSM Transfer timelines used one
-  8.6M-block `getLogs`. Now chunked through the retrying `getLogsChunked`
-  helper. Snapshots are only written after all timelines complete, so a
-  crashed run leaves the previous snapshots untouched.
-- `node engine/validate-replay.js` (PENDING — runs after the LP re-replay
-  lands): checks replayed liquidity == `getPositionLiquidity`, replayed
-  price == `getSlot0`, replayed owner == `ownerOf`, and tickmath amounts
-  agree to the wei — on sampled positions incl. #3036297, #3156366,
-  #3344714 (read-only; positions never touched).
-- LP math: JS `getAmountsForLiquidity` on live position #3344714 =
-  77263397.06691882 PORCH / 310064.3558220185 MUSEBOOK — matches the keeper's
-  independent Python math to 8+ decimals.
+  muse id (latest link wins); below-floor wallets excluded; LP-only wallets
+  score zero and stale `s.lp` fields change nothing (spot-only proven).
+- LP REMOVED from rewards 2026-09-27 (Andrew's order): no LP tracking, no
+  1.5x multiplier, no V4 replay, no LP eligibility. `replay.js` retains the
+  ERC20 Transfer replay used for spot balances; the V4/LP functions
+  (`positionTimeline`, `v4Replay`, `lpBalancesAtReplay`) are obsolete for
+  rewards. `relp.js` / `validate-replay.js` / `validate-lp.js` are obsolete.
 - Fork E2E on real chain data: deploy → fund from impersonated treasury →
   publish dry-run root → real `claim()` paid the exact MUSEBOOK → double-claim
   reverted → forged amount reverted → post-deadline claim reverted →
@@ -112,7 +97,7 @@ Next epoch's `--carryover` = distributor's free balance
   requires a `to` address (no contract-creation path). No EOA key exists on
   this machine. Andrew runs `forge script script/Deploy.s.sol` (or the
   init bytecode in the launch checkpoint) from his own wallet in the morning.
-- Guard params (1M PORCH / 1K MDOG floors, 2% whale cap, 1.5x LP mult) are
+- Guard params (1M PORCH / 1K MDOG floors, 2% whale cap) are
   **proposed** — Andrew rules before epoch 1.
 - Identity registry export from the registration backend is still TODO
   (registration must accept any EVM address — Spellbook included). Without

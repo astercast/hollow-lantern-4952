@@ -44,11 +44,18 @@ async function main() {
   const timelines = new Map();
   let done = 0;
   for (const tid of tokenIds) {
+    if (tid === '0') continue; // salt 0 is not a real position NFT; RPC chokes on it
     const topic3 = '0x' + BigInt(tid).toString(16).padStart(64, '0');
-    const logs = await getLogsChunked(provider, {
-      address: cfg.POSM, topics: [TRANSFER, null, null, topic3],
-      fromBlock: SCAN_FROM, toBlock: nowBlock,
-    }, `tl-${tid}`, 500000);
+    let logs;
+    try {
+      logs = await getLogsChunked(provider, {
+        address: cfg.POSM, topics: [TRANSFER, null, null, topic3],
+        fromBlock: SCAN_FROM, toBlock: nowBlock,
+      }, `tl-${tid}`, 500000);
+    } catch (err) {
+      console.log(`  tl-${tid}: FAILED after retries (${err.shortMessage || err.message}) — skipping token`);
+      continue;
+    }
     const tl = logs.map((l) => {
       const ev = posmIface.parseLog(l);
       return { block: l.blockNumber, to: ev.args.to.toLowerCase() };

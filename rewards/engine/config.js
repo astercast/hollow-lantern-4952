@@ -38,8 +38,11 @@ module.exports = {
   FLOOR: { porch: 1000000n * 10n ** 18n, mdog: 1000n * 10n ** 18n }, // min holding
   FLOOR_DAYS: 4,             // must clear the floor on >= this many of 7 snapshots
   WHALE_CAP_BP: 200,         // score capped at 200 bps (2%) of class total supply
-  LP_MULT_NUM: 3, LP_MULT_DEN: 2, // LP-held tokens weigh 3/2 = 1.5x spot
   MIN_PAYOUT_WEI: 10n ** 18n, // dust threshold: 1 MUSEBOOK
+  // NOTE (2026-09-27): LP tracking REMOVED from rewards by Andrew's order.
+  // Scoring uses PORCH/MDOG spot wallet balances only. No LP multiplier,
+  // no replay, no LP eligibility. POOLS/POSM/STATEVIEW kept for reference
+  // (other tooling) but are not consulted by the rewards engine.
 
   // ---- Chain scan bounds ----
   // PORCH launched 2026-09-23; MDOG earlier. Conservative scan starts:

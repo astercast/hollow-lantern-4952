@@ -116,6 +116,7 @@ async function positionTimeline(provider, fromBlock, toBlock) {
 }
 
 function ownerAt(transfers, block) {
+  if (!transfers) return null;
   let owner = null;
   for (const t of transfers) {
     if (t.block > block) break;
@@ -154,8 +155,8 @@ async function v4Replay(provider, poolManager, poolIds, fromBlock, toBlock) {
   }));
   const livePools = poolIds.filter((pid) => birthFrom[pid] !== null);
   const [modLogs, swapLogs] = await Promise.all([
-    (async () => { const o = []; for (const pid of livePools) o.push(...await getLogsChunked(provider, { address: poolManager, topics: topicsFor(MODLIQ, pid), fromBlock: birthFrom[pid], toBlock }, `modliq ${pid.slice(0, 10)}`)); return o; })(),
-    (async () => { const o = []; for (const pid of livePools) o.push(...await getLogsChunked(provider, { address: poolManager, topics: topicsFor(SWAP, pid), fromBlock: birthFrom[pid], toBlock }, `swap ${pid.slice(0, 10)}`)); return o; })(),
+    (async () => { const o = []; for (const pid of livePools) o.push(...await getLogsChunked(provider, { address: poolManager, topics: topicsFor(MODLIQ, pid), fromBlock: birthFrom[pid], toBlock }, `modliq ${pid.slice(0, 10)}`, 100000)); return o; })(),
+    (async () => { const o = []; for (const pid of livePools) o.push(...await getLogsChunked(provider, { address: poolManager, topics: topicsFor(SWAP, pid), fromBlock: birthFrom[pid], toBlock }, `swap ${pid.slice(0, 10)}`, 100000)); return o; })(),
   ]);
 
   // liquidity: key `${poolId}:${tokenId}` -> {tickLower, tickUpper, deltas: [[block, delta]]}

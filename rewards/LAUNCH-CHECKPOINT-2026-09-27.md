@@ -9,9 +9,10 @@ verified on-chain or by test run on 2026-09-27, not asserted from memory.
   MUSEBOOK-only, owner = treasury EOA. 100% of each published allocation
   goes to claimants; no reserve; unclaimed after 30-day window is releasable
   by anyone via `finalizeEpoch()` into free funds the owner can withdraw.
-- `rewards/engine/` — snapshot, LP log-replay, scoring (50 PORCH / 30 MDOG,
-  normalized /80, one combined leaf per wallet), Merkle tree, publish-bundle
-  builder, fork E2E, scoring self-tests, replay validator.
+- `rewards/engine/` — snapshot (spot only), scoring (50 PORCH / 30 MDOG,
+  normalized /80, one combined leaf per wallet, spot-only — LP removed
+  2026-09-27), Merkle tree, publish-bundle builder, fork E2E, scoring
+  self-tests.
 - `site/claim.js` — real claim UI, DISTRIBUTOR=null (disabled) until deploy.
 
 ## Choice made
@@ -36,12 +37,14 @@ verified on-chain or by test run on 2026-09-27, not asserted from memory.
   identity — locked rewards model (see holder-rewards-design.md).
 
 ## What would invalidate this checkpoint
-- Andrew changes guard params (floors 1M PORCH / 1K MDOG, 2% whale cap,
-  1.5x LP multiplier are PROPOSED, not locked) → rescore before epoch 1.
+- Andrew changes guard params (floors 1M PORCH / 1K MDOG, 2% whale cap are
+  PROPOSED, not locked) → rescore before epoch 1.
 - A real identity-registry export appears → epoch-1 scoring must use it,
-  not the TEST registry (dry-run claims used the test registry: 2178
-  holders, all linked — NOT production).
+  not the TEST registry (dry-run claims used the test registry — NOT production).
 - MUSEBOOK or treasury address changes → rebuild init bytecode.
+- LP stays OUT of rewards (Andrew 2026-09-27): if LP is ever reintroduced,
+  scoring, docs, and tests must be rebuilt — the current suite proves
+  spot-only.
 
 ## Blockers (morning actions for Andrew)
 1. **Deploy**: this machine cannot sign contract creation (Bankr CLI
@@ -53,7 +56,7 @@ verified on-chain or by test run on 2026-09-27, not asserted from memory.
    then `publishRoot(epochId, root, allocation)` from the owner EOA.
 3. **Identity registry**: real verified-muse export still TODO — without
    it, epoch 1 cannot satisfy "verified identity required".
-4. **Guard params**: Andrew rules on floors / whale cap / LP multiplier.
+4. **Guard params**: Andrew rules on floors / whale cap.
 
 ## Rerunnable checks (another agent can re-verify)
 ```bash
@@ -61,8 +64,7 @@ export PATH=/home/hatch/.foundry/versions/foundry-rs/foundry/v1.8.3:$PATH
 cd ~/workspace/muse-dog-lol/rewards
 forge test                                   # expect 22/22
 cd engine
-node score-selftest.js                       # expect 12/12
-node validate-replay.js                      # expect all MATCH (after relp)
+node score-selftest.js                       # expect 15/15 (incl. LP-ignored)
 node rescore.js                              # rebuilds claims-999 (test only)
 node fork-e2e.js                             # expect full battery PASS
 ```
@@ -71,19 +73,19 @@ Rebuild deploy bytecode:
 cd ~/workspace/muse-dog-lol/rewards/engine && node -e "
 const {ethers}=require('ethers'); const cfg=require('./config');
 const ART=require('../out/RewardsDistributor.sol/RewardsDistributor.json');
-new ethers.ContractFactory(ART.abi,ART.bytecode)
+new ethers.ContractFactory(ART.abi,ART.bytecode.object)
   .getDeployTransaction(cfg.TOKENS.musebook,cfg.TREASURY)
   .then(tx=>require('fs').writeFileSync('/tmp/deploy-data.txt',tx.data));"
 ```
+NOTE: use `ART.bytecode.object` (foundry artifact nests bytecode).
 
 ## Test evidence (2026-09-27)
 - forge: 22/22 (incl. ownership, non-owner withdraw, token-false/revert,
   future-asset-class agnosticism).
-- score-selftest: 12/12 (50/80 PORCH-only, 30/80 MDOG-only exact).
-- LP replay fix: PoolManager emits no Initialize event on this chain;
-  birth discovered from first ModifyLiquidity log (MDOG/MUSEBOOK 67856790,
-  PORCH/MDOG 70387195, PORCH/MUSEBOOK 70382066). Re-replay in progress at
-  checkpoint time; snapshots at `rewards/api/dryrun/snapshots/`.
-- fork-e2e: extended with wrong-epoch/account/index cases; full run pending
-  the re-scored claims.
+- score-selftest: 15/15 (50/80 PORCH-only, 30/80 MDOG-only exact; LP-only
+  wallets score zero; stale s.lp fields ignored).
+- LP removed from rewards 2026-09-27 (Andrew): scoring is spot-only.
+  `replay.js` keeps ERC20 Transfer replay for spot; V4/LP functions obsolete.
+- fork-e2e: deploy/fund/publish/claim verified on fork; full battery pending
+  (public RPC flaky — anvil fork estimateGas unreliable, use explicit gas).
 - Nothing deployed. No funds moved. Passcode stays up.

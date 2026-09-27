@@ -1,28 +1,24 @@
 /* Epoch scoring for the rewards engine.
  *
- * Locked rules (Andrew 2026-09-26; simplified 2026-09-27):
+ * Locked rules (Andrew 2026-09-26; simplified 2026-09-27; LP removed 2026-09-27):
  *   - 7 daily snapshots -> time-weighted average per token per wallet
  *   - pot = treasury MUSEBOOK / 8 + carryover (unclaimed from prior epochs)
  *   - ONE score per wallet: PORCH holdings weigh 50, MDOG holdings weigh 30,
  *     so PORCH counts ~1.67x more than MDOG. 100% of the pot is distributed
  *     to holders — no reserve, no treasury cut, no separate categories.
+ *   - Scoring uses SPOT wallet balances only. No LP tracking, no LP
+ *     multiplier, no replay, no LP eligibility (Andrew 2026-09-27).
  *   - claimed by holders, never airdropped; one wallet per verified muse ID;
  *     unlinked wallets earn nothing
  * Proposed guards (defaults; change in config.js before epoch 1):
  *   - floor on >= 4/7 snapshots (1M PORCH / 1K MDOG); a wallet earns from a
  *     token only if it clears that token's floor
  *   - whale cap: score <= 2% of class total supply
- *   - LP-held tokens weigh 1.5x spot
  */
 'use strict';
 
 const { buildTree } = require('./merkle');
 const cfg = require('./config');
-
-/* Integer scoring scale: effective balance = spot + lp * (NUM/DEN).
- * Scores are kept in DEN-scaled units: score = spot*DEN + lp*NUM. */
-const DEN = BigInt(cfg.LP_MULT_DEN);
-const NUM = BigInt(cfg.LP_MULT_NUM);
 
 /* registry: {wallet: {muse_id, linked_at}} -> Map(wallet -> muse_id), deduped by muse_id (latest wins) */
 function loadRegistry(json) {
@@ -41,24 +37,24 @@ function scoreEpoch({ epochId, startTs, endTs, snapshots, registryJson, treasury
   const pot = treasuryMusebook / BigInt(cfg.POT_DIVISOR) + carryover;
 
   const classes = ['porch', 'mdog'];
-  const scores = { porch: new Map(), mdog: new Map() }; // wallet -> score (W2 units)
+  const scores = { porch: new Map(), mdog: new Map() }; // wallet -> score (spot wei, time-averaged)
   const cleared = new Map(); // wallet -> Set of classes whose floor it cleared
   const floors = { porch: 0, mdog: 0 };
 
   for (const cls of classes) {
     const floor = cfg.FLOOR[cls];
-    // whale cap: 2% of class total supply, in DEN-scaled score units — pure bigint math
-    const cap = (supplies[cls] * BigInt(cfg.WHALE_CAP_BP) * DEN) / 10000n;
+    // whale cap: 2% of class total supply, in spot wei — pure bigint math
+    const cap = (supplies[cls] * BigInt(cfg.WHALE_CAP_BP)) / 10000n;
     for (const w of linked.keys()) {
-      let effSum = 0n, floorDays = 0;
+      let spotSum = 0n, floorDays = 0;
       for (const s of snapshots) {
+        // SPOT ONLY — s.lp is ignored entirely (LP removed from rewards 2026-09-27).
         const sp = BigInt((s.spot[w] && s.spot[w][cls]) || '0');
-        const lp = BigInt((s.lp[w] && s.lp[w][cls]) || '0');
-        if (sp + lp >= floor) floorDays++;
-        effSum += sp * DEN + lp * NUM;
+        if (sp >= floor) floorDays++;
+        spotSum += sp;
       }
       if (floorDays < cfg.FLOOR_DAYS) continue;
-      let score = effSum / BigInt(snapshots.length);
+      let score = spotSum / BigInt(snapshots.length);
       if (score > cap) score = cap;
       if (score > 0n) {
         scores[cls].set(w, score);
@@ -112,8 +108,8 @@ function scoreEpoch({ epochId, startTs, endTs, snapshots, registryJson, treasury
     const score = wDen === 0n ? 0 : Number(wNum) / Number(wDen);
     board.push({
       wallet: w,
-      porch: ((scores.porch.get(w) || 0n) / DEN).toString(),
-      mdog: ((scores.mdog.get(w) || 0n) / DEN).toString(),
+      porch: (scores.porch.get(w) || 0n).toString(),
+      mdog: (scores.mdog.get(w) || 0n).toString(),
       score: score,
       amount: amount.toString(),
     });
@@ -128,7 +124,7 @@ function scoreEpoch({ epochId, startTs, endTs, snapshots, registryJson, treasury
   const epochConfig = {
     epochId, startTs, endTs,
     enabled: { porch: true, mdog: true },
-    scoring: 'combined', // one score per wallet: PORCH weight 50 + MDOG weight 30, 100% of pot distributed
+    scoring: 'combined-spot', // one score per wallet: PORCH weight 50 + MDOG weight 30, spot only, 100% of pot
     weights: cfg.WEIGHTS,
     potMusebook: pot.toString(),
     carryover: carryover.toString(),
@@ -139,7 +135,7 @@ function scoreEpoch({ epochId, startTs, endTs, snapshots, registryJson, treasury
     guards: {
       floorPorch: cfg.FLOOR.porch.toString(), floorMdog: cfg.FLOOR.mdog.toString(),
       floorDays: cfg.FLOOR_DAYS, whaleCapBps: cfg.WHALE_CAP_BP,
-      lpMultNum: cfg.LP_MULT_NUM, lpMultDen: cfg.LP_MULT_DEN,
+      lp: 'removed 2026-09-27 — spot balances only, no multiplier, no replay',
       note: 'guard values are PROPOSED until Andrew rules',
     },
     publishedTx: null,

@@ -1,8 +1,9 @@
 /* FULL PIPELINE DRY RUN on real Robinhood Chain data (last 7 days).
  *
  * The public RPC is a PRUNED node (no historical eth_call), so snapshots are
- * built by LOG REPLAY (see replay.js): exact for spot balances, and for LP
- * via ModifyLiquidity + Swap/Initialize events. Read-only. Never signs.
+ * built by ERC20 Transfer LOG REPLAY (see replay.js): exact for spot wallet
+ * balances. LP tracking was REMOVED from rewards 2026-09-27 — no V4 replay,
+ * no LP balances, no multiplier. Read-only. Never signs.
  *
  * TEST ONLY: identity registry is synthesized from discovered holders
  * (muse_id "test-muse-<n>") — the production run uses the real registration
@@ -14,10 +15,7 @@ const path = require('path');
 const { ethers } = require('ethers');
 const cfg = require('./config');
 const { blockAtTimestamp } = require('./snapshot');
-const {
-  transferReplay, balanceAt, positionTimeline,
-  v4Replay, lpBalancesAtReplay,
-} = require('./replay');
+const { transferReplay, balanceAt } = require('./replay');
 const { scoreEpoch } = require('./score');
 
 // first-Transfer blocks measured 2026-09-27 (binary search on getLogs)
@@ -42,15 +40,9 @@ async function main() {
   const nowBlock = await provider.getBlockNumber();
   console.log('nowBlock:', nowBlock);
 
-  const poolManager = await new ethers.Contract(
-    cfg.POSM, ['function poolManager() view returns (address)'], provider).poolManager();
-  const poolIds = Object.keys(cfg.POOLS);
-
-  console.log('replaying transfers + v4 events (serialized: public RPC 429s under parallel load)…');
+  console.log('replaying ERC20 transfers (spot balances only; serialized: public RPC 429s under parallel load)…');
   const porchTx = await transferReplay(provider, cfg.TOKENS.porch, PORCH_BIRTH - 1000, nowBlock);
   const mdogTx = await transferReplay(provider, cfg.TOKENS.mdog, SCAN_FROM, nowBlock);
-  const timeline = await positionTimeline(provider, SCAN_FROM, nowBlock);
-  const v4 = await v4Replay(provider, poolManager, poolIds, SCAN_FROM, nowBlock);
 
   const holders = new Set([...porchTx.keys(), ...mdogTx.keys()]);
   console.log('holder addrs:', holders.size);
@@ -65,11 +57,11 @@ async function main() {
       const m = balanceAt(mdogTx, h, block);
       if (p !== 0n || m !== 0n) spot[h] = { porch: p.toString(), mdog: m.toString() };
     }
-    const lp = await lpBalancesAtReplay(provider, timeline, v4, poolIds, block);
-    const snap = { date: d.date, ts: d.ts, block, spot, lp, replay: true };
+    // Spot only — no LP field (removed 2026-09-27).
+    const snap = { date: d.date, ts: d.ts, block, spot, replay: true };
     snaps.push(snap);
     fs.writeFileSync(`${snapDir}/day-${d.date}.json`, JSON.stringify(snap));
-    console.log(`  spot nonzero: ${Object.keys(spot).length}, lp owners: ${Object.keys(lp).length}`);
+    console.log(`  spot nonzero: ${Object.keys(spot).length}`);
   }
 
   // TEST registry: every discovered holder linked to a synthetic muse id.

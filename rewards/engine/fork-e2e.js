@@ -18,16 +18,18 @@ const ART = require('../out/RewardsDistributor.sol/RewardsDistributor.json');
 
 async function main() {
   const provider = new ethers.JsonRpcProvider('http://127.0.0.1:8545', cfg.CHAIN_ID, { staticNetwork: true });
-  const [deployer] = await provider.listAccounts();
-  const depSigner = await provider.getSigner(deployer);
+  const [depSigner] = await provider.listAccounts(); // v6: listAccounts returns Signers
+  const deployer = await depSigner.getAddress();
 
   const dry = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'api', 'dryrun', 'claims-999.json'), 'utf8'));
   const epoch = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'api', 'dryrun', 'epoch-999.json'), 'utf8'));
   if (!dry.claims.length) throw new Error('dry run produced no claims — nothing to test');
 
   console.log('deploying distributor on fork…');
-  const factory = new ethers.ContractFactory(ART.abi, ART.bytecode, depSigner);
-  const dist = await factory.deploy(cfg.TOKENS.musebook, deployer);
+  const factory = new ethers.ContractFactory(ART.abi, ART.bytecode.object, depSigner);
+  // NOTE: explicit gasLimit — anvil-fork estimateGas is unreliable for
+  // contract creation (returns empty revert). 2.2M covers the 1.86M estimate.
+  const dist = await factory.deploy(cfg.TOKENS.musebook, deployer, { gasLimit: 2200000 });
   await dist.waitForDeployment();
   const distAddr = await dist.getAddress();
   console.log('distributor:', distAddr);
@@ -48,6 +50,8 @@ async function main() {
   // Claim #1: real claim() for the first claimant.
   const c0 = dry.claims[0];
   await provider.send('anvil_impersonateAccount', [c0.account]);
+  // Fund claimer with ETH for gas (fork accounts may hold none).
+  await provider.send('anvil_setBalance', [c0.account, '0xDE0B6B3A7640000']); // 1 ETH
   const claimer = await provider.getSigner(c0.account);
   const distAsClaimer = new ethers.Contract(distAddr, ART.abi, claimer);
   const mbAsView = new ethers.Contract(cfg.TOKENS.musebook,
@@ -62,9 +66,13 @@ async function main() {
 
   // Double claim must revert.
   try {
-    await distAsClaimer.claim(dry.epochId, c0.index, c0.account, c0.amount, c0.proof);
-    throw new Error('DOUBLE CLAIM DID NOT REVERT');
+    const tx2 = await distAsClaimer.claim(dry.epochId, c0.index, c0.account, c0.amount, c0.proof, { gasLimit: 500000 });
+    const rc2 = await tx2.wait();
+    console.log('double claim tx status:', rc2.status);
+    if (rc2.status === 1) throw new Error('DOUBLE CLAIM DID NOT REVERT (status 1)');
+    console.log('double claim reverts: OK (status 0)');
   } catch (e) {
+    if (/DOUBLE CLAIM DID NOT REVERT/.test(e.message)) throw e;
     if (!/already claimed/.test(e.message) && !/reverted/.test(e.message)) throw e;
     console.log('double claim reverts: OK');
   }
@@ -107,6 +115,7 @@ async function main() {
   console.log('warped to', (await provider.getBlock('latest')).timestamp, '(was', cur + ')');
   const c2 = dry.claims[1] || c0;
   await provider.send('anvil_impersonateAccount', [c2.account]);
+  await provider.send('anvil_setBalance', [c2.account, '0xDE0B6B3A7640000']); // 1 ETH
   const claimer2 = await provider.getSigner(c2.account);
   const distAsClaimer2 = new ethers.Contract(distAddr, ART.abi, claimer2);
   try {

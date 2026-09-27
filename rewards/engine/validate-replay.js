@@ -140,20 +140,26 @@ async function main() {
     check(`${label} price replay==slot0`, replaySqrtP !== null && replaySqrtP === directSqrtP,
       `replay ${replaySqrtP} vs slot0 ${directSqrtP}`);
 
-    // 3. ownership
+    // 3. ownership (fault-tolerant: RPC times out on some Transfer queries)
     const topic3 = '0x' + BigInt(tokenId).toString(16).padStart(64, '0');
-    const tlogs = await p.getLogs({
-      address: cfg.POSM, topics: [TRANSFER, null, null, topic3],
-      fromBlock: births[pid], toBlock: nowBlock,
-    });
-    let replayOwner = null;
-    for (const l of tlogs) {
-      const ev = posmIface.parseLog(l);
-      replayOwner = ev.args.to.toLowerCase() === '0x0000000000000000000000000000000000000000' ? null : ev.args.to.toLowerCase();
+    let replayOwner = null, ownerSkipped = false;
+    try {
+      const tlogs = await getLogsChunked(p, {
+        address: cfg.POSM, topics: [TRANSFER, null, null, topic3],
+        fromBlock: births[pid], toBlock: nowBlock,
+      }, `owner-${tokenId}`);
+      for (const l of tlogs) {
+        const ev = posmIface.parseLog(l);
+        replayOwner = ev.args.to.toLowerCase() === '0x0000000000000000000000000000000000000000' ? null : ev.args.to.toLowerCase();
+      }
+    } catch (err) {
+      ownerSkipped = true;
+      console.log(`SKIP ${label} owner check (RPC timeout): ${err.shortMessage || err.message}`);
     }
     let directOwner = null;
     try { directOwner = (await posm.ownerOf(tokenId)).toLowerCase(); } catch { directOwner = null; }
-    check(`${label} owner replay==direct`, replayOwner === directOwner, `${replayOwner} vs ${directOwner}`);
+    if (!ownerSkipped)
+      check(`${label} owner replay==direct`, replayOwner === directOwner, `${replayOwner} vs ${directOwner}`);
 
     // 4. amounts agree to the wei
     if (tickLower !== null && replayLiq > 0n && replaySqrtP !== null) {
