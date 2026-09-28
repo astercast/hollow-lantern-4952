@@ -102,6 +102,24 @@
     return "PORCH " + fmt(r.porch, 0) + " · MDOG " + fmt(r.mdog, 0);
   }
 
+  /* Compact holdings for the one-line rows — "8.4B PORCH · 2.9M MDOG".
+   * The full-precision string from holdingsLine() stays in the row's title. */
+  function trim1(n) {
+    return Number(n).toLocaleString("en-US", { maximumFractionDigits: 1 });
+  }
+
+  function fmtCompact(n) {
+    n = Number(n) || 0;
+    if (n >= 1e9) return trim1(n / 1e9) + "B";
+    if (n >= 1e6) return trim1(n / 1e6) + "M";
+    if (n >= 1e3) return trim1(n / 1e3) + "K";
+    return String(Math.round(n));
+  }
+
+  function holdingsShort(r) {
+    return fmtCompact(r.porch) + " PORCH · " + fmtCompact(r.mdog) + " MDOG";
+  }
+
   /* Live board: once the engine publishes an epoch, weekly-epoch.js writes
    * api/v1/rewards/manifest.json + board-<epochId>.json next to this page.
    * The engine board is already ranked by the LIVE persistent score
@@ -154,20 +172,28 @@
     return '<div class="lb-reward">—<span>opens with epoch 1</span></div>';
   }
 
+  /* Compact one-line rows: rank, codename (+ compact holdings on the same
+   * line), score, reward, status. Tight padding, hairline dividers — many
+   * rows fit on screen at once. The wallet-checker "Your pup" row keeps the
+   * same shape with its "· you" marker and gold highlight, so it reads as a
+   * preview estimate, never as live board data. */
   function renderRows(rows) {
     var html = "";
     rows.forEach(function (r) {
       var mine = !!r.you;
+      var statusCls = mine ? "you" : r.preview ? "prev" : r.claimed ? "done" : "open";
+      var statusTxt = mine ? "Your position" : r.preview ? "Preview" : r.claimed ? "Claimed" : "Claimable";
       html += '<div class="lb-row' + (mine ? " you" : "") + '">' +
         '<div class="lb-rank">' + String(r.rank).padStart(2, "0") + "</div>" +
-        '<div class="lb-holder">' +
-          '<span class="lb-name">' + esc(r.name) + (mine ? ' <em>· you</em>' : "") + "</span>" +
-          '<span class="lb-hold">' + esc(holdingsLine(r)) + "</span></div>" +
+        '<div class="lb-holder" title="' + esc(holdingsLine(r)) + '">' +
+          '<span class="lb-name">' + esc(r.name) + "</span>" +
+          (mine ? "<em>· you</em>" : "") +
+          '<span class="lb-hold-inline">' + esc(holdingsShort(r)) + "</span>" +
+        "</div>" +
         '<div class="lb-meta">' +
-          '<div class="lb-score">' + fmt(r.score, 1) + "<span>score</span></div>" +
+          '<div class="lb-score">' + fmt(r.score, 1) + "</div>" +
           rewardCell(r) +
-          '<div class="lb-status ' + (mine ? "you" : r.preview ? "prev" : r.claimed ? "done" : "open") + '">' +
-            (mine ? "Your position" : r.preview ? "Preview" : r.claimed ? "Claimed" : "Claimable") + "</div>" +
+          '<div class="lb-status ' + statusCls + '">' + statusTxt + "</div>" +
         "</div>" +
         "</div>";
     });

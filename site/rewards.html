@@ -86,42 +86,40 @@
   }
   .lb-section .sub { color: var(--lb-faint); font-size: 14px; margin: 0 0 26px; line-height: 1.6; }
 
-  /* ---------- DESKTOP: ranking rows ---------- */
+  /* ---------- DESKTOP: ranking rows — compact, one line per holder ---------- */
   .lb-head, .lb-row { padding-left: 12px; padding-right: 12px; }
   .lb-head {
-    display: grid; grid-template-columns: 56px 1.6fr 1fr 1fr 120px; gap: 14px; align-items: center;
-    font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+    display: grid; grid-template-columns: 34px minmax(0, 1fr) 62px 140px 84px; gap: 10px; align-items: center;
+    font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase;
     color: var(--lb-faint); font-weight: 700;
     border-bottom: 1px solid var(--lb-line);
-    padding-top: 6px; padding-bottom: 14px;
+    padding-top: 4px; padding-bottom: 8px;
   }
   .lb-row {
-    display: grid; grid-template-columns: 56px 1.6fr 1fr 1fr 120px; gap: 14px; align-items: center;
-    padding-top: 17px; padding-bottom: 17px;
+    display: grid; grid-template-columns: 34px minmax(0, 1fr) 62px 140px 84px; gap: 10px; align-items: center;
+    padding-top: 6px; padding-bottom: 6px;
     border-bottom: 1px solid rgba(212, 169, 78, .08);
-    border-radius: 10px;
     transition: background .15s ease;
   }
   .lb-row:hover { background: rgba(212, 169, 78, .05); }
-  .lb-row.you {
-    background: var(--lb-gold-soft);
-    border: 1px solid rgba(212, 169, 78, .45);
-    border-bottom: 1px solid rgba(212, 169, 78, .45);
-  }
-  .lb-rank { font-size: 15px; font-weight: 800; color: var(--lb-faint); font-variant-numeric: tabular-nums; }
+  .lb-row.you { background: var(--lb-gold-soft); box-shadow: inset 2px 0 0 var(--lb-gold); }
+  .lb-rank { font-size: 12.5px; font-weight: 800; color: var(--lb-faint); font-variant-numeric: tabular-nums; }
   .lb-row.you .lb-rank { color: var(--lb-gold); }
-  .lb-holder { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-  .lb-name { font-size: 16.5px; font-weight: 700; color: #fff; letter-spacing: -.2px; }
-  .lb-hold { display: block; width: 100%; font-size: 12px; color: var(--lb-faint); font-weight: 600; font-variant-numeric: tabular-nums; }
-  .lb-holder em { font-style: normal; color: var(--lb-gold); font-size: 13px; font-weight: 700; }
+  .lb-holder { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lb-name { font-size: 13.5px; font-weight: 700; color: #fff; letter-spacing: -.2px; }
+  .lb-holder em { font-style: normal; color: var(--lb-gold); font-size: 11.5px; font-weight: 700; margin-left: 6px; }
+  .lb-hold-inline { font-size: 11px; font-weight: 600; color: var(--lb-faint); font-variant-numeric: tabular-nums; margin-left: 8px; }
   .lb-meta { display: contents; }
-  .lb-score, .lb-reward { font-size: 15.5px; font-weight: 700; color: var(--lb-text); text-align: right; font-variant-numeric: tabular-nums; }
-  .lb-score span, .lb-reward span {
-    display: block; font-size: 10px; letter-spacing: 2px;
-    color: var(--lb-faint); font-weight: 700; margin-top: 3px;
+  .lb-score, .lb-reward {
+    font-size: 13px; font-weight: 700; color: var(--lb-text);
+    text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap;
   }
   .lb-reward { color: var(--lb-gold); }
-  .lb-status { font-size: 12.5px; font-weight: 700; text-align: right; }
+  .lb-reward span {
+    font-size: 9px; letter-spacing: .5px; text-transform: uppercase;
+    color: var(--lb-faint); font-weight: 700; margin-left: 6px;
+  }
+  .lb-status { font-size: 11px; font-weight: 700; text-align: right; white-space: nowrap; }
   .lb-status.open { color: var(--lb-gold); }
   .lb-status.done { color: var(--lb-faint); }
   .lb-status.prev { color: var(--lb-faint); font-style: italic; }
@@ -210,35 +208,22 @@
     .lb-section .sub { font-size: 13px; margin-bottom: 20px; }
 
 
-    /* Mobile rows: vertical cards.
-       Line 1: rank + name (+ you tag). Line 2: holdings.
-       Line 3: score / est. reward / status in a roomy row. */
+    /* Mobile rows: same compact one-line rows, squeezed — no cards.
+       Inline holdings are desktop-only (the full holdings string stays in
+       each row's title attribute). */
     .lb-head { display: none; }
     .lb-row {
-      display: block;
-      background: var(--lb-card);
-      border: 1px solid rgba(212, 169, 78, .12);
-      border-radius: 14px;
-      padding: 18px;
-      margin-bottom: 12px;
+      grid-template-columns: 22px minmax(0, 1fr) 38px auto auto;
+      gap: 7px;
+      padding: 7px 6px;
     }
-    .lb-row:hover { background: var(--lb-card2); }
-    .lb-row.you { border: 1px solid rgba(212, 169, 78, .55); background: var(--lb-gold-soft); }
-    .lb-rank { display: inline-block; font-size: 13px; margin-right: 10px; }
-    .lb-holder { display: contents; }
-    .lb-name { font-size: 16.5px; }
-    .lb-hold { margin-top: 8px; font-size: 12.5px; line-height: 1.5; }
-    .lb-meta {
-      display: flex;
-      align-items: baseline;
-      flex-wrap: wrap;
-      gap: 6px 22px;
-      margin-top: 14px;
-      padding-top: 14px;
-      border-top: 1px solid rgba(212, 169, 78, .1);
-    }
-    .lb-score, .lb-reward { text-align: left; font-size: 15.5px; }
-    .lb-status { margin-left: auto; text-align: right; }
+    .lb-rank { font-size: 11px; }
+    .lb-name { font-size: 12.5px; }
+    .lb-holder em { font-size: 10.5px; margin-left: 4px; }
+    .lb-hold-inline { display: none; }
+    .lb-score, .lb-reward { font-size: 12px; }
+    .lb-reward span { display: none; }
+    .lb-status { font-size: 10px; }
     /* Mobile checker: stack the two cards instead of squeezing them side by side */
     .check-grid { grid-template-columns: 1fr; }
     /* Mobile rules: stack the six info cards full-width instead of 3 squeezed columns */
@@ -250,7 +235,6 @@
   /* Small phones */
   @media (max-width: 380px) {
     .lb-hero h1 { font-size: 29px; }
-    .lb-status { margin-left: 0; text-align: left; }
   }
 
 </style>
