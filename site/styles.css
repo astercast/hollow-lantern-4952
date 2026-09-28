@@ -971,3 +971,156 @@ img { max-width: 100%; }
 }
 .result-err { border-left-color: var(--red); }
 .result-ok p, .result-err p { color: var(--ink-soft); margin: 6px 0 0; }
+
+/* ============================================================
+   Design pass — 2026-09-28
+   Pinned posts: real art banners, no emoji. Richer banners,
+   cards, and header. Mobile-first refinements throughout.
+   ============================================================ */
+
+/* ---- Pinned posts: premium banner cards ---- */
+.post.pinned {
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  box-shadow: 0 1px 2px rgba(35, 32, 26, 0.05), 0 24px 48px -24px rgba(143, 94, 23, 0.28);
+  position: relative;
+}
+.post.pinned::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 24px; right: 24px;
+  height: 3px;
+  border-radius: 0 0 4px 4px;
+  background: linear-gradient(90deg, transparent, var(--accent) 25%, var(--accent) 75%, transparent);
+  opacity: 0.6;
+  pointer-events: none;
+  z-index: 2;
+}
+.post-banner { margin: 0; position: relative; overflow: hidden; background: var(--bg-soft); }
+.post-banner img {
+  display: block;
+  width: 100%;
+  height: clamp(150px, 24vw, 240px);
+  object-fit: cover;
+  object-position: center 32%;
+}
+.post-banner::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(35, 32, 26, 0) 55%, rgba(35, 32, 26, 0.16));
+  pointer-events: none;
+}
+.post.pinned .post-meta { padding-top: 22px; }
+.post-meta .avatar {
+  width: 46px;
+  height: 46px;
+  font-size: 0;
+  border: 2px solid #ffffff;
+  box-shadow: 0 2px 10px rgba(35, 32, 26, 0.2);
+  background: var(--bg-soft);
+}
+.post-meta .who { font-size: 14.5px; }
+.post.pinned .chan {
+  background: rgba(143, 94, 23, 0.08);
+  border-color: var(--accent-line);
+  color: var(--accent);
+}
+
+/* ---- Phase banners: richer, designed ---- */
+.phase {
+  background: linear-gradient(180deg, rgba(143, 94, 23, 0.07), rgba(143, 94, 23, 0.02));
+  border: 1px solid var(--accent-line);
+  border-left: none;
+  border-radius: 12px;
+  padding: 20px 26px 20px 32px;
+  margin: 26px 0;
+  font-weight: 500;
+  color: var(--ink-soft);
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  overflow: hidden;
+}
+.phase::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 5px;
+  background: linear-gradient(180deg, #c98f2e, var(--accent));
+}
+.phase strong { color: var(--accent); font-weight: 700; }
+
+/* ---- Town strip: subtle polish ---- */
+.town-strip {
+  background: linear-gradient(180deg, var(--bg-soft), #f1ece0);
+  font-size: 14px;
+  padding: 11px 16px;
+}
+
+/* ---- Header: crisper nav ---- */
+.site-header { box-shadow: 0 1px 0 rgba(35, 32, 26, 0.03), 0 8px 24px -18px rgba(35, 32, 26, 0.25); }
+nav.main-nav a { border: 1px solid transparent; }
+nav.main-nav a.active {
+  background: var(--accent-soft);
+  border-color: var(--accent-line);
+  color: var(--accent);
+  font-weight: 650;
+}
+nav.main-nav a:hover { border-color: var(--line-soft); }
+
+/* ---- Cards: gentle lift on desktop ---- */
+@media (hover: hover) {
+  .detail-card, .step-card, .counter { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+  .detail-card:hover, .step-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lift); }
+}
+
+/* ---- Hero art: framed ---- */
+.hero-art .banner { border-radius: 22px; }
+
+/* ---- Section rhythm ---- */
+.section { margin: 88px 0; }
+.section-head h2 { letter-spacing: -0.02em; }
+
+/* ---- Mobile refinements ---- */
+@media (max-width: 560px) {
+  /* Nav becomes a single swipeable row instead of wrapping into a stack. */
+  nav.main-nav {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    justify-content: flex-start;
+    max-width: 100%;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    margin-left: 0;
+    padding-bottom: 2px;
+  }
+  nav.main-nav::-webkit-scrollbar { display: none; }
+  nav.main-nav a { flex: none; padding: 9px 12px; font-size: 13.5px; }
+  .site-header .wrap { gap: 8px; }
+  .logo { flex: none; }
+
+  /* Pinned banners: shorter on phones. */
+  .post-banner img { height: 140px; }
+  .post.pinned::before { left: 16px; right: 16px; }
+
+  /* Facts tables stack instead of squeezing. */
+  table.facts, table.facts tbody, table.facts tr, table.facts td { display: block; width: 100%; }
+  table.facts tr { border-bottom: 1px solid var(--line-soft); padding: 10px 0; }
+  table.facts tr:last-child { border-bottom: none; }
+  table.facts td { border-bottom: none; padding: 3px 0; }
+  table.facts td:first-child { white-space: normal; width: auto; margin-bottom: 2px; }
+
+  /* Tap targets. */
+  .btn { min-height: 48px; }
+  .copy-btn, .token-pill { min-height: 40px; }
+
+  /* Phase banner padding tightens. */
+  .phase { padding: 16px 18px 16px 26px; }
+
+  /* Contract address row wraps cleanly. */
+  .ca { font-size: 12px; padding: 8px 11px; }
+
+  /* Stats stay two-up but breathe. */
+  .stat { padding: 18px 8px; }
+  .stat .num { font-size: 26px; }
+}
