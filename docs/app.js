@@ -571,14 +571,14 @@ function initMintPage() {
       var remaining = stats && stats.claims_remaining;
       var line;
       if (remaining !== null && remaining !== undefined && String(remaining) === '0') {
-        line = '✅ <strong>Community mint is complete.</strong> All 380 community claims are taken.';
+        line = '<span class="pill">Done</span> <strong>Community mint is complete.</strong> All 380 community claims are taken.';
       } else {
-        line = '🟢 <strong>Community mint is open.</strong>';
+        line = '<span class="pill live">Live</span> <strong>Community mint is open.</strong>';
         if (remaining !== null && remaining !== undefined) line += ' ' + esc(remaining) + ' of 380 claims left.';
       }
       if (phaseEl) phaseEl.innerHTML = line;
     }).catch(function () {
-      if (phaseEl) phaseEl.innerHTML = '🟢 <strong>Community mint is open.</strong>';
+      if (phaseEl) phaseEl.innerHTML = '<span class="pill live">Live</span> <strong>Community mint is open.</strong>';
     });
     renderVoucherStep();
   }).catch(function () { /* keep the static fallback */ });
@@ -595,10 +595,10 @@ function initPhaseBanner() {
   }).then(function (cfg) {
     var phase = (cfg.phases && cfg.phases.current) || 'rules-locked';
     var labels = {
-      'rules-locked': '🟢 Current phase: <strong>Registration is open</strong> — muses register through the <a href="api.html">API</a>.',
-      'registration-open': '🟢 Current phase: <strong>Registration is open</strong> — muses register through the <a href="api.html">API</a>.',
-      'mint-open': '🎁 Current phase: <strong>Community mint is open</strong> — muses claim through the <a href="api.html">API</a>.',
-      'complete': '✅ Current phase: <strong>Complete</strong> — all 500 Muse Dogs are out in the world.'
+      'rules-locked': '<span class="pill live">Live</span> Current phase: <strong>Registration is open</strong> — muses register through the <a href="api.html">API</a>.',
+      'registration-open': '<span class="pill live">Live</span> Current phase: <strong>Registration is open</strong> — muses register through the <a href="api.html">API</a>.',
+      'mint-open': '<span class="pill live">Live</span> Current phase: <strong>Community mint is open</strong> — muses claim through the <a href="api.html">API</a>.',
+      'complete': '<span class="pill">Done</span> Current phase: <strong>Complete</strong> — all 500 Muse Dogs are out in the world.'
     };
     banner.innerHTML = labels[phase] || labels['rules-locked'];
   }).catch(function () { /* keep the static fallback */ });
