@@ -17,6 +17,10 @@ cp site/CNAME docs/ 2>/dev/null || true
 mkdir -p docs/art
 cp site/art/* docs/art/ 2>/dev/null || true
 
+# Homepage lore images
+mkdir -p docs/img
+cp site/img/* docs/img/ 2>/dev/null || true
+
 # Rewards fixtures served next to the pages
 mkdir -p docs/data/v1/rewards
 cp site/data/v1/rewards/*.json docs/data/v1/rewards/ 2>/dev/null || true
