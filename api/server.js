@@ -25,11 +25,9 @@ const PORT = Number(process.env.PORT || 3000);
 // the per-IP rate limiter keys every request to the proxy's address.
 app.set('trust proxy', 1);
 
-// CORS: the static site at musedog.me calls this API cross-origin.
+// CORS: the static site at musedog.lol calls this API cross-origin.
 // Production-safe: only the real site origins are allowed, no wildcards.
 const ALLOWED_ORIGINS = new Set([
-  'https://musedog.me',
-  'https://www.musedog.me',
   'https://musedog.lol',
   'https://www.musedog.lol',
 ]);
