@@ -1,6 +1,8 @@
 /* Holder leaderboard — READ ONLY. No transactions, no signatures, no money moves.
  * Board rows use dog-inspired codenames — no wallet addresses,
- * no emojis next to codenames. Row scores are preview data until the engine is live.
+ * no emojis next to codenames. Until the engine publishes an epoch the rows
+ * are preview data; once it does, the board loads the live board file and
+ * ranks the LIVE persistent score (final-day live score, top holder = 80).
  * One combined score per holder: PORCH holdings weigh 50, MDOG holdings
  * weigh 30, so PORCH counts about 1.7x more. 100% of the pot goes to holders.
  * No separate categories.
@@ -35,6 +37,7 @@
   var $ = function (id) { return document.getElementById(id); };
   var currentAddr = null;
   var boardRows = [];
+  var liveBoardActive = false; // true once the engine's live board file loads
 
   function fmt(n, d) {
     d = (d === undefined) ? 2 : d;
@@ -99,6 +102,58 @@
     return "PORCH " + fmt(r.porch, 0) + " · MDOG " + fmt(r.mdog, 0);
   }
 
+  /* Live board: once the engine publishes an epoch, weekly-epoch.js writes
+   * api/v1/rewards/manifest.json + board-<epochId>.json next to this page.
+   * The engine board is already ranked by the LIVE persistent score
+   * (final-day live score, /80 scale). Its rows carry wallet addresses —
+   * the public board shows deterministic dog codenames only, never addresses. */
+  var MANIFEST_URL = "api/v1/rewards/manifest.json";
+  var CODENAMES = ["Bark Knight", "Snout Scout", "Howl Runner", "Treat Bandit", "Wag Captain",
+                   "Paw Patroller", "Drool Duke", "Leash Legend", "Tail Chaser", "Bone Baron"];
+
+  function codenameFor(addr, used) {
+    var h = 0, s = String(addr).toLowerCase();
+    for (var i = 0; i < s.length; i++) h = ((h * 31) + s.charCodeAt(i)) >>> 0;
+    var base = CODENAMES[h % CODENAMES.length], name = base, k = 2;
+    while (used[name]) { name = base + " " + k; k++; }
+    used[name] = true;
+    return name;
+  }
+
+  function weiToTokens(weiStr) { return Number(weiStr) / 1e18; }
+
+  function loadLiveBoard() {
+    if (!window.fetch) return;
+    fetch(MANIFEST_URL, { cache: "no-store" }).then(function (r) {
+      if (!r.ok) throw new Error("no manifest");
+      return r.json();
+    }).then(function (m) {
+      return fetch("api/v1/rewards/board-" + m.latestEpochId + ".json", { cache: "no-store" })
+        .then(function (r) { if (!r.ok) throw new Error("no board"); return r.json(); });
+    }).then(function (rows) {
+      var used = {};
+      boardRows = rows.map(function (b, i) {
+        return {
+          rank: i + 1,
+          name: codenameFor(b.wallet, used),
+          porch: weiToTokens(b.porch),
+          mdog: weiToTokens(b.mdog),
+          score: b.score,
+          reward: weiToTokens(b.amount),
+          claimed: false, preview: false
+        };
+      });
+      liveBoardActive = true;
+      renderBoard(boardRows);
+    }).catch(function () { /* no live board yet — the preview rows stay */ });
+  }
+
+  function rewardCell(r) {
+    if (r.reward != null && isFinite(r.reward))
+      return '<div class="lb-reward">' + fmt(r.reward, 2) + "<span>MUSEBOOK</span></div>";
+    return '<div class="lb-reward">—<span>opens with epoch 1</span></div>';
+  }
+
   function renderRows(rows) {
     var html = "";
     rows.forEach(function (r) {
@@ -110,7 +165,7 @@
           '<span class="lb-hold">' + esc(holdingsLine(r)) + "</span></div>" +
         '<div class="lb-meta">' +
           '<div class="lb-score">' + fmt(r.score, 1) + "<span>score</span></div>" +
-          '<div class="lb-reward">—<span>opens with epoch 1</span></div>' +
+          rewardCell(r) +
           '<div class="lb-status ' + (mine ? "you" : r.preview ? "prev" : r.claimed ? "done" : "open") + '">' +
             (mine ? "Your position" : r.preview ? "Preview" : r.claimed ? "Claimed" : "Claimable") + "</div>" +
         "</div>" +
@@ -130,7 +185,7 @@
       });
     } else {
       boardRows = buildPreviewRows();
-      renderBoard(boardRows);
+    renderBoard(boardRows);
     }
   }
 
@@ -146,9 +201,16 @@
     rows.forEach(function (r) { r.score = combinedScore(r.porch, r.mdog, totals); });
     var out = rows.concat([mine]).sort(function (a, b) { return b.score - a.score; });
     out.forEach(function (r, i) { r.rank = i + 1; });
-    renderBoard(out);
     var myRank = out.filter(function (r) { return r.you; })[0].rank;
-    $("my-rank").textContent = "Estimated position on the preview board: #" + myRank + ".";
+    if (liveBoardActive) {
+      /* The live board stays put — this estimate is preview-style math on
+       * today's balances, so it can't be slotted into the live ranking. */
+      $("my-rank").textContent = "Estimated position on the preview board: #" + myRank +
+        ". (The live board above ranks 7-day trailing scores; this estimate uses today's balances.)";
+    } else {
+      renderBoard(out);
+      $("my-rank").textContent = "Estimated position on the preview board: #" + myRank + ".";
+    }
   }
 
   /* Reads always go through the dedicated Robinhood Chain RPC — never through
@@ -219,6 +281,7 @@
   document.addEventListener("DOMContentLoaded", function () {
     boardRows = buildPreviewRows();
     renderBoard(boardRows);
+    loadLiveBoard(); // replaces the preview rows once the engine publishes an epoch
     $("connect-btn").addEventListener("click", onConnect);
     $("lookup-btn").addEventListener("click", onLookup);
   });

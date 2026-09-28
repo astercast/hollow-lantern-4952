@@ -1,24 +1,39 @@
 /* Epoch scoring for the rewards engine.
  *
- * Locked rules (Andrew 2026-09-26; simplified 2026-09-27; LP removed 2026-09-27):
- *   - 7 daily snapshots -> time-weighted average per token per wallet
- *   - pot = treasury MUSEBOOK / 8 + carryover (unclaimed from prior epochs)
- *   - ONE score per wallet: PORCH holdings weigh 50, MDOG holdings weigh 30,
- *     so PORCH counts ~1.67x more than MDOG. 100% of the pot is distributed
- *     to holders — no reserve, no treasury cut, no separate categories.
+ * Locked rules (Andrew 2026-09-27 — persistent daily scoring; replaces the
+ * old weekly-reset / 4-of-7 model):
+ *   - Daily wallet snapshots of PORCH + MDOG spot balances (00:00 UTC).
+ *   - ONE live score per wallet per day:
+ *       dailyWeighted_t = 50 * cappedPorch_t + 30 * cappedMdog_t
+ *       liveScore_t     = min(dailyWeighted_t,
+ *                             mean(dailyWeighted over the trailing 7 days incl. today))
+ *     so PORCH counts ~1.67x more than MDOG. No weekly reset: the score
+ *     rises and falls with what the wallet holds.
+ *   - Hold steady -> score stays high. Buy more -> score climbs toward full
+ *     weight over ~7 days (the trailing average caps it). Sell everything ->
+ *     score is 0 the next day, so the wallet earns nothing for that day's
+ *     slice. Amounts earned on prior days stay accrued — selling stops
+ *     future daily earnings, it never erases past ones.
+ *   - Each day's 1/7 of the weekly pot is divided by that day's live scores.
+ *     The weekly Merkle output is the sum of the 7 daily allocations.
  *   - Scoring uses SPOT wallet balances only. No LP tracking, no LP
- *     multiplier, no replay, no LP eligibility (Andrew 2026-09-27).
+ *     multiplier, no replay (Andrew 2026-09-27).
  *   - claimed by holders, never airdropped; one wallet per verified muse ID;
  *     unlinked wallets earn nothing
  * Guards (decided by Andrew 2026-09-27; locked in config.js):
- *   - floor on >= 4/7 snapshots (1M PORCH / 1K MDOG); a wallet earns from a
- *     token only if it clears that token's floor
- *   - whale cap: score <= 2% of class total supply
+ *   - floors (1M PORCH / 1K MDOG) are a daily dust filter: a token class
+ *     below its floor contributes 0 to that day's weighted value
+ *   - whale cap: each day's raw balance is capped at 2% of that token's
+ *     total supply BEFORE weighting
+ *   - 1 MUSEBOOK minimum on the WEEKLY total: dust stays as carryover
  */
 'use strict';
 
 const { buildTree } = require('./merkle');
 const cfg = require('./config');
+
+const CLASSES = ['porch', 'mdog'];
+const TRAIL_DAYS = 7;
 
 /* registry: {wallet: {muse_id, linked_at}} -> Map(wallet -> muse_id), deduped by muse_id (latest wins) */
 function loadRegistry(json) {
@@ -32,85 +47,110 @@ function loadRegistry(json) {
   return wallets;
 }
 
-function scoreEpoch({ epochId, startTs, endTs, snapshots, registryJson, treasuryMusebook, carryover, supplies, distributor }) {
+/* One day's weighted snapshot value for one wallet (bigint, raw wei units):
+ * 50 * cappedPorch + 30 * cappedMdog. A class below its floor contributes 0
+ * (daily dust filter); each class is whale-capped at 2% of its total supply
+ * before weighting. */
+function dailyWeighted(spotW, supplies) {
+  let v = 0n;
+  for (const cls of CLASSES) {
+    const raw = BigInt((spotW && spotW[cls]) || '0');
+    if (raw < cfg.FLOOR[cls]) continue; // dust filter
+    const cap = (supplies[cls] * BigInt(cfg.WHALE_CAP_BP)) / 10000n;
+    const capped = raw > cap ? cap : raw;
+    v += BigInt(cfg.WEIGHTS[cls]) * capped;
+  }
+  return v;
+}
+
+/* Live scores, one Map per epoch day. epochDays = the epoch's own snapshots
+ * (ordered), historyDays = preceding snapshots (ordered, up to 6 used). */
+function liveScoresPerDay(epochDays, historyDays, linked, supplies) {
+  const history = (historyDays || []).slice(-(TRAIL_DAYS - 1));
+  const all = [...history, ...epochDays];
+  const base = history.length;
+  const weighted = all.map((s) => {
+    const m = new Map();
+    for (const w of linked.keys()) {
+      const v = dailyWeighted((s.spot && s.spot[w]) || {}, supplies);
+      if (v > 0n) m.set(w, v);
+    }
+    return m;
+  });
+  const out = [];
+  for (let d = 0; d < epochDays.length; d++) {
+    const todayIdx = base + d;
+    const lo = Math.max(0, todayIdx - (TRAIL_DAYS - 1));
+    const m = new Map();
+    for (const w of linked.keys()) {
+      const today = weighted[todayIdx].get(w) || 0n;
+      let sum = 0n, cnt = 0;
+      for (let k = lo; k <= todayIdx; k++) { sum += weighted[k].get(w) || 0n; cnt++; }
+      const avg = sum / BigInt(cnt);
+      const score = today < avg ? today : avg;
+      if (score > 0n) m.set(w, score);
+    }
+    out.push(m);
+  }
+  return out;
+}
+
+function scoreEpoch({ epochId, startTs, endTs, snapshots, registryJson, treasuryMusebook, carryover, supplies, distributor, historySnapshots }) {
   const linked = loadRegistry(registryJson);
   const pot = treasuryMusebook / BigInt(cfg.POT_DIVISOR) + carryover;
+  const nDays = snapshots.length;
 
-  const classes = ['porch', 'mdog'];
-  const scores = { porch: new Map(), mdog: new Map() }; // wallet -> score (spot wei, time-averaged)
-  const cleared = new Map(); // wallet -> Set of classes whose floor it cleared
-  const floors = { porch: 0, mdog: 0 };
+  // The persistent live score, one Map per epoch day.
+  const perDay = liveScoresPerDay(snapshots, historySnapshots || [], linked, supplies);
 
-  for (const cls of classes) {
-    const floor = cfg.FLOOR[cls];
-    // whale cap: 2% of class total supply, in spot wei — pure bigint math
-    const cap = (supplies[cls] * BigInt(cfg.WHALE_CAP_BP)) / 10000n;
-    for (const w of linked.keys()) {
-      let spotSum = 0n, floorDays = 0;
-      for (const s of snapshots) {
-        // SPOT ONLY — snapshots carry no LP data at all (LP removed from rewards 2026-09-27).
-        const sp = BigInt((s.spot[w] && s.spot[w][cls]) || '0');
-        if (sp >= floor) floorDays++;
-        spotSum += sp;
-      }
-      if (floorDays < cfg.FLOOR_DAYS) continue;
-      let score = spotSum / BigInt(snapshots.length);
-      if (score > cap) score = cap;
-      if (score > 0n) {
-        scores[cls].set(w, score);
-        if (!cleared.has(w)) cleared.set(w, new Set());
-        cleared.get(w).add(cls);
-      } else floors[cls]++;
+  // Split the pot into nDays daily slices (integer division; the remainder
+  // lands on the final day so the slices always sum to exactly the pot).
+  const slices = [];
+  if (nDays > 0) {
+    const baseSlice = pot / BigInt(nDays);
+    for (let d = 0; d < nDays; d++) slices.push(baseSlice);
+    slices[nDays - 1] += pot - baseSlice * BigInt(nDays);
+  }
+
+  // Each day's slice is divided by that day's live scores. A day with no
+  // scorers leaves its whole slice unallocated (rolls to carryover).
+  const weekly = new Map(); // wallet -> summed daily wei
+  for (let d = 0; d < nDays; d++) {
+    const scores = perDay[d];
+    let total = 0n;
+    for (const s of scores.values()) total += s;
+    if (total === 0n) continue;
+    const slice = slices[d];
+    for (const [w, sc] of scores) {
+      const amt = (sc * slice) / total;
+      if (amt > 0n) weekly.set(w, (weekly.get(w) || 0n) + amt);
     }
   }
 
-  // Class totals over wallets that cleared that class's floor.
-  // Weights are relative (50 + 30 = 80); each class pot is its weight's share
-  // of the full pot, so 100% of the pot is distributed to holders.
-  const totals = {};
-  const classPots = {};
-  const weightSum = BigInt(cfg.WEIGHTS.porch + cfg.WEIGHTS.mdog);
-  for (const cls of classes) {
-    let total = 0n;
-    for (const s of scores[cls].values()) total += s;
-    totals[cls] = total;
-    classPots[cls] = (pot * BigInt(cfg.WEIGHTS[cls])) / weightSum;
-  }
-
-  // ONE combined leaf per wallet: amount(w) = sum over classes of
-  // weight[cls]/weightSum * pot * (score(w,cls)/total(cls)).
-  // PORCH weighs 50, MDOG weighs 30 — one claim per wallet.
+  // The weekly Merkle output is the sum of the daily allocations.
+  // 1 MUSEBOOK minimum on the weekly total: dust stays as carryover.
   const leaves = [];
   const board = [];
+  const finalScores = nDays > 0 ? perDay[nDays - 1] : new Map();
+  let maxScore = 0n;
+  for (const s of finalScores.values()) if (s > maxScore) maxScore = s;
+
+  const finalDay = nDays > 0 ? snapshots[nDays - 1] : { spot: {} };
   let totalAllocated = 0n;
-  for (const w of cleared.keys()) {
-    const clsSet = cleared.get(w);
-    let amount = 0n;
-    const parts = {};
-    for (const cls of classes) {
-      if (!clsSet.has(cls) || totals[cls] === 0n) continue;
-      const part = (scores[cls].get(w) * classPots[cls]) / totals[cls];
-      parts[cls] = part;
-      amount += part;
-    }
+  for (const [w, amount] of weekly) {
     if (amount < cfg.MIN_PAYOUT_WEI) continue; // dust stays as carryover
     leaves.push({ epochId, index: leaves.length, account: w, amount: amount.toString() });
     totalAllocated += amount;
-    // Display score: combined weight (50 + 30 = 80 max).
-    // amount = score/80 * pot, exactly.
-    let wNum = 0n, wDen = 1n;
-    for (const cls of classes) {
-      if (!clsSet.has(cls) || totals[cls] === 0n) continue;
-      // term = WEIGHTS[cls] * score/total ; sum as a single rational
-      wNum = wNum * totals[cls] + BigInt(cfg.WEIGHTS[cls]) * scores[cls].get(w) * wDen;
-      wDen = wDen * totals[cls];
-    }
-    const score = wDen === 0n ? 0 : Number(wNum) / Number(wDen);
+    // Board ranks the LIVE persistent score (final epoch day). Displayed on
+    // the familiar /80 scale: the top live scorer reads 80.
+    const live = finalScores.get(w) || 0n;
+    const disp = maxScore === 0n ? 0 : Number((live * 8000n) / maxScore) / 100;
+    const spotW = (finalDay.spot && finalDay.spot[w]) || {};
     board.push({
       wallet: w,
-      porch: (scores.porch.get(w) || 0n).toString(),
-      mdog: (scores.mdog.get(w) || 0n).toString(),
-      score: score,
+      porch: (spotW.porch || '0').toString(),
+      mdog: (spotW.mdog || '0').toString(),
+      score: disp,
       amount: amount.toString(),
     });
   }
@@ -124,9 +164,11 @@ function scoreEpoch({ epochId, startTs, endTs, snapshots, registryJson, treasury
   const epochConfig = {
     epochId, startTs, endTs,
     enabled: { porch: true, mdog: true },
-    scoring: 'combined-spot', // one score per wallet: PORCH weight 50 + MDOG weight 30, spot only, 100% of pot
+    scoring: 'daily-persistent', // live score = min(today's weighted snapshot, 7-day trailing avg); 1/7 of the pot per day split by that day's scores; no weekly reset
     weights: cfg.WEIGHTS,
     potMusebook: pot.toString(),
+    dailySlices: slices.map((s) => s.toString()),
+    historyDays: Math.min((historySnapshots || []).length, TRAIL_DAYS - 1),
     carryover: carryover.toString(),
     merkleRoot: root,
     totalAllocated: totalAllocated.toString(),
@@ -134,9 +176,12 @@ function scoreEpoch({ epochId, startTs, endTs, snapshots, registryJson, treasury
     distributor: distributor || null,
     guards: {
       floorPorch: cfg.FLOOR.porch.toString(), floorMdog: cfg.FLOOR.mdog.toString(),
-      floorDays: cfg.FLOOR_DAYS, whaleCapBps: cfg.WHALE_CAP_BP,
+      floorMode: 'daily dust filter — a token below its floor contributes 0 to that day',
+      whaleCapBps: cfg.WHALE_CAP_BP,
+      whaleCapMode: '2% of each token total supply, applied to each daily balance before weighting',
+      minPayout: '1 MUSEBOOK on the weekly total (dust rolls to carryover)',
       lp: 'removed 2026-09-27 — spot balances only, no multiplier, no replay',
-      note: 'guard values decided by Andrew 2026-09-27',
+      note: 'persistent daily scoring locked by Andrew 2026-09-27: no weekly reset',
     },
     publishedTx: null,
   };
@@ -144,4 +189,4 @@ function scoreEpoch({ epochId, startTs, endTs, snapshots, registryJson, treasury
   return { epochConfig, claims, board };
 }
 
-module.exports = { scoreEpoch, loadRegistry };
+module.exports = { scoreEpoch, loadRegistry, liveScoresPerDay, dailyWeighted };

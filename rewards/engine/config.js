@@ -36,10 +36,12 @@ module.exports = {
   WEIGHTS: { porch: 50, mdog: 30 },
 
   // ---- Scoring guards (DECIDED by Andrew 2026-09-27; locked) ----
-  // A wallet earns from a token class only if it holds at least the floor
-  // for that token on at least FLOOR_DAYS of the 7 daily snapshots.
+  // Floors are a DAILY dust filter: on each snapshot day, a token class
+  // below its floor contributes 0 to that day's weighted value. There is no
+  // weekly eligibility count anymore — the persistent live score handles it:
+  // score = min(today's whale-capped weighted snapshot,
+  //             7-day trailing average of daily snapshots).
   FLOOR: { porch: 1000000n * 10n ** 18n, mdog: 1000n * 10n ** 18n }, // 1M PORCH / 1K MDOG
-  FLOOR_DAYS: 4,             // must clear the floor on >= 4 of 7 snapshots
   WHALE_CAP_BP: 200,         // no wallet's score may exceed 2% of its class total
   MIN_PAYOUT_WEI: 10n ** 18n, // dust threshold: payouts below 1 MUSEBOOK stay as carryover
   // NOTE (2026-09-27): LP tracking REMOVED from rewards by Andrew's order.

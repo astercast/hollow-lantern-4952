@@ -1,6 +1,6 @@
 {
   "epochId": 1,
-  "note": "Codenames only \u2014 the board never exposes wallet addresses. One combined score per wallet (PORCH 50%, MDOG 30%); no separate categories.",
+  "note": "Codenames only \u2014 the board never exposes wallet addresses. One persistent live score per wallet (final-day live score, /80 scale); no separate categories.",
   "rows": [
     {
       "claimed": false,

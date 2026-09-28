@@ -57,8 +57,11 @@ verified on-chain or by test run on 2026-09-27, not asserted from memory.
 3. **Identity registry**: export tool built (`engine/export-registry.js`);
    still needs real registrations in the production backend.
 4. ~~Guard params~~ — decided by Andrew 2026-09-27: floors 1M PORCH / 1K MDOG
-   on ≥4 of 7 snapshots, 2% whale cap, 1 MUSEBOOK minimum payout. Locked in
-   `engine/config.js`. Epoch 1: Monday 2026-09-28 00:00 UTC.
+   (daily dust filter — below-floor contributes 0 that day), 2% of each
+   token's total supply whale cap per daily snapshot, 1 MUSEBOOK minimum
+   payout. Locked in `engine/config.js`. Persistent daily scoring (no weekly
+   reset) locked 2026-09-27: live score = min(today's whale-capped weighted
+   snapshot, 7-day trailing average). Epoch 1: Monday 2026-09-28 00:00 UTC.
 
 ## Deployment v1 — ABANDONED (2026-09-27 ~11:10 PDT)
 
@@ -161,10 +164,18 @@ NOTE: use `ART.bytecode.object` (foundry artifact nests bytecode).
 ## Andrew's rulings — 2026-09-27 ~10:20 PDT (his words, acted on same session)
 
 1. **Guard numbers: set.** Locked in `engine/config.js`:
-   - 1,000,000 PORCH / 1,000 MDOG floors, must hold on >= 4 of 7 snapshots
-   - 2% whale cap (no wallet's score exceeds 2% of its class total)
-   - 1 MUSEBOOK minimum payout (below that stays as carryover)
+   - 1,000,000 PORCH / 1,000 MDOG floors as a daily dust filter (a day's
+     balance below the floor contributes 0 to that day's weighted value)
+   - 2% of each token's total supply whale cap per daily snapshot (applied
+     before weighting)
+   - 1 MUSEBOOK minimum payout on the weekly total (below that stays as
+     carryover)
    - Epoch 1 starts Monday 2026-09-28 00:00 UTC (runs to 2026-10-04; scored 2026-10-05)
+   Scoring model updated 2026-09-27 (Andrew's order): one persistent live
+   score per wallet per day = min(today's whale-capped weighted snapshot,
+   7-day trailing average); each day's 1/7 of the pot is divided by that
+   day's live scores; the weekly Merkle output is the sum of the 7 daily
+   allocations. No weekly reset.
    Values were already the proposed defaults; this ruling flips them from
    PROPOSED to DECIDED. README + checkpoint + score.js notes updated.
 2. **No LP tracking at all.** `engine/snapshot.js` no longer discovers or

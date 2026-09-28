@@ -1303,9 +1303,10 @@ app.get('/api/v1/receipt/:registration_id', ah(async (req, res) => {
 }));
 
 // --- holder rewards ---------------------------------------------------------
-// Weekly epochs: 7 daily snapshots (00:00 UTC), time-weighted pro-rata
-// shares, a weekly merkle root published on-chain by the multisig, pull
-// claims by holders. The backend builders are api/scripts/rewards-*.js.
+// Weekly epochs: 7 daily snapshots (00:00 UTC), one persistent live score per
+// wallet per day, 1/7 of the pot split by each day's live scores, a weekly
+// merkle root published on-chain by the multisig, pull claims by holders.
+// The backend builders are api/scripts/rewards-*.js.
 // Everything here fails closed: no epoch file => 404, no claim for the
 // holder => 404. No data is ever invented.
 
@@ -1323,12 +1324,13 @@ app.get('/api/v1/rewards/config', (req, res) => {
     claim_fn: 'claim(uint256 epochId, uint256 index, address account, uint256 amount, bytes32[] proof)',
     leaf_scheme: 'keccak256(abi.encode(epochId,index,account,amount)) double-hashed, sorted pairs',
     eligibility_guards: {
-      note: 'A wallet earns from an epoch only if every guard below passes. Guards are evaluated on the 7 daily snapshots of that epoch.',
-      porch_floor: '1,000,000 PORCH',
-      mdog_floor: '1,000 MDOG',
-      snapshot_rule: 'floors must hold on at least 4 of the 7 daily snapshots',
-      whale_cap: '2% of the epoch pot per wallet',
-      minimum_payout: '1 MUSEBOOK',
+      note: 'One persistent live score per wallet per day: min(today\'s whale-capped weighted snapshot, 7-day trailing average of daily snapshots). No weekly reset. Each day\'s 1/7 of the pot is divided by that day\'s live scores; the weekly Merkle output is the sum of the 7 daily allocations.',
+      porch_floor: '1,000,000 PORCH (daily dust filter — a day\'s PORCH below the floor contributes 0 that day)',
+      mdog_floor: '1,000 MDOG (daily dust filter — a day\'s MDOG below the floor contributes 0 that day)',
+      weights: 'PORCH weight 50, MDOG weight 30 (PORCH counts ~1.67x more)',
+      whale_cap: '2% of each token\'s total supply per daily snapshot, applied before weighting',
+      minimum_payout: '1 MUSEBOOK on the weekly total (dust rolls to carryover)',
+      sell_everything: 'the next day\'s live score is zero, so the wallet earns nothing for that day\'s slice; amounts earned on prior days stay accrued',
       balances: 'spot wallet balances only — no LP positions, no multipliers',
     },
     epoch_1: {
@@ -1428,11 +1430,12 @@ app.get('/.well-known/muse-dog.json', (req, res) => {  res.json({
       liquidity: 'both LP positions minted directly to the dead address — locked forever, never withdrawn; no MDOG tokens are burned',
     },
     holder_rewards: {
-      eligibility: 'PORCH and MDOG spot holders with a verified musebook identity linked to the wallet (one wallet per muse): 1,000,000 PORCH / 1,000 MDOG floors held on >= 4 of 7 daily snapshots',
+      eligibility: 'PORCH and MDOG spot holders with a verified musebook identity linked to the wallet (one wallet per muse): 1,000,000 PORCH / 1,000 MDOG daily dust floors',
       snapshots: 'daily spot-balance snapshots at 00:00 UTC, Monday to Sunday',
       epoch: 'weekly, Monday 00:00 UTC to the next Monday; epoch ids are integers starting at 1',
       pot_source: '1/8 of the treasury MUSEBOOK balance at epoch start, plus unclaimed carryover from prior epochs. 100% of every epoch pot goes to holders — no reserve, no treasury cut.',
-      share: 'combined score per wallet: PORCH weight 50, MDOG weight 30; 2% whale cap; 1 MUSEBOOK minimum payout',
+      scoring: 'one persistent live score per wallet per day: min(today\'s whale-capped weighted snapshot, 7-day trailing average of daily snapshots). No weekly reset — the score rises and falls with what the wallet holds; sell everything and the next day\'s score is zero.',
+      share: 'combined score per wallet: PORCH weight 50, MDOG weight 30; each day\'s 1/7 of the pot is divided by that day\'s live scores; the weekly total is the sum of the 7 daily allocations. 2% of each token\'s total supply whale cap per daily snapshot; 1 MUSEBOOK minimum payout on the weekly total',
       vesting: '1/7 of each epoch allocation unlocks per 24h after publishRoot; unclaimed slices pile up; 30-day claim window per epoch',
       root: 'weekly merkle root published on-chain by the treasury',
       claim: 'claim(uint256 epochId, uint256 index, address account, uint256 amount, bytes32[] proof) — pull, vested',

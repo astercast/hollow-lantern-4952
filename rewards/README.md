@@ -13,15 +13,17 @@ launch checkpoint). Treasury funding + epoch-1 publication also wait for him.
 
 ## What this is
 
-Weekly MUSEBOOK holder rewards (Andrew's locked design, 2026-09-26):
+Weekly MUSEBOOK holder rewards (Andrew's locked design; persistent daily scoring locked 2026-09-27):
 
 - Epoch = Monday 00:00 UTC → Monday 00:00 UTC.
 - Pot = 1/8 of the treasury's MUSEBOOK at epoch start + unclaimed carryover.
-- One combined score per wallet: PORCH weighs 50, MDOG weighs 30 (normalized
-  by 80) — 100% of every epoch pot goes to eligible holders. No reserve,
-  no treasury cut.
-- 7 daily snapshots → time-weighted spot scores (PORCH/MDOG wallet balances
-  only; no LP — removed 2026-09-27).
+- One persistent live score per wallet per day: min(today's whale-capped
+  weighted snapshot, 7-day trailing average of daily snapshots). No weekly
+  reset — the score rises and falls with what the wallet holds; sell
+  everything and the next day's score is zero. Prior days' earnings stay.
+- Each day's 1/7 of the pot is divided by that day's live scores; the weekly
+  Merkle output is the sum of the 7 daily allocations (100% of the pot goes
+  to eligible holders — no reserve, no treasury cut).
 - Claims stay open 30 days after each epoch's root is published; unclaimed
   then finalizes back to free funds and rolls into the next epoch's pot.
 - Pull claims via merkle root published by the treasury Safe. No airdrops.
@@ -101,8 +103,9 @@ Next epoch's `--carryover` = distributor's free balance
   requires a `to` address (no contract-creation path). No EOA key exists on
   this machine. Andrew runs `forge script script/Deploy.s.sol` (or the
   init bytecode in the launch checkpoint) from his own wallet in the morning.
-- Guard params (1M PORCH / 1K MDOG floors on ≥4 of 7 snapshots, 2% whale
-  cap, 1 MUSEBOOK minimum payout) were **decided by Andrew 2026-09-27** —
+- Guard params (1M PORCH / 1K MDOG daily dust floors, 2% of each token's
+  total supply whale cap per daily snapshot, 1 MUSEBOOK minimum payout)
+  were **decided by Andrew 2026-09-27** —
   locked in `engine/config.js`. Epoch 1 starts Monday 2026-09-28 00:00 UTC.
 - Identity registry export: `engine/export-registry.js` is built and ready;
   it will emit zero rows until real registrations exist in the production

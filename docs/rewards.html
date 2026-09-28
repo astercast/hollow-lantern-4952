@@ -289,6 +289,8 @@
       <ul>
         <li>Every Monday, <strong>1/8 of the treasury's MUSEBOOK</strong> becomes the week's pot.</li>
         <li>Each holder gets <strong>one combined score</strong> from both holdings, ranked on the board below under dog codenames.</li>
+        <li>Your score is <strong>live</strong> — a 7-day average of your daily holdings that never resets. Hold steady and it stays high; buy more and it climbs; sell everything and it drops to zero the next day.</li>
+        <li>Each day's seventh of the pot goes to whoever's holding <strong>that day</strong>, by score — what you already earned stays put.</li>
         <li>Rewards are <strong>claimed, never airdropped</strong> — unclaimed rewards roll into next week.</li>
         <li>Each week's reward unlocks <strong>a seventh per day</strong> — skip days and it piles up, never lost.</li>
         <li>Only wallets linked to a <strong>verified musebook identity</strong> earn.</li>
@@ -307,7 +309,7 @@
       <div class="lb-eyebrow">Muse Dogs · Holder Rewards</div>
       <h1>Leaderboard</h1>
       <p class="lb-lede">Weekly <strong>MUSEBOOK</strong> rewards for <strong>PORCH</strong> and <strong>MDOG</strong> holders, funded by 1/8 of the treasury's MUSEBOOK each week. Every holder appears under a dog codename — no addresses on the board, ever.</p>
-      <p class="lb-note">Scores are time-weighted — how much you hold and how long you hold it. Last-minute buys barely count.</p>
+      <p class="lb-note">Your score follows what you hold — a daily snapshot averaged over the last seven days, capped by today's balance. It never resets; it moves with your holdings.</p>
       <div class="lb-epoch"><span class="dot"></span><span id="epoch-line">Epoch 1 · weekly cycle, Monday 00:00 UTC</span></div>
     </div>
 
@@ -348,7 +350,7 @@
           <h3>Your eligibility</h3>
           <div id="eligibility"><p>Nothing checked yet.</p></div>
           <p id="my-rank"></p>
-          <p style="font-size:13px">This preview scores today's balances; the live engine scores a 7-day time-weighted average. Minimums: 1,000,000 PORCH and 1,000 MDOG.</p>
+          <p style="font-size:13px">This preview scores today's balances; the live engine scores a 7-day trailing average of your daily snapshots, capped by what you hold today. Minimums: 1,000,000 PORCH and 1,000 MDOG.</p>
         </div>
       </div>
     </div>
@@ -380,7 +382,7 @@
       <div class="rules">
         <div class="rule">
           <div class="rk">Epochs</div>
-          <p>Weekly epochs, Monday 00:00 UTC. Daily balance snapshots, time-weighted average — last-minute buys barely count.</p>
+          <p>Weekly epochs, Monday 00:00 UTC. Daily balance snapshots. Your live score is the 7-day trailing average of your holdings, capped by what you hold today — it never resets. Sell everything and your score drops to zero the next day.</p>
         </div>
         <div class="rule">
           <div class="rk">The pot</div>
@@ -440,7 +442,7 @@
     <p><strong>Safety:</strong> The real claim sends you tokens — no approvals, no transfers, no seed phrase. If your wallet shows an approval or a payment <em>from</em> you, reject it and check the <a href="verify">Verify page</a>.</p>
   </div>
 
-  <p class="fine-print">The fine print: each weekly pot is split among holders by one combined score — your PORCH holdings weigh a bit more than your MDOG. One score per holder. Muse Dog holders separately receive ETH from resale royalties and PORCH from vesting once the contracts deploy.</p>
+  <p class="fine-print">The fine print: each day, one seventh of the weekly pot is split among holders by that day's live scores — your PORCH holdings weigh a bit more than your MDOG. Your score is the 7-day average of your daily holdings and never resets. Muse Dog holders separately receive ETH from resale royalties and PORCH from vesting once the contracts deploy.</p>
 
 </div>
 
