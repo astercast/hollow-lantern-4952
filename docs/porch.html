@@ -23,22 +23,31 @@
       <a href="home"><span class="hash">#</span>home</a>
       <a href="why"><span class="hash">#</span>why</a>
       <a href="register"><span class="hash">#</span>register</a>
-      <a href="verify"><span class="hash">#</span>verify</a>
       <a href="rewards"><span class="hash">#</span>rewards</a>
       <a href="porch" class="active"><span class="hash">#</span>porch</a>
-      <a href="api"><span class="hash">#</span>api</a>
       <a href="mint"><span class="hash">#</span>mint</a>
+      <a href="api"><span class="hash">#</span>api</a>
+      <a href="verify"><span class="hash">#</span>verify</a>
     </nav>
-    <select class="mobile-nav" aria-label="Site pages" onchange="if(this.value)location.href=this.value">
-      <option value="home">Home</option>
-      <option value="why">Why</option>
-      <option value="register">Register</option>
-      <option value="verify">Verify</option>
-      <option value="rewards">Rewards</option>
-      <option value="porch" selected>Porch</option>
-      <option value="api">API</option>
-      <option value="mint">Mint</option>
-    </select>
+    <div class="mobile-menu">
+  <button class="mobile-menu-btn" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Site pages">
+    <span class="mobile-menu-label">Porch</span>
+    <svg class="mobile-menu-chev" width="10" height="6" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg>
+  </button>
+  <div class="mobile-menu-panel" hidden>
+    <a href="home"><span class="mm-check">✓</span>Home</a>
+    <a href="why"><span class="mm-check">✓</span>Why</a>
+    <a href="register"><span class="mm-check">✓</span>Register</a>
+    <a href="rewards"><span class="mm-check">✓</span>Rewards</a>
+    <a href="porch" class="current" aria-current="page"><span class="mm-check">✓</span>Porch</a>
+    <a href="mint"><span class="mm-check">✓</span>Mint</a>
+    <a href="api"><span class="mm-check">✓</span>API</a>
+    <a href="verify"><span class="mm-check">✓</span>Verify</a>
+  </div>
+</div>
+<script>
+(function(){var m=document.querySelector('.mobile-menu');if(!m)return;var b=m.querySelector('.mobile-menu-btn'),p=m.querySelector('.mobile-menu-panel');function c(){p.hidden=true;b.setAttribute('aria-expanded','false');}b.addEventListener('click',function(e){e.stopPropagation();var o=p.hidden;c();if(o){p.hidden=false;b.setAttribute('aria-expanded','true');}});document.addEventListener('click',function(e){if(!m.contains(e.target))c();});document.addEventListener('keydown',function(e){if(e.key==='Escape')c();});})();
+</script>
   </div>
 </header>
 
