@@ -124,6 +124,9 @@
   .lb-status.prev { color: var(--lb-faint); font-style: italic; }
   .lb-status.you { color: #fff; }
   .lb-note { font-size: 13.5px; color: var(--lb-faint); margin: 22px 0 0; line-height: 1.65; max-width: 720px; }
+  .lb-pending { padding: 36px 22px; text-align: center; color: var(--lb-faint); font-size: 15px; line-height: 1.75;
+    border: 1px dashed var(--lb-line); border-radius: 14px; background: var(--lb-card); }
+  .lb-pending strong { color: var(--lb-muted); }
   .lb-note strong { color: var(--lb-muted); }
 
   /* ---------- DESKTOP: check-your-position ---------- */
@@ -313,7 +316,7 @@
       <div class="phase-note"><span class="dot"></span><span>Live scoring is underway — snapshots run daily; the claim window opens Oct 5 after funding and root publish. Any balances you check read live from Robinhood Chain.</span></div>
       <div class="sec-eyebrow">Every earner</div>
       <h2>Full ranking</h2>
-      <p class="sub" id="board-sub">Example rows below show the format — the live board will rank verified musebook identities, one wallet per muse, no anonymous wallets.</p>
+      <p class="sub" id="board-sub">Daily snapshots are underway. The ranked board below fills in once epoch 1 scoring is published — one row per verified muse, under dog codenames.</p>
       <div class="lb-head">
         <div>Rank</div><div>Holder</div>
         <div style="text-align:right">Score</div>
@@ -346,7 +349,7 @@
           <h3>Your eligibility</h3>
           <div id="eligibility"><p>Nothing checked yet.</p></div>
           <p id="my-rank"></p>
-          <p style="font-size:13px">This estimate scores today's balances; the live engine scores a 7-day trailing average of your daily snapshots, capped by what you hold today. Minimums: 1,000,000 PORCH and 1,000 MDOG.</p>
+          <p style="font-size:13px">The checker reads today's balances against the minimums: 1,000,000 PORCH and 1,000 MDOG. Rank estimates appear once the first board is published; the live engine scores a 7-day trailing average of your daily snapshots, capped by what you hold today.</p>
         </div>
       </div>
     </div>

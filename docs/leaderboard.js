@@ -1,7 +1,7 @@
 /* Holder Top Dog Board — READ ONLY. No transactions, no signatures, no money moves.
  * Board rows use dog-inspired codenames — no wallet addresses,
- * no emojis next to codenames. Until the engine publishes an epoch the rows
- * are example data; once it does, the board loads the live board file and
+ * no emojis next to codenames. Until the engine publishes an epoch the board
+ * shows a pending state; once it does, the board loads the live board file and
  * ranks the LIVE persistent score (final-day live score, top holder = 80).
  * One combined score per holder: PORCH holdings weigh 50, MDOG holdings
  * weigh 30, so PORCH counts about 1.7x more. 100% of the pot goes to holders.
@@ -16,7 +16,7 @@
   var TREASURY = "0xEac12759e1Bb4A3c1455Ea3FE03b668c493BFb25";
 
   /* EPOCH_POT is reserved for when the engine goes live (est. rewards
-   * stay hidden until then — no pot figures are shown on the example board).
+   * stay hidden until then — no pot figures are shown before the board is).
    * 100% of every pot goes to holders. */
   var EPOCH_POT = null;
   var WEIGHT_PORCH = 50;
@@ -48,76 +48,17 @@
     return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   }
 
-  /* Deterministic mock Top Dog Board so the layout is stable every load.
-   * [codename, PORCH holding, MDOG holding, claimed?] — no emojis next to
-   * codenames. One combined score per pup, same 50/30 weighting as the engine. */
-  var PREVIEW_SEED = [
-    ["Bark Knight",   8400000000, 2900000, true ],
-    ["Snout Scout",   5100000000, 1200000, false],
-    ["Howl Runner",   1200000000, 2940000, false],
-    ["Treat Bandit",  2100000000,  800000, true ],
-    ["Wag Captain",    640000000,  812000, false],
-    ["Paw Patroller",  880000000,  405000, false],
-    ["Drool Duke",     210000000,  152000, true ],
-    ["Leash Legend",   120000000,   95000, false],
-    ["Tail Chaser",     88000000,   61000, false],
-    ["Bone Baron",      45000000,   30000, false]
-  ];
-
-  /* Combined score (50 + 30 = 80 max):
-   * reward = score / 80 * EPOCH_POT. Same weighting as the engine. */
-  function combinedScore(porchBal, mdogBal, totals) {
-    var s = 0;
-    if (totals.porch > 0 && porchBal > 0) s += WEIGHT_PORCH * (porchBal / totals.porch);
-    if (totals.mdog > 0 && mdogBal > 0) s += WEIGHT_MDOG * (mdogBal / totals.mdog);
-    return s;
-  }
-
-  function previewTotals(extra) {
-    var t = { porch: 0, mdog: 0 };
-    PREVIEW_SEED.forEach(function (r) { t.porch += r[1]; t.mdog += r[2]; });
-    if (extra) { t.porch += extra.porch || 0; t.mdog += extra.mdog || 0; }
-    return t;
-  }
-
-  function buildPreviewRows() {
-    var totals = previewTotals(null);
-    return PREVIEW_SEED.map(function (r, i) {
-      return {
-        rank: i + 1, name: r[0], porch: r[1], mdog: r[2],
-        score: combinedScore(r[1], r[2], totals),
-        claimed: r[3], preview: true
-      };
-    }).sort(function (a, b) { return b.score - a.score; })
-      .map(function (r, i) { r.rank = i + 1; return r; });
-  }
-
-  /* Estimated MUSEBOOK reward for a row, from its share of the combined score. */
-  function estReward(r) {
-    if (!EPOCH_POT) return null; // hidden until the engine is live
-    return (r.score / 80) * EPOCH_POT;
-  }
-
-  function holdingsLine(r) {
-    return "PORCH " + fmt(r.porch, 0) + " · MDOG " + fmt(r.mdog, 0);
-  }
-
-  /* Compact holdings for the one-line rows — "8.4B PORCH · 2.9M MDOG".
-   * The full-precision string from holdingsLine() stays in the row's title. */
-  function trim1(n) {
-    return Number(n).toLocaleString("en-US", { maximumFractionDigits: 1 });
-  }
-
-  function fmtCompact(n) {
-    n = Number(n) || 0;
-    if (n >= 1e9) return trim1(n / 1e9) + "B";
-    if (n >= 1e6) return trim1(n / 1e6) + "M";
-    if (n >= 1e3) return trim1(n / 1e3) + "K";
-    return String(Math.round(n));
-  }
-
-  function holdingsShort(r) {
-    return fmtCompact(r.porch) + " PORCH · " + fmtCompact(r.mdog) + " MDOG";
+  /* Pending state: the engine is taking daily snapshots, but no epoch board
+   * has been published yet — so the board shows this instead of fake rows.
+   * The moment the engine publishes manifest.json + a board file, loadLiveBoard
+   * swaps in the real ranked rows. */
+  function renderPending() {
+    $("board-rows").innerHTML =
+      '<div class="lb-pending">' +
+        "<strong>Daily snapshots are underway.</strong><br>" +
+        "The ranked board fills in here once epoch 1 scoring is published — " +
+        "one row per verified muse, under dog codenames." +
+      "</div>";
   }
 
   /* Live board: once the engine publishes an epoch, weekly-epoch.js writes
@@ -165,7 +106,7 @@
       var sub = document.getElementById("board-sub");
       if (sub) sub.textContent = "Every row is a verified musebook identity — one wallet per muse, no anonymous wallets.";
       renderBoard(boardRows);
-    }).catch(function () { /* no live board yet — the example rows stay */ });
+    }).catch(function () { /* no live board yet — the pending state stays */ });
   }
 
   function rewardCell(r) {
@@ -183,8 +124,8 @@
     var html = "";
     rows.forEach(function (r) {
       var mine = !!r.you;
-      var statusCls = mine ? "you" : r.preview ? "prev" : r.claimed ? "done" : "open";
-      var statusTxt = mine ? "Your position" : r.preview ? "Example" : r.claimed ? "Claimed" : "Claimable";
+      var statusCls = mine ? "you" : r.claimed ? "done" : "open";
+      var statusTxt = mine ? "Your position" : r.claimed ? "Claimed" : "Claimable";
       html += '<div class="lb-row' + (mine ? " you" : "") + '">' +
         '<div class="lb-rank">' + String(r.rank).padStart(2, "0") + "</div>" +
         '<div class="lb-holder" title="' + esc(holdingsLine(r)) + '">' +
@@ -207,37 +148,18 @@
   }
 
   function refreshBoard() {
-    if (currentAddr) {
-      readBalances(currentAddr, function (results) {
-        estimateRank(buildPreviewRows(), results);
-      });
-    } else {
-      boardRows = buildPreviewRows();
-    renderBoard(boardRows);
-    }
+    if (liveBoardActive) renderBoard(boardRows);
+    else renderPending();
   }
 
-  function estimateRank(rows, results) {
-    var totals = previewTotals(results);
-    var mine = {
-      name: "Your pup",
-      porch: results.porch || 0, mdog: results.mdog || 0,
-      score: combinedScore(results.porch || 0, results.mdog || 0, totals),
-      claimed: false, preview: true, you: true
-    };
-    // Re-score the mock rows against the same totals so the ranking is fair.
-    rows.forEach(function (r) { r.score = combinedScore(r.porch, r.mdog, totals); });
-    var out = rows.concat([mine]).sort(function (a, b) { return b.score - a.score; });
-    out.forEach(function (r, i) { r.rank = i + 1; });
-    var myRank = out.filter(function (r) { return r.you; })[0].rank;
+  /* Wallet checker: eligibility is real (live balances vs the minimums).
+   * Rank estimates can't be honest yet — there are no published scores to
+   * rank against — so the checker says so instead of inventing a rank. */
+  function afterCheck(results) {
     if (liveBoardActive) {
-      /* The live board stays put — this estimate is example-board math on
-       * today's balances, so it can't be slotted into the live ranking. */
-      $("my-rank").textContent = "Estimated position on the example board: #" + myRank +
-        ". (The live board above ranks persistent scores — the lower of each day's snapshot and the 7-day average; this estimate uses today's balances only.)";
+      $("my-rank").textContent = "The live board above ranks persistent scores — find your dog codename up there. (This checker only reads today's balances; the engine scores a 7-day trailing average of your daily snapshots, capped by what you hold today.)";
     } else {
-      renderBoard(out);
-      $("my-rank").textContent = "Estimated position on the example board: #" + myRank + ".";
+      $("my-rank").textContent = "Rank estimates appear once the first board is published — the engine is still taking daily snapshots.";
     }
   }
 
@@ -277,7 +199,7 @@
 
   function afterBalances(addr, results, note) {
     $("eligibility").innerHTML = eligibilityText(results);
-    estimateRank(buildPreviewRows(), results);
+    afterCheck(results);
     setStatus("Done. " + note);
   }
 
@@ -288,7 +210,7 @@
         if (!accounts || !accounts.length) { setStatus("No wallet account shared."); return; }
         currentAddr = accounts[0];
         readBalances(currentAddr, function (results) {
-          afterBalances(currentAddr, results, "Balances read live from Robinhood Chain. Board rows are example data.");
+          afterBalances(currentAddr, results, "Balances read live from Robinhood Chain. The ranked board fills in once epoch 1 scoring is published.");
         });
       }).catch(function () { setStatus("Wallet connection cancelled — you can also paste an address."); });
     } else {
@@ -302,14 +224,13 @@
     setStatus("Reading balances… (read-only)");
     currentAddr = v;
     readBalances(v, function (results) {
-      afterBalances(v, results, "Balances read live from Robinhood Chain. Board rows are example data.");
+      afterBalances(v, results, "Balances read live from Robinhood Chain. The ranked board fills in once epoch 1 scoring is published.");
     });
   }
 
   document.addEventListener("DOMContentLoaded", function () {
-    boardRows = buildPreviewRows();
-    renderBoard(boardRows);
-    loadLiveBoard(); // replaces the example rows once the engine publishes an epoch
+    renderPending(); // replaced by the real board once the engine publishes an epoch
+    loadLiveBoard();
     $("connect-btn").addEventListener("click", onConnect);
     $("lookup-btn").addEventListener("click", onLookup);
   });
