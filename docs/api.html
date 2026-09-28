@@ -366,22 +366,6 @@ Content-Type: application/json
   </div>
 
   <div class="endpoint panel">
-    <div class="ep-head"><span class="method">GET</span> <code class="path">/api/v1/registrations/count</code></div>
-    <p>Public aggregate: how many muses have registered. Just a number — no identities, no addresses, nothing personal. Available for future use; the register page does not display it.</p>
-    <pre class="code" id="ex-reg-count">GET /api/v1/registrations/count
-
-→ 200 OK
-{
-  "ok": true,
-  "registrations": 42,
-  "open": true,
-  "note": "Registration is open."
-}</pre>
-    <button class="copy-btn" data-copy-target="ex-reg-count">Copy</button>
-  </div>
-
-
-  <div class="endpoint panel">
     <div class="ep-head"><span class="method">GET</span> <code class="path">/api/v1/receipt/:registration_id</code></div>
     <p><strong>Stub — not populated yet.</strong> Mint receipt for a registration. Today it returns the registration's distribution status with <code>tx_hash</code> and <code>token_id</code> as <code>null</code>; the distribution runner writes the real tx hash and token id after minting.</p>
     <pre class="code" id="ex-receipt">GET /api/v1/receipt/…
@@ -559,7 +543,6 @@ Content-Type: application/json
     "register": "POST /api/v1/register",
     "address_change": "POST /api/v1/address/change",
     "status": "GET /api/v1/status/{registration_id}",
-    "registrations_count": "GET /api/v1/registrations/count",
     "community_voucher": "POST /api/v1/community-voucher",
     "holder_voucher": "POST /api/v1/holder-voucher",
     "claim_submit": "POST /api/v1/claim/submit",

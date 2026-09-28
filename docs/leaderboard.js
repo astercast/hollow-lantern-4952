@@ -1,4 +1,4 @@
-/* Holder leaderboard — READ ONLY. No transactions, no signatures, no money moves.
+/* Holder Top Dog Board — READ ONLY. No transactions, no signatures, no money moves.
  * Board rows use dog-inspired codenames — no wallet addresses,
  * no emojis next to codenames. Until the engine publishes an epoch the rows
  * are example data; once it does, the board loads the live board file and
@@ -48,7 +48,7 @@
     return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   }
 
-  /* Deterministic mock leaderboard so the layout is stable every load.
+  /* Deterministic mock Top Dog Board so the layout is stable every load.
    * [codename, PORCH holding, MDOG holding, claimed?] — no emojis next to
    * codenames. One combined score per pup, same 50/30 weighting as the engine. */
   var PREVIEW_SEED = [

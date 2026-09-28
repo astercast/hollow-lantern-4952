@@ -1249,19 +1249,7 @@ app.get('/api/v1/claim/status/:job_id', ah(async (req, res) => {
   res.json(jobPublic(job));
 }));
 
-// Public aggregate for the register page counter. Just a number — no
-// identities, no addresses, nothing personal.
-app.get('/api/v1/registrations/count', ah(async (req, res) => {
-  const db = await store.load();
-  res.json({
-    ok: true,
-    registrations: db.registrations.length,
-    open: CURRENT_PHASE === 'registration-open',
-    note: CURRENT_PHASE === 'registration-open'
-      ? 'Registration is open.'
-      : 'Registration is not open yet.',
-  });
-}));
+// Registration totals are private by policy — no public count endpoint.
 
 // Public mint state, read live from chain when the relayer is up.
 // Powers the mint page's live counter ("X of 380 community mints left").
@@ -1448,7 +1436,6 @@ app.get('/.well-known/muse-dog.json', (req, res) => {  res.json({
       register: 'POST /api/v1/register',
       address_change: 'POST /api/v1/address/change',
       status: 'GET /api/v1/status/{registration_id}',
-      registrations_count: 'GET /api/v1/registrations/count',
       community_voucher: 'POST /api/v1/community-voucher',
       holder_voucher: 'POST /api/v1/holder-voucher',
       claim_submit: 'POST /api/v1/claim/submit',
