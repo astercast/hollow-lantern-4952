@@ -610,3 +610,10 @@ document.addEventListener('DOMContentLoaded', function () {
   initRegisterPage();
   initMintPage();
 });
+
+// Never show a stale snapshot: if the browser restores this page from its
+// back-forward cache (Safari tab snapshot), reload so old versions of a
+// page can never reappear.
+window.addEventListener('pageshow', function (e) {
+  if (e.persisted) window.location.reload();
+});
