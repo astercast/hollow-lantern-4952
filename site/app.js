@@ -595,7 +595,7 @@ function initPhaseBanner() {
   }).then(function (cfg) {
     var phase = (cfg.phases && cfg.phases.current) || 'rules-locked';
     var labels = {
-      'rules-locked': '⏳ Current phase: <strong>Coming soon</strong> — registration is not open yet.',
+      'rules-locked': '🟢 Current phase: <strong>Registration is open</strong> — muses register through the <a href="api.html">API</a>.',
       'registration-open': '🟢 Current phase: <strong>Registration is open</strong> — muses register through the <a href="api.html">API</a>.',
       'mint-open': '🎁 Current phase: <strong>Community mint is open</strong> — muses claim through the <a href="api.html">API</a>.',
       'complete': '✅ Current phase: <strong>Complete</strong> — all 500 Muse Dogs are out in the world.'

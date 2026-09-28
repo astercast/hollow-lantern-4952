@@ -1,7 +1,7 @@
 /* Holder leaderboard — READ ONLY. No transactions, no signatures, no money moves.
  * Board rows use dog-inspired codenames — no wallet addresses,
  * no emojis next to codenames. Until the engine publishes an epoch the rows
- * are preview data; once it does, the board loads the live board file and
+ * are example data; once it does, the board loads the live board file and
  * ranks the LIVE persistent score (final-day live score, top holder = 80).
  * One combined score per holder: PORCH holdings weigh 50, MDOG holdings
  * weigh 30, so PORCH counts about 1.7x more. 100% of the pot goes to holders.
@@ -16,7 +16,7 @@
   var TREASURY = "0xEac12759e1Bb4A3c1455Ea3FE03b668c493BFb25";
 
   /* EPOCH_POT is reserved for when the engine goes live (est. rewards
-   * stay hidden until then — no pot figures are shown on the preview board).
+   * stay hidden until then — no pot figures are shown on the example board).
    * 100% of every pot goes to holders. */
   var EPOCH_POT = null;
   var WEIGHT_PORCH = 50;
@@ -162,8 +162,10 @@
         };
       });
       liveBoardActive = true;
+      var sub = document.getElementById("board-sub");
+      if (sub) sub.textContent = "Every row is a verified musebook identity — one wallet per muse, no anonymous wallets.";
       renderBoard(boardRows);
-    }).catch(function () { /* no live board yet — the preview rows stay */ });
+    }).catch(function () { /* no live board yet — the example rows stay */ });
   }
 
   function rewardCell(r) {
@@ -175,14 +177,14 @@
   /* Compact one-line rows: rank, codename (+ compact holdings on the same
    * line), score, reward, status. Tight padding, hairline dividers — many
    * rows fit on screen at once. The wallet-checker "Your pup" row keeps the
-   * same shape with its "· you" marker and gold highlight, so it reads as a
-   * preview estimate, never as live board data. */
+   * same shape with its "· you" marker and gold highlight, so it reads as an
+   * example-board estimate, never as live board data. */
   function renderRows(rows) {
     var html = "";
     rows.forEach(function (r) {
       var mine = !!r.you;
       var statusCls = mine ? "you" : r.preview ? "prev" : r.claimed ? "done" : "open";
-      var statusTxt = mine ? "Your position" : r.preview ? "Preview" : r.claimed ? "Claimed" : "Claimable";
+      var statusTxt = mine ? "Your position" : r.preview ? "Example" : r.claimed ? "Claimed" : "Claimable";
       html += '<div class="lb-row' + (mine ? " you" : "") + '">' +
         '<div class="lb-rank">' + String(r.rank).padStart(2, "0") + "</div>" +
         '<div class="lb-holder" title="' + esc(holdingsLine(r)) + '">' +
@@ -229,13 +231,13 @@
     out.forEach(function (r, i) { r.rank = i + 1; });
     var myRank = out.filter(function (r) { return r.you; })[0].rank;
     if (liveBoardActive) {
-      /* The live board stays put — this estimate is preview-style math on
+      /* The live board stays put — this estimate is example-board math on
        * today's balances, so it can't be slotted into the live ranking. */
-      $("my-rank").textContent = "Estimated position on the preview board: #" + myRank +
-        ". (The live board above ranks 7-day trailing scores; this estimate uses today's balances.)";
+      $("my-rank").textContent = "Estimated position on the example board: #" + myRank +
+        ". (The live board above ranks persistent scores — the lower of each day's snapshot and the 7-day average; this estimate uses today's balances only.)";
     } else {
       renderBoard(out);
-      $("my-rank").textContent = "Estimated position on the preview board: #" + myRank + ".";
+      $("my-rank").textContent = "Estimated position on the example board: #" + myRank + ".";
     }
   }
 
@@ -286,7 +288,7 @@
         if (!accounts || !accounts.length) { setStatus("No wallet account shared."); return; }
         currentAddr = accounts[0];
         readBalances(currentAddr, function (results) {
-          afterBalances(currentAddr, results, "Balances read live from Robinhood Chain. Board rows are preview data.");
+          afterBalances(currentAddr, results, "Balances read live from Robinhood Chain. Board rows are example data.");
         });
       }).catch(function () { setStatus("Wallet connection cancelled — you can also paste an address."); });
     } else {
@@ -300,14 +302,14 @@
     setStatus("Reading balances… (read-only)");
     currentAddr = v;
     readBalances(v, function (results) {
-      afterBalances(v, results, "Balances read live from Robinhood Chain. Board rows are preview data.");
+      afterBalances(v, results, "Balances read live from Robinhood Chain. Board rows are example data.");
     });
   }
 
   document.addEventListener("DOMContentLoaded", function () {
     boardRows = buildPreviewRows();
     renderBoard(boardRows);
-    loadLiveBoard(); // replaces the preview rows once the engine publishes an epoch
+    loadLiveBoard(); // replaces the example rows once the engine publishes an epoch
     $("connect-btn").addEventListener("click", onConnect);
     $("lookup-btn").addEventListener("click", onLookup);
   });

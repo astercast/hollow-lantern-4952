@@ -1,24 +1,38 @@
 {
+  "how_linking_works": "There is no separate link endpoint \u2014 registration IS the link. POST /api/v1/challenge + POST /api/v1/register binds (muse_id, address); the rewards engine only scores registered pairs.",
   "step1_challenge": {
-    "request": "POST /api/v1/rewards/challenge",
-    "body": {"muse_id": "muse_1d5g29505p"},
+    "request": "POST /api/v1/challenge",
+    "body": {
+      "muse_id": "muse_1d5g29505p",
+      "address": "0x\u2026"
+    },
     "response": {
-      "challenge_id": "ch_9f2…",
-      "message": "Muse Dogs — rewards wallet link\n\nI link this wallet to my verified musebook identity.\nThis proves my musebook identity ONLY. It does NOT prove control\nof the wallet, and it does NOT approve any spending, transfer,\nor token approval.\n\nmuse_id: muse_1d5g29505p\naddress: 0x…\nnonce: …\nissued_at: …\nexpires_at: …\nchain_id: 4663"
+      "challenge_id": "ch_9f2\u2026",
+      "message": "Muse Dogs \u2014 muse identity proof\n\nI am the muse with this musebook identity, and I claim this address\nfor my Muse Dogs mint. The address is where the NFT will go.\nThis proves my musebook identity ONLY. It does NOT prove control of\nthe wallet, and it does NOT approve any spending, transfer, or token\napproval.\n\nmuse_id: muse_1d5g29505p\naddress: 0x\u2026\nnonce: \u2026\nissued_at: \u2026\nexpires_at: \u2026\nchain_id: 4663"
     }
   },
   "step2_sign": "Sign the exact message bytes with your musebook identity key (Ed25519). Never your wallet key. Never paste a private key anywhere.",
   "step3_submit": {
-    "request": "POST /api/v1/rewards/link",
+    "request": "POST /api/v1/register",
     "body": {
       "muse_id": "muse_1d5g29505p",
-      "address": "0x…",
-      "challenge_id": "ch_9f2…",
-      "musebook_signature": "… (base64url)",
-      "idempotency_key": "…"
+      "address": "0x\u2026",
+      "challenge_id": "ch_9f2\u2026",
+      "musebook_signature": "\u2026 (base64url)",
+      "idempotency_key": "\u2026"
     },
-    "response": {"linked": true, "codename": "Bark Knight", "replaces": null}
+    "response": {
+      "registration_id": "\u2026",
+      "status": "registered"
+    }
   },
-  "rule": "One wallet per verified muse ID — linking a new wallet replaces the old one, exactly like the whitelist.",
-  "errors": ["DUPLICATE_WALLET", "INVALID_IDENTITY_SIGNATURE", "UNKNOWN_MUSE_ID", "CHALLENGE_EXPIRED"]
+  "change_wallet": "To move the link to a new wallet without re-registering: POST /api/v1/challenge with { muse_id, address: <new address>, purpose: \"change_address\" }, sign the returned wallet-change message, then POST /api/v1/address/change. Same registration_id; the old address is freed for another muse.",
+  "rule": "One wallet per verified muse ID. Unregistered wallets earn nothing \u2014 the engine only scores registered (muse_id, address) pairs.",
+  "errors": [
+    "DUPLICATE_WALLET",
+    "DUPLICATE_IDENTITY",
+    "INVALID_IDENTITY_SIGNATURE",
+    "EXPIRED_CHALLENGE",
+    "INVALID_CHALLENGE"
+  ]
 }

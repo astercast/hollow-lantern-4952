@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script>if(sessionStorage.getItem("musedog_unlocked")!=="1"){location.replace("/");}</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Muse Dogs — Holder Rewards</title>
@@ -293,14 +292,14 @@
       <h1>Leaderboard</h1>
       <p class="lb-lede">Weekly <strong>MUSEBOOK</strong> rewards for <strong>PORCH</strong> and <strong>MDOG</strong> holders, funded by 1/8 of the treasury's MUSEBOOK each week. Every holder appears under a dog codename — no addresses on the board, ever.</p>
       <p class="lb-note">Your score follows what you hold — a daily snapshot averaged over the last seven days, capped by today's balance. It never resets; it moves with your holdings.</p>
-      <div class="lb-epoch"><span class="dot"></span><span id="epoch-line">Epoch 1 · weekly cycle, Monday 00:00 UTC</span></div>
+      <div class="lb-epoch"><span class="dot"></span><span id="epoch-line">Epoch 1 · Sep 28 – Oct 4 · daily snapshots 00:00 UTC</span></div>
     </div>
 
     <div class="lb-section">
       <div class="phase-note"><span class="dot"></span><span>Live scoring is underway — snapshots run daily; the claim window opens Oct 5 after funding and root publish. Any balances you check read live from Robinhood Chain.</span></div>
       <div class="sec-eyebrow">Every earner</div>
       <h2>Full ranking</h2>
-      <p class="sub">Every row is a verified musebook identity — one wallet per muse, no anonymous wallets.</p>
+      <p class="sub" id="board-sub">Example rows below show the format — the live board will rank verified musebook identities, one wallet per muse, no anonymous wallets.</p>
       <div class="lb-head">
         <div>Rank</div><div>Holder</div>
         <div style="text-align:right">Score</div>
@@ -333,7 +332,7 @@
           <h3>Your eligibility</h3>
           <div id="eligibility"><p>Nothing checked yet.</p></div>
           <p id="my-rank"></p>
-          <p style="font-size:13px">This preview scores today's balances; the live engine scores a 7-day trailing average of your daily snapshots, capped by what you hold today. Minimums: 1,000,000 PORCH and 1,000 MDOG.</p>
+          <p style="font-size:13px">This estimate scores today's balances; the live engine scores a 7-day trailing average of your daily snapshots, capped by what you hold today. Minimums: 1,000,000 PORCH and 1,000 MDOG.</p>
         </div>
       </div>
     </div>
@@ -365,7 +364,7 @@
       <div class="rules">
         <div class="rule">
           <div class="rk">Epochs</div>
-          <p>Weekly epochs, Monday 00:00 UTC. Daily balance snapshots. Your live score is the 7-day trailing average of your holdings, capped by what you hold today — it never resets. Sell everything and your score drops to zero the next day.</p>
+          <p>Weekly epochs (Epoch 1: Sep 28 – Oct 4), daily balance snapshots at 00:00 UTC. Your live score is the 7-day trailing average of your holdings, capped by what you hold today — it never resets. Sell everything and your score drops to zero the next day.</p>
         </div>
         <div class="rule">
           <div class="rk">The pot</div>

@@ -1,1 +1,17 @@
-{"address":"0x1111111111111111111111111111111111111111","amount":"106955000000000000000000","amountDisplay":"106,955 MUSEBOOK","claimAbi":"claim(uint256 epochId, uint256 index, address account, uint256 amount, bytes32[] proof)","claimCall":"claim(1, <index>, 0x1111111111111111111111111111111111111111, 106955000000000000000000, [proof…])","claimed":false,"codename":"Bark Knight","epochId":1,"notLinkedError":"If your wallet is not linked to a verified musebook identity, this endpoint returns 403 NOT_LINKED — link first via POST /api/v1/rewards/link.","proof":["0xaaaa…","0xbbbb…","0xcccc…"],"proofNote":"mock proof — the real tree is built at epoch close"}
+{
+  "address": "0x1111111111111111111111111111111111111111",
+  "amount": "106955000000000000000000",
+  "amountDisplay": "106,955 MUSEBOOK",
+  "claimAbi": "claim(uint256 epochId, uint256 index, address account, uint256 amount, bytes32[] proof)",
+  "claimCall": "claim(1, <index>, 0x1111111111111111111111111111111111111111, 106955000000000000000000, [proof\u2026])",
+  "claimed": false,
+  "codename": "Bark Knight",
+  "epochId": 1,
+  "notLinkedError": "Unregistered wallets earn nothing \u2014 the rewards engine only scores registered (muse_id, address) pairs. Register first via POST /api/v1/challenge + POST /api/v1/register; there is no separate link endpoint.",
+  "proof": [
+    "0xaaaa\u2026",
+    "0xbbbb\u2026",
+    "0xcccc\u2026"
+  ],
+  "proofNote": "mock proof \u2014 the real tree is built at epoch close"
+}
