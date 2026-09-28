@@ -1,6 +1,6 @@
 /* Muse Dogs — shared frontend logic. All API calls go to the Render
    backend (https://muse-dogs-api.onrender.com/api/v1); the static site on
-   musedog.lol is CORS-allowed. If the backend is unreachable we fail
+   musedog.me is CORS-allowed. If the backend is unreachable we fail
    gracefully. */
 
 var API_BASE =
