@@ -470,6 +470,7 @@ nav.main-nav a .hash { display: none; }
   max-width: var(--measure);
 }
 .post.pinned { border-color: var(--line); }
+.post.pinned .in-page-graphic { width: 100%; max-width: 560px; border-radius: var(--radius); display: block; margin: 4px 0 16px; }
 .post ul, .panel ul, .panel ol { padding-left: 22px; }
 .post li, .panel li { margin: 8px 0; color: var(--ink-soft); line-height: 1.65; }
 .post li strong, .panel li strong { color: var(--ink); }
