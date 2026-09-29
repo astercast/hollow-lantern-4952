@@ -1,7 +1,7 @@
 {
   "address": "0x1111111111111111111111111111111111111111",
   "amount": "106955000000000000000000",
-  "amountDisplay": "106,955 MUSEBOOK",
+  "amountDisplay": "106,955 $MUSEBOOK",
   "claimAbi": "claim(uint256 epochId, uint256 index, address account, uint256 amount, bytes32[] proof)",
   "claimCall": "claim(1, <index>, 0x1111111111111111111111111111111111111111, 106955000000000000000000, [proof\u2026])",
   "claimed": false,

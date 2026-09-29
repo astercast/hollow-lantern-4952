@@ -186,17 +186,17 @@ function initRegisterPage() {
       // 2026-09-23 creation-date cutoff was removed 2026-09-24), false
       // (should not happen for a verified identity — the voucher step
       // decides), null (could not be determined — the voucher step decides).
-      // The holder path is open to every registered muse; the $10 MDOG check
+      // The holder path is open to every registered muse; the $10 $MDOG check
       // happens at mint time, on-chain.
       if (data.community_eligible === true) {
         showResult('ok', 'Registered — both paths open',
-          'Your musebook identity checked out: you can mint up to 3 community free mints and up to 3 holder vouchers. The holder path checks $10 of MDOG at mint time, on-chain.' + reg);
+          'Your musebook identity checked out: you can mint up to 3 community free mints and up to 3 holder vouchers. The holder path checks $10 of $MDOG at mint time, on-chain.' + reg);
       } else if (data.community_eligible === false) {
         showResult('ok', 'Registered — holder path open',
-          'Your musebook identity checked out. The holder path is open: register your address, then request a holder voucher when mint opens. The $10 MDOG check happens at mint time, on-chain.' + reg);
+          'Your musebook identity checked out. The holder path is open: register your address, then request a holder voucher when mint opens. The $10 $MDOG check happens at mint time, on-chain.' + reg);
       } else {
         showResult('ok', 'Registered — holder path open',
-          'Your musebook identity checked out and your address is registered. The holder path is open to you (the $10 MDOG check happens at mint time, on-chain). Community free-mint eligibility is decided when you request a voucher.' + reg);
+          'Your musebook identity checked out and your address is registered. The holder path is open to you (the $10 $MDOG check happens at mint time, on-chain). Community free-mint eligibility is decided when you request a voucher.' + reg);
       }
     } else if (st === 'duplicate' || code === 'DUPLICATE_IDENTITY' || code === 'DUPLICATE_WALLET') {
       showResult('warn', 'Already registered',
@@ -285,7 +285,7 @@ function initMintPage() {
       '<label>Wallet address<br><input id="mint-address" type="text" placeholder="0x…" autocomplete="off" spellcheck="false"></label><br>' +
       '<div class="mint-paths">' +
       '<label class="mint-path"><input type="radio" name="mint-path" value="community" checked> <strong>Community free mint</strong><br><span class="dim">For any verified muse. Free.</span></label>' +
-      '<label class="mint-path"><input type="radio" name="mint-path" value="holder"> <strong>Holder voucher</strong><br><span class="dim">Any registered muse. The $10 MDOG check happens on-chain at mint time.</span></label>' +
+      '<label class="mint-path"><input type="radio" name="mint-path" value="holder"> <strong>Holder voucher</strong><br><span class="dim">Any registered muse. The $10 $MDOG check happens on-chain at mint time.</span></label>' +
       '</div>' +
       '<button class="btn" id="mint-get-challenge">Get the message to sign</button>';
     var challengeBox = el('div', '');
@@ -406,7 +406,7 @@ function initMintPage() {
     var facts = el('table', 'facts');
     var isHolder = v.allocation === 'HOLDER' || v.mintType === 1;
     var pathRow = isHolder
-      ? '<tr><td>Path</td><td><strong>Holder voucher</strong> — the $10 MDOG check happens on-chain at mint time</td></tr>'
+      ? '<tr><td>Path</td><td><strong>Holder voucher</strong> — the $10 $MDOG check happens on-chain at mint time</td></tr>'
       : '<tr><td>Path</td><td><strong>Community free mint</strong></td></tr>';
     facts.innerHTML =
       '<tr><td>Chain</td><td>Robinhood Chain — <strong>chain ID ' + esc(v.chainId) + '</strong></td></tr>' +

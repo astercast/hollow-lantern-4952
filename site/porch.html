@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Muse Dogs — P.O.R.C.H · Pools of Rare Coin Holdings</title>
-<meta name="description" content="PORCH — the Muse Dogs treasury token on Robinhood Chain. Fees, pools, vesting, and the holder-rewards engine.">
+<meta name="description" content="$PORCH — the Muse Dogs treasury token on Robinhood Chain. Fees, pools, vesting, and the holder-rewards engine.">
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -56,7 +56,7 @@
   <div class="post pinned">
 <div class="post-body">
       <h1>Pools of Rare Coin Holdings</h1>
-      <img class="in-page-graphic" src="porch-logo.webp" alt="PORCH logo" loading="lazy">
+      <img class="in-page-graphic" src="porch-logo.webp" alt="$PORCH logo" loading="lazy">
       <p class="lede">P.O.R.C.H is the coin engine under the town: liquidity pools where the town's coins sit, earn fees on every trade, and pay holders back. This page covers the pools, the fee design, and the contract addresses.</p>
     </div>
   </div>
@@ -65,30 +65,30 @@
     <h2>The contract addresses</h2>
     <p>Check these on Blockscout before trusting anything on this page.</p>
     <table class="facts">
-      <tr><td>PORCH token</td><td class="mono">0x4B434541873f171aB70D7d2F3a48b0f0b0f13ba3<br><span class="gallery-note">"Porch", symbol PORCH. 100B fixed supply.</span></td></tr>
-      <tr><td>MDOG token</td><td class="mono">0x4CAF2e6eC0fCBef77314566A9884643512EF8bfC<br><span class="gallery-note">"Muse Dog", symbol MDOG.</span></td></tr>
-      <tr><td>MUSEBOOK token</td><td class="mono">0x91a2dae9699f0b82540b5886b0d8759c22820ba3<br><span class="gallery-note">MUSEBOOK — the coin fees arrive in.</span></td></tr>
-      <tr><td>PORCH/MDOG pool</td><td class="mono">Uniswap V4 — PoolId 0x3fb159d5ab470476e4a2e3f6b364fc452b0af3c785d8bb2d677af41dea6f8557<br><span class="gallery-note">V4 pools live as a PoolId inside the PoolManager — <a href="https://robinhoodchain.blockscout.com/tx/0xabf1c14cf3d0d26d52e94508ed68fae4f89481d0a6a268590b79d9e7cffb7f7c" target="_blank" rel="noopener">creation transaction</a>. PORCH is currency0, MDOG currency1.</span></td></tr>
-      <tr><td>PORCH on Bankr</td><td><a href="https://bankr.bot/terminal/trade?out=0x4B434541873f171aB70D7d2F3a48b0f0b0f13ba3&chain=robinhood" target="_blank" rel="noopener">bankr.bot/terminal/trade — PORCH on Robinhood Chain</a></td></tr>
+      <tr><td>$PORCH token</td><td class="mono">0x4B434541873f171aB70D7d2F3a48b0f0b0f13ba3<br><span class="gallery-note">"Porch", symbol PORCH. 100B fixed supply.</span></td></tr>
+      <tr><td>$MDOG token</td><td class="mono">0x4CAF2e6eC0fCBef77314566A9884643512EF8bfC<br><span class="gallery-note">"Muse Dog", symbol MDOG.</span></td></tr>
+      <tr><td>$MUSEBOOK token</td><td class="mono">0x91a2dae9699f0b82540b5886b0d8759c22820ba3<br><span class="gallery-note">$MUSEBOOK — the coin fees arrive in.</span></td></tr>
+      <tr><td>$PORCH/$MDOG pool</td><td class="mono">Uniswap V4 — PoolId 0x3fb159d5ab470476e4a2e3f6b364fc452b0af3c785d8bb2d677af41dea6f8557<br><span class="gallery-note">V4 pools live as a PoolId inside the PoolManager — <a href="https://robinhoodchain.blockscout.com/tx/0xabf1c14cf3d0d26d52e94508ed68fae4f89481d0a6a268590b79d9e7cffb7f7c" target="_blank" rel="noopener">creation transaction</a>. $PORCH is currency0, $MDOG currency1.</span></td></tr>
+      <tr><td>$PORCH on Bankr</td><td><a href="https://bankr.bot/terminal/trade?out=0x4B434541873f171aB70D7d2F3a48b0f0b0f13ba3&chain=robinhood" target="_blank" rel="noopener">bankr.bot/terminal/trade — $PORCH on Robinhood Chain</a></td></tr>
     </table>
   </div>
 
   <div class="panel">
     <h2>How the fees move</h2>
-    <img class="poster-art feature" src="art/porch-incentive-engine.jpg" alt="How the fees move: fee-in sources (LP fees + NFT royalties, creator fees, vested PORCH) and reward-out paths (Merkl LP rewards, holder claim engine)">
+    <img class="poster-art feature" src="art/porch-incentive-engine.jpg" alt="How the fees move: fee-in sources (LP fees + NFT royalties, creator fees, vested $PORCH) and reward-out paths (Merkl LP rewards, holder claim engine)">
   </div>
 
   <div class="panel">
     <h2>Why a porch</h2>
-    <p>PORCH isn't a trading coin — <strong>you win by sitting</strong>. Coins sit in the pools, the town trades around them, fees come to you. The active coin runs; PORCH is the machine underneath it — deeper liquidity, cheaper trading, holders paid over time.</p>
+    <p>$PORCH isn't a trading coin — <strong>you win by sitting</strong>. Coins sit in the pools, the town trades around them, fees come to you. The active coin runs; $PORCH is the machine underneath it — deeper liquidity, cheaper trading, holders paid over time.</p>
   </div>
 
   <div class="panel">
     <h2>The pools</h2>
     <ul>
-      <li><strong>MDOG/MUSEBOOK</strong> — the foundation. Full-range, live. Where MDOG gets its price.</li>
-      <li><strong>PORCH/MUSEBOOK</strong> — the front door. Seeded with 85B PORCH. Every trade pays 1.75%: <strong>0.665%</strong> to the Muse Dogs treasury in MUSEBOOK, <strong>0.285%</strong> auto-compounded back into the pool as locked liquidity, the rest to LPs.</li>
-      <li><strong>PORCH/MDOG</strong> — the bridge. Ties the two community coins together so every rotation pays a fee here.</li>
+      <li><strong>$MDOG/$MUSEBOOK</strong> — the foundation. Full-range, live. Where $MDOG gets its price.</li>
+      <li><strong>$PORCH/$MUSEBOOK</strong> — the front door. Seeded with 85B $PORCH. Every trade pays 1.75%: <strong>0.665%</strong> to the Muse Dogs treasury in $MUSEBOOK, <strong>0.285%</strong> auto-compounded back into the pool as locked liquidity, the rest to LPs.</li>
+      <li><strong>$PORCH/$MDOG</strong> — the bridge. Ties the two community coins together so every rotation pays a fee here.</li>
     </ul>
   </div>
 
@@ -97,18 +97,18 @@
     <p>Two sources, both real:</p>
     <ul>
       <li><strong>Trading fees.</strong> Every swap pays the pool. No volume, no fees — deeper pools mean less slippage, less slippage attracts traders, more traders means more fees. That loop is the engine.</li>
-      <li><strong>Incentives.</strong> 15B PORCH vests to the locked launch wallet over one year (30-day cliff). Half of it is earmarked for Merkl incentive campaigns on the pools — LPs earn fees <em>plus</em> PORCH. Campaigns launch when announced.</li>
+      <li><strong>Incentives.</strong> 15B $PORCH vests to the locked launch wallet over one year (30-day cliff). Half of it is earmarked for Merkl incentive campaigns on the pools — LPs earn fees <em>plus</em> $PORCH. Campaigns launch when announced.</li>
     </ul>
   </div>
 
   <div class="panel">
     <h2>The flywheel, step by step</h2>
     <ol>
-      <li><strong>PORCH launches;</strong> the PORCH/MUSEBOOK pool opens with deep seeded liquidity.</li>
-      <li><strong>The PORCH/MDOG bridge pool opens.</strong></li>
-      <li><strong>Vested PORCH will flow into Merkl campaigns</strong> (planned — after the vesting cliff) — LPs would earn fees <em>plus</em> PORCH rewards.</li>
+      <li><strong>$PORCH launches;</strong> the $PORCH/$MUSEBOOK pool opens with deep seeded liquidity.</li>
+      <li><strong>The $PORCH/$MDOG bridge pool opens.</strong></li>
+      <li><strong>Vested $PORCH will flow into Merkl campaigns</strong> (planned — after the vesting cliff) — LPs would earn fees <em>plus</em> $PORCH rewards.</li>
       <li><strong>High APRs attract more LPs</strong> → deeper pools → less slippage → the best place to trade these coins.</li>
-      <li><strong>More volume</strong> → more swap fees to LPs, more creator fees to the treasury in MUSEBOOK.</li>
+      <li><strong>More volume</strong> → more swap fees to LPs, more creator fees to the treasury in $MUSEBOOK.</li>
       <li><strong>Treasury grows</strong> → funds the next round of incentives and holder rewards → repeat.</li>
     </ol>
     <p>Every turn: <strong>deeper pools, a bigger treasury, more of the town's coins working instead of sitting idle.</strong></p>
@@ -117,9 +117,9 @@
   <div class="panel">
     <h2>What it means for you</h2>
     <ul>
-      <li><strong>Hold a Muse Dog:</strong> once the contracts launch, the weekly ETH rewards vault gains a second income stream — PORCH creator fees flowing into the treasury in MUSEBOOK. 40% of the vested PORCH funds an on-site claim engine: hold the dog, claim PORCH directly. Planned — opens when the NFT contracts deploy.</li>
-      <li><strong>LP:</strong> earn swap fees plus Merkl PORCH incentives — Merkl can boost NFT holders, so loyalty pays more.</li>
-      <li><strong>Trade:</strong> deeper pools mean less slippage on every MDOG or PORCH trade.</li>
+      <li><strong>Hold a Muse Dog:</strong> once the contracts launch, the weekly ETH rewards vault gains a second income stream — $PORCH creator fees flowing into the treasury in $MUSEBOOK. 40% of the vested $PORCH funds an on-site claim engine: hold the dog, claim $PORCH directly. Planned — opens when the NFT contracts deploy.</li>
+      <li><strong>LP:</strong> earn swap fees plus Merkl $PORCH incentives — Merkl can boost NFT holders, so loyalty pays more.</li>
+      <li><strong>Trade:</strong> deeper pools mean less slippage on every $MDOG or $PORCH trade.</li>
       <li><strong>Watch:</strong> the treasury, the pools, and the Merkl campaigns are all on-chain. Every claim on this page is auditable.</li>
     </ul>
   </div>

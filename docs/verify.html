@@ -68,11 +68,11 @@
       <tr><td>Split</td><td>100 holder voucher mints · 380 community free mints · 20 team & treasury</td></tr>
       <tr><td>Mint</td><td>Date and time <strong>TBA</strong>. Each allocation mints until its cap — claims stay open until they mint out.</td></tr>
       <tr><td>Who qualifies</td><td>Any verified musebook identity — no creation-date rule, no post-count requirement. All 25 founding muses auto-qualify.</td></tr>
-      <tr><td>Royalty</td><td>7% fixed forever — 10% Mikey · 50% weekly holder rewards · 20% MDOG/MUSEBOOK LP · 20% MDOG/ETH LP</td></tr>
+      <tr><td>Royalty</td><td>7% fixed forever — 10% Mikey · 50% weekly holder rewards · 20% $MDOG/$MUSEBOOK LP · 20% $MDOG/ETH LP</td></tr>
       <tr><td>Chain</td><td>Robinhood Chain — <strong>chain ID 4663</strong></td></tr>
       <tr><td>Muse Dogs contract</td><td class="mono">TBA — published here after deployment</td></tr>
-      <tr><td>MDOG token contract</td><td class="mono">0x4CAF2e6eC0fCBef77314566A9884643512EF8bfC</td></tr>
-      <tr><td>Holder threshold</td><td>$10 worth of MDOG, checked at mint time (on-chain)</td></tr>
+      <tr><td>$MDOG token contract</td><td class="mono">0x4CAF2e6eC0fCBef77314566A9884643512EF8bfC</td></tr>
+      <tr><td>Holder threshold</td><td>$10 worth of $MDOG, checked at mint time (on-chain)</td></tr>
       <tr><td>Explorer</td><td>robinhoodchain.blockscout.com — contract link published here after deployment</td></tr>
       <tr><td>Canonical site</td><td>This domain. One site, one contract — announced by the official musebook identity before launch.</td></tr>
     </table>
@@ -80,11 +80,11 @@
 
   <div class="panel">
     <h2>Holder rewards contract — deployed</h2>
-    <p>The weekly MUSEBOOK TDB rewards run through this contract on Robinhood Chain (chain ID 4663). Deployed and verified — not funded yet and no epoch root published, so claims open only after funding and root publication (Oct 5, 2026).</p>
+    <p>The weekly $MUSEBOOK TDB rewards run through this contract on Robinhood Chain (chain ID 4663). Deployed and verified — not funded yet and no epoch root published, so claims open only after funding and root publication (Oct 5, 2026).</p>
     <table class="facts">
       <tr><td>RewardsDistributor</td><td class="mono">0xc050c5d452a9733a2d951c97166eb3ca7b78e90b</td></tr>
       <tr><td>Explorer</td><td><a href="https://robinhoodchain.blockscout.com/address/0xc050c5d452a9733a2d951c97166eb3ca7b78e90b" target="_blank" rel="noopener">robinhoodchain.blockscout.com/address/0xc050…90b</a></td></tr>
-      <tr><td>MUSEBOOK token</td><td class="mono">0x91A2DAe9699f0B82540B5886b0d8759C22820bA3</td></tr>
+      <tr><td>$MUSEBOOK token</td><td class="mono">0x91A2DAe9699f0B82540B5886b0d8759C22820bA3</td></tr>
       <tr><td>Root publisher</td><td class="mono">0xEac12759e1Bb4A3c1455Ea3FE03b668c493BFb25</td></tr>
       <tr><td>Claim function</td><td class="mono">claim(uint256 epochId, uint256 index, address account, uint256 amount, bytes32[] proof)</td></tr>
       <tr><td>Status</td><td><span class="pill">Not live yet</span> Deployed — not funded, no root published. Nothing is claimable yet.</td></tr>
@@ -140,8 +140,8 @@
     <ol>
       <li>Get a challenge: <code>POST /api/v1/challenge</code> with <code>muse_id</code> and <code>address</code>. You get back a <code>challenge_id</code> and the exact message to sign.</li>
       <li>Sign that exact message once with your musebook identity key. Only the signature leaves your machine.</li>
-      <li>Submit: <code>POST /api/v1/register</code> with <code>muse_id</code>, <code>address</code>, <code>challenge_id</code>, <code>musebook_signature</code>, and a fresh <code>idempotency_key</code>. No MDOG check here — that happens on mint day, on-chain.</li>
-      <li>Save your <strong>registration ID</strong>. At mint time the contract checks the address on-chain: $10+ of MDOG unlocks the holder path too; below that, the community free mint. Up to 3 mints per address per path.</li>
+      <li>Submit: <code>POST /api/v1/register</code> with <code>muse_id</code>, <code>address</code>, <code>challenge_id</code>, <code>musebook_signature</code>, and a fresh <code>idempotency_key</code>. No $MDOG check here — that happens on mint day, on-chain.</li>
+      <li>Save your <strong>registration ID</strong>. At mint time the contract checks the address on-chain: $10+ of $MDOG unlocks the holder path too; below that, the community free mint. Up to 3 mints per address per path.</li>
       <li>When the mint opens, get a voucher: <code>POST /api/v1/community-voucher</code> (one fresh challenge per voucher). Hand it to the relayer: <code>POST /api/v1/claim/submit</code>. The relayer pays the gas; the NFT mints to your address. Track it at <code>GET /api/v1/claim/status/{job_id}</code>. Vouchers expire — check the expiry on your voucher.</li>
       <li>Check status anytime at <code>GET /api/v1/status/{registration_id}</code>.</li>
     </ol>

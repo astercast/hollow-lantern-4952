@@ -3,8 +3,8 @@
  * no emojis next to codenames. Until the engine publishes an epoch the board
  * shows a pending state; once it does, the board loads the live board file and
  * ranks the LIVE persistent score (final-day live score, top holder = 80).
- * One combined score per holder: PORCH holdings weigh 50, MDOG holdings
- * weigh 30, so PORCH counts about 1.7x more. 100% of the pot goes to holders.
+ * One combined score per holder: $PORCH holdings weigh 50, $MDOG holdings
+ * weigh 30, so $PORCH counts about 1.7x more. 100% of the pot goes to holders.
  * No separate categories.
  * The wallet checker reads live token balances from Robinhood Chain. */
 
@@ -19,8 +19,8 @@
    * stay hidden until then — no pot figures are shown before the board is).
    * 100% of every pot goes to holders. */
   var EPOCH_POT = null;
-  var WEIGHT_PORCH = 50;
-  var WEIGHT_MDOG = 30;
+  var WEIGHT_$PORCH = 50;
+  var WEIGHT_$MDOG = 30;
 
   var TOKENS = {
     porch:    { address: "0x4B434541873f171aB70D7d2F3a48b0f0b0f13ba3", symbol: "PORCH",    min: 1000000 },
@@ -111,7 +111,7 @@
 
   function rewardCell(r) {
     if (r.reward != null && isFinite(r.reward))
-      return '<div class="lb-reward">' + fmt(r.reward, 2) + "<span>MUSEBOOK</span></div>";
+      return '<div class="lb-reward">' + fmt(r.reward, 2) + "<span>$MUSEBOOK</span></div>";
     return '<div class="lb-reward">—<span>opens with epoch 1</span></div>';
   }
 

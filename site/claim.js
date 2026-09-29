@@ -8,7 +8,7 @@
  *   3. This page: holder connects (standard wallet prompt — address only, no
  *      signature, no approval), finds their leaf + proof in the claims file,
  *      and calls claim(epochId, index, account, amount, proof).
- *   4. The contract verifies the proof and sends MUSEBOOK. Pull only — the
+ *   4. The contract verifies the proof and sends $MUSEBOOK. Pull only — the
  *      claimer pays their own gas. Claiming never asks for a token approval
  *      and never moves anything OUT of the holder's wallet.
  *
@@ -132,8 +132,8 @@
       ]).then(function (res) {
         var epoch = res[0], unclaimed = res[1];
         setText('claim-epoch', 'Epoch ' + epoch.epochId);
-        setText('claim-pot', fmt(epoch.pot) + ' MUSEBOOK');
-        setText('claim-unclaimed', unclaimed === null ? '—' : fmt(unclaimed) + ' MUSEBOOK');
+        setText('claim-pot', fmt(epoch.pot) + ' $MUSEBOOK');
+        setText('claim-unclaimed', unclaimed === null ? '—' : fmt(unclaimed) + ' $MUSEBOOK');
         setText('claim-root', String(epoch.root).slice(0, 18) + '…');
         var nn = document.getElementById('claim-notlive-note');
         if (nn) nn.style.display = 'none';
@@ -143,8 +143,8 @@
             if (!c) { setText('claim-mine', 'No claim for this wallet in epoch ' + epochId + '.'); return true; }
             return distRead().isClaimed(epochId, c.index).then(function (done) {
               setText('claim-mine', done
-                ? 'Claimed. ' + fmt(c.amount) + ' MUSEBOOK received.'
-                : 'You can claim ' + fmt(c.amount) + ' MUSEBOOK.');
+                ? 'Claimed. ' + fmt(c.amount) + ' $MUSEBOOK received.'
+                : 'You can claim ' + fmt(c.amount) + ' $MUSEBOOK.');
               var btn = document.querySelector('[data-claim-rewards]');
               if (btn && !done) { btn.disabled = false; btn.removeAttribute('title'); }
               return true;
