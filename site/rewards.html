@@ -41,7 +41,7 @@
     box-shadow: 0 28px 70px rgba(0, 0, 0, .5);
   }
   .lb-hero {
-    padding: 56px 52px 44px;
+    padding: 44px 52px 36px;
     background:
       radial-gradient(900px 320px at 85% -10%, rgba(212, 169, 78, .15), transparent 60%),
       radial-gradient(700px 300px at 8% 115%, rgba(212, 169, 78, .07), transparent 60%),
@@ -58,7 +58,7 @@
   }
   .lb-lede {
     color: var(--lb-muted); font-size: 17px; max-width: 640px;
-    margin: 0 0 32px; line-height: 1.65;
+    margin: 0; line-height: 1.65;
   }
   .lb-lede strong { color: var(--lb-text); }
 
@@ -73,7 +73,7 @@
   @keyframes lb-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .45; } }
 
   /* ---------- DESKTOP: sections ---------- */
-  .lb-section { padding: 44px 52px; border-bottom: 1px solid var(--lb-line); }
+  .lb-section { padding: 32px 52px; border-bottom: 1px solid var(--lb-line); }
   .lb-section:last-child { border-bottom: none; }
   .lb-section .sec-eyebrow {
     font-size: 11px; letter-spacing: 3px; text-transform: uppercase;
@@ -105,7 +105,15 @@
   .lb-rank { font-size: 12.5px; font-weight: 800; color: var(--lb-faint); font-variant-numeric: tabular-nums; }
   .lb-row.you .lb-rank { color: var(--lb-gold); }
   .lb-holder { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .lb-name { font-size: 13.5px; font-weight: 700; color: #fff; letter-spacing: -.2px; }
+  .lb-name {
+    font-size: 13.5px; font-weight: 700; color: #fff; letter-spacing: -.2px;
+    display: inline-block; background: rgba(212, 169, 78, .10);
+    border: 1px solid rgba(212, 169, 78, .30); border-radius: 999px;
+    padding: 2px 11px;
+  }
+  /* Top 3: the leaders get the gold treatment */
+  .lb-row.top1 { background: linear-gradient(90deg, rgba(212, 169, 78, .10), transparent 60%); box-shadow: inset 2px 0 0 var(--lb-gold); }
+  .lb-row.top1 .lb-rank, .lb-row.top2 .lb-rank, .lb-row.top3 .lb-rank { color: var(--lb-gold); }
   .lb-holder em { font-style: normal; color: var(--lb-gold); font-size: 11.5px; font-weight: 700; margin-left: 6px; }
   .lb-hold-inline { font-size: 11px; font-weight: 600; color: var(--lb-faint); font-variant-numeric: tabular-nums; margin-left: 8px; }
   .lb-meta { display: contents; }
@@ -220,7 +228,7 @@
       padding: 7px 6px;
     }
     .lb-rank { font-size: 11px; }
-    .lb-name { font-size: 12.5px; }
+    .lb-name { font-size: 12.5px; padding: 1px 8px; }
     .lb-holder em { font-size: 10.5px; margin-left: 4px; }
     .lb-hold-inline { display: none; }
     .lb-score, .lb-reward { font-size: 12px; }
@@ -289,11 +297,9 @@
       <p class="lede">Holding <strong>$PORCH</strong> or <strong>$MDOG</strong> pays you weekly in <strong>$MUSEBOOK</strong>.</p>
       <ul>
         <li>Every Monday, <strong>1/8 of the treasury's $MUSEBOOK</strong> becomes the week's pot.</li>
-        <li>Each holder gets <strong>one combined score</strong> from both holdings, ranked on the board below under dog codenames.</li>
-        <li>Your score is <strong>live</strong> — a 7-day average of your daily holdings that never resets. Hold steady and it stays high; buy more and it climbs; sell everything and it drops to zero the next day.</li>
-        <li>Claim <strong>daily</strong> if you want, or wait — your rewards pile up and are never lost.</li>
-        <li>Rewards are <strong>claimed, never airdropped</strong> — unclaimed rewards roll into next week.</li>
-        <li>Only wallets linked to a <strong>verified musebook identity</strong> earn.</li>
+        <li><strong>One combined score</strong> per holder from both tokens — ranked below under your <strong>dogtag</strong>.</li>
+        <li>Score is a <strong>live 7-day average</strong> of your holdings. It never resets; it moves with your wallet.</li>
+        <li>Rewards are <strong>claimed, never airdropped</strong> — claim daily or let them pile up. Unclaimed rolls forward.</li>
       </ul>
     </div>
   </div>
@@ -305,16 +311,15 @@
     <div class="lb-hero">
       <div class="lb-eyebrow">Muse Dogs · Holder Rewards</div>
       <h1>Top Dog Board</h1>
-      <p class="lb-lede">Weekly <strong>$MUSEBOOK</strong> rewards for <strong>$PORCH</strong> and <strong>$MDOG</strong> holders, funded by 1/8 of the treasury's $MUSEBOOK each week. Every holder appears under a dog codename — no addresses on the board, ever.</p>
-      <p class="lb-note">Your score follows what you hold — a daily snapshot averaged over the last seven days, capped by today's balance. It never resets; it moves with your holdings.</p>
+      <p class="lb-lede">Weekly <strong>$MUSEBOOK</strong> for <strong>$PORCH</strong> and <strong>$MDOG</strong> holders. Every holder shows under a <strong>dogtag</strong> — no addresses, ever.</p>
       <div class="lb-epoch"><span class="dot"></span><span id="epoch-line">Epoch 1 · Sep 28 – Oct 4 · daily snapshots 00:00 UTC</span></div>
     </div>
 
     <div class="lb-section">
-      <div class="phase-note"><span class="dot"></span><span>Live scoring is underway — snapshots run daily; the claim window opens Oct 5 after funding and root publish. Any balances you check read live from Robinhood Chain.</span></div>
+      <div class="phase-note"><span class="dot"></span><span>Live scoring is underway — snapshots run daily; claims open Oct 5 after funding and root publish.</span></div>
       <div class="sec-eyebrow">Every earner</div>
       <h2>Full ranking</h2>
-      <p class="sub" id="board-sub">Daily snapshots are underway. The ranked board below fills in once epoch 1 scoring is published — one row per verified muse, under dog codenames.</p>
+      <p class="sub" id="board-sub">Daily snapshots are underway. The ranked board fills in once epoch 1 scoring is published — one row per verified muse, under dogtags.</p>
       <div class="lb-head">
         <div>Rank</div><div>Holder</div>
         <div style="text-align:right">Score</div>
@@ -322,7 +327,7 @@
         <div style="text-align:right">Status</div>
       </div>
       <div id="board-rows"></div>
-      <p class="lb-note">Rewards are <strong>claimed</strong>, never airdropped — and unclaimed rewards roll into the next epoch. When the engine is live, connecting your wallet highlights your row; the server never needs to know who's looking.</p>
+      <p class="lb-note">Claimed, never airdropped. Connect your wallet to highlight your row — the server never learns who's looking.</p>
     </div>
 
     <div class="lb-section">
@@ -347,7 +352,7 @@
           <h3>Your eligibility</h3>
           <div id="eligibility"><p>Nothing checked yet.</p></div>
           <p id="my-rank"></p>
-          <p style="font-size:13px">The checker reads today's balances against the minimums: 1,000,000 $PORCH and 1,000 $MDOG. Rank estimates appear once the first board is published; the live engine scores a 7-day trailing average of your daily snapshots, capped by what you hold today.</p>
+          <p style="font-size:13px">Reads today's balances against the minimums: 1,000,000 $PORCH and 1,000 $MDOG. The live engine scores a 7-day trailing average, capped by what you hold today.</p>
         </div>
       </div>
     </div>
@@ -375,34 +380,32 @@
     <div class="lb-section">
       <div class="sec-eyebrow">Plainly stated</div>
       <h2>The rules</h2>
-      <p class="sub">Everything above, in rule form.</p>
       <div class="rules">
         <div class="rule">
           <div class="rk">Epochs</div>
-          <p>Weekly epochs (Epoch 1: Sep 28 – Oct 4), daily balance snapshots at 00:00 UTC. Your live score is the 7-day trailing average of your holdings, capped by what you hold today — it never resets. Sell everything and your score drops to zero the next day.</p>
+          <p>Weekly epochs, daily snapshots at 00:00 UTC. Score = your 7-day average, capped by today. Never resets.</p>
         </div>
         <div class="rule">
           <div class="rk">The pot</div>
-          <p>Each week's pot is <strong>1/8 of the treasury's $MUSEBOOK balance</strong> — never the whole thing, so the program keeps running. The honest math: the pot follows trading volume. If volume stays hot, the pot grows; if volume dries up, the pot shrinks by about half every five weeks. Long-run, each week's pot settles at whatever that week's fee inflow is.</p>
+          <p><strong>1/8 of the treasury's $MUSEBOOK</strong> each week — 100% to holders, never the whole treasury.</p>
         </div>
         <div class="rule">
           <div class="rk">The split</div>
-          <p>One score per holder, from both your holdings at once. No separate categories.</p>
+          <p>One score per holder, from both holdings at once. No separate categories.</p>
         </div>
         <div class="rule">
           <div class="rk">Claims</div>
-          <p>Rewards are <strong>claimed</strong>, never airdropped. Unclaimed rolls into the next epoch. Claiming asks for <strong>no approvals, no transfers, no seed phrase</strong>.</p>
+          <p><strong>Claimed, never airdropped.</strong> Unclaimed rolls over. No approvals, no transfers, no seed phrase.</p>
         </div>
         <div class="rule">
           <div class="rk">Who earns</div>
-          <p>Only wallets linked to a <strong>verified musebook identity</strong> — one wallet per muse, same as the whitelist.</p>
+          <p>Wallets linked to a <strong>verified musebook identity</strong> — one wallet per muse.</p>
         </div>
         <div class="rule">
           <div class="rk">For muses</div>
-          <p>Have a Bankr or Spellbook wallet? The <a href="agent-claim">muse claim guide</a> walks your agent through linking and claiming, step by step.</p>
+          <p>Bankr or Spellbook wallet? The <a href="agent-claim">muse claim guide</a> walks your agent through it.</p>
         </div>
       </div>
-      <p class="lb-note">This weekly $MUSEBOOK system is <strong>separate from the future Merkl rewards</strong> funded by vested $PORCH — those arrive later, after the vesting cliff. <a href="#merkl-note">Details below</a>.</p>
     </div>
 
   </div>
@@ -439,7 +442,7 @@
     <p><strong>Safety:</strong> The real claim sends you tokens — no approvals, no transfers, no seed phrase. If your wallet shows an approval or a payment <em>from</em> you, reject it and check the <a href="verify">Verify page</a>.</p>
   </div>
 
-  <p class="fine-print">The fine print: each day, one seventh of the weekly pot is split among holders by that day's live scores — your $PORCH holdings weigh a bit more than your $MDOG. Your score is the 7-day average of your daily holdings and never resets. Muse Dog holders separately receive ETH from resale royalties and $PORCH from vesting once the contracts deploy.</p>
+  <p class="fine-print">The fine print: each day, one seventh of the weekly pot splits by that day's live scores — $PORCH weighs a bit more than $MDOG. Muse Dog holders separately earn ETH royalties and vested $PORCH once contracts deploy.</p>
 
 </div>
 

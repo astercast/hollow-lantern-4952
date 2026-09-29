@@ -1,6 +1,6 @@
 /* Holder Top Dog Board — READ ONLY. No transactions, no signatures, no money moves.
- * Board rows use dog-inspired codenames — no wallet addresses,
- * no emojis next to codenames. Until the engine publishes an epoch the board
+ * Board rows use dog-inspired dogtags — no wallet addresses,
+ * no emojis next to dogtags. Until the engine publishes an epoch the board
  * shows a pending state; once it does, the board loads the live board file and
  * ranks the LIVE persistent score (final-day live score, top holder = 80).
  * One combined score per holder: $PORCH holdings weigh 50, $MDOG holdings
@@ -57,7 +57,7 @@
       '<div class="lb-pending">' +
         "<strong>Daily snapshots are underway.</strong><br>" +
         "The ranked board fills in here once epoch 1 scoring is published — " +
-        "one row per verified muse, under dog codenames." +
+        "one row per verified muse, under dogtags." +
       "</div>";
   }
 
@@ -65,15 +65,15 @@
    * api/v1/rewards/manifest.json + board-<epochId>.json next to this page.
    * The engine board is already ranked by the LIVE persistent score
    * (final-day live score, /80 scale). Its rows carry wallet addresses —
-   * the public board shows deterministic dog codenames only, never addresses. */
+   * the public board shows deterministic dogtags only, never addresses. */
   var MANIFEST_URL = "api/v1/rewards/manifest.json";
-  var CODENAMES = ["Bark Knight", "Snout Scout", "Howl Runner", "Treat Bandit", "Wag Captain",
+  var DOGTAGS = ["Bark Knight", "Snout Scout", "Howl Runner", "Treat Bandit", "Wag Captain",
                    "Paw Patroller", "Drool Duke", "Leash Legend", "Tail Chaser", "Bone Baron"];
 
-  function codenameFor(addr, used) {
+  function dogtagFor(addr, used) {
     var h = 0, s = String(addr).toLowerCase();
     for (var i = 0; i < s.length; i++) h = ((h * 31) + s.charCodeAt(i)) >>> 0;
-    var base = CODENAMES[h % CODENAMES.length], name = base, k = 2;
+    var base = DOGTAGS[h % DOGTAGS.length], name = base, k = 2;
     while (used[name]) { name = base + " " + k; k++; }
     used[name] = true;
     return name;
@@ -94,7 +94,7 @@
       boardRows = rows.map(function (b, i) {
         return {
           rank: i + 1,
-          name: codenameFor(b.wallet, used),
+          name: dogtagFor(b.wallet, used),
           porch: weiToTokens(b.porch),
           mdog: weiToTokens(b.mdog),
           score: b.score,
@@ -115,7 +115,7 @@
     return '<div class="lb-reward">—<span>opens with epoch 1</span></div>';
   }
 
-  /* Compact one-line rows: rank, codename (+ compact holdings on the same
+  /* Compact one-line rows: rank, dogtag (+ compact holdings on the same
    * line), score, reward, status. Tight padding, hairline dividers — many
    * rows fit on screen at once. The wallet-checker "Your pup" row keeps the
    * same shape with its "· you" marker and gold highlight, so it reads as an
@@ -126,7 +126,8 @@
       var mine = !!r.you;
       var statusCls = mine ? "you" : r.claimed ? "done" : "open";
       var statusTxt = mine ? "Your position" : r.claimed ? "Claimed" : "Claimable";
-      html += '<div class="lb-row' + (mine ? " you" : "") + '">' +
+      var topCls = (!mine && r.rank <= 3) ? " top" + r.rank : "";
+      html += '<div class="lb-row' + (mine ? " you" : "") + topCls + '">' +
         '<div class="lb-rank">' + String(r.rank).padStart(2, "0") + "</div>" +
         '<div class="lb-holder" title="' + esc(holdingsLine(r)) + '">' +
           '<span class="lb-name">' + esc(r.name) + "</span>" +
@@ -157,7 +158,7 @@
    * rank against — so the checker says so instead of inventing a rank. */
   function afterCheck(results) {
     if (liveBoardActive) {
-      $("my-rank").textContent = "The live board above ranks persistent scores — find your dog codename up there. (This checker only reads today's balances; the engine scores a 7-day trailing average of your daily snapshots, capped by what you hold today.)";
+      $("my-rank").textContent = "The live board above ranks persistent scores — find your dogtag up there. (This checker only reads today's balances; the engine scores a 7-day trailing average of your daily snapshots, capped by what you hold today.)";
     } else {
       $("my-rank").textContent = "Rank estimates appear once the first board is published — the engine is still taking daily snapshots.";
     }
