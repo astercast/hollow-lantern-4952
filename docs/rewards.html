@@ -327,32 +327,28 @@
         <div style="text-align:right">Status</div>
       </div>
       <div id="board-rows"></div>
-      <p class="lb-note">Claimed, never airdropped. Connect your wallet to highlight your row — the server never learns who's looking.</p>
+      <p class="lb-note">Claimed, never airdropped. Paste your registered address in Find your row to light up your dogtag — the server never learns who's looking.</p>
     </div>
 
     <div class="lb-section">
       <div class="sec-eyebrow">Where do you stand</div>
-      <h2>Check your position</h2>
-      <p class="sub">Read-only. Nothing is signed, nothing leaves your wallet.</p>
+      <h2>Find your row</h2>
+      <p class="sub">Registered already? Paste the wallet address you registered — your dogtag row lights up on the board. Read-only; nothing is signed.</p>
       <div class="check-grid">
         <div class="check-card">
-          <h3>Connect or look up</h3>
-          <p id="status">Connect a wallet or paste an address to see where you'd land.</p>
-          <p style="margin-top:16px">
-            <button class="btn-gold" id="connect-btn">Connect wallet</button>
+          <h3>Your registered address</h3>
+          <p id="status">Paste your registered 0x address and hit Find my row.</p>
+          <p style="margin-top:12px">
+            <input class="lb-input" id="addr-input" type="text" placeholder="0x address you registered" spellcheck="false">
           </p>
           <p style="margin-top:12px">
-            <input class="lb-input" id="addr-input" type="text" placeholder="or paste a 0x address" spellcheck="false">
-          </p>
-          <p style="margin-top:12px">
-            <button class="btn-ghost" id="lookup-btn">Look up</button>
+            <button class="btn-gold" id="lookup-btn">Find my row</button>
           </p>
         </div>
         <div class="check-card">
-          <h3>Your eligibility</h3>
-          <div id="eligibility"><p>Nothing checked yet.</p></div>
-          <p id="my-rank"></p>
-          <p style="font-size:13px">Reads today's balances against the minimums: 1,000,000 $PORCH and 1,000 $MDOG. The live engine scores a 7-day trailing average, capped by what you hold today.</p>
+          <h3>Your dogtag</h3>
+          <p id="my-rank">Nothing looked up yet.</p>
+          <p style="font-size:13px">The board shows dogtags only, never addresses. One row per verified musebook identity — one wallet per muse.</p>
         </div>
       </div>
     </div>

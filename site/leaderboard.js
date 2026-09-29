@@ -6,14 +6,11 @@
  * One combined score per holder: $PORCH holdings weigh 50, $MDOG holdings
  * weigh 30, so $PORCH counts about 1.7x more. 100% of the pot goes to holders.
  * No separate categories.
- * The wallet checker reads live token balances from Robinhood Chain. */
+ * Find-my-row is fully local: paste your registered address and your dogtag
+ * row highlights — no chain reads, no signatures, nothing leaves the page. */
 
 (function () {
   "use strict";
-
-  var CHAIN_ID = 4663;
-  var RPC_URL = "https://rpc.mainnet.chain.robinhood.com";
-  var TREASURY = "0xEac12759e1Bb4A3c1455Ea3FE03b668c493BFb25";
 
   /* EPOCH_POT is reserved for when the engine goes live (est. rewards
    * stay hidden until then — no pot figures are shown before the board is).
@@ -22,20 +19,7 @@
   var WEIGHT_$PORCH = 50;
   var WEIGHT_$MDOG = 30;
 
-  var TOKENS = {
-    porch:    { address: "0x4B434541873f171aB70D7d2F3a48b0f0b0f13ba3", symbol: "PORCH",    min: 1000000 },
-    mdog:     { address: "0x4CAF2e6eC0fCBef77314566A9884643512EF8bfC", symbol: "MDOG",     min: 1000 },
-    musebook: { address: "0x91A2DAe9699f0B82540B5886b0d8759C22820bA3", symbol: "MUSEBOOK", min: 0 }
-  };
-
-  var ERC20_ABI = [
-    "function balanceOf(address owner) view returns (uint256)",
-    "function decimals() view returns (uint8)",
-    "function symbol() view returns (string)"
-  ];
-
   var $ = function (id) { return document.getElementById(id); };
-  var currentAddr = null;
   var boardRows = [];
   var liveBoardActive = false; // true once the engine's live board file loads
 
@@ -95,6 +79,7 @@
         return {
           rank: i + 1,
           name: dogtagFor(b.wallet, used),
+          wallet: String(b.wallet).toLowerCase(), /* internal only — never rendered */
           porch: weiToTokens(b.porch),
           mdog: weiToTokens(b.mdog),
           score: b.score,
@@ -117,9 +102,8 @@
 
   /* Compact one-line rows: rank, dogtag (+ compact holdings on the same
    * line), score, reward, status. Tight padding, hairline dividers — many
-   * rows fit on screen at once. The wallet-checker "Your pup" row keeps the
-   * same shape with its "· you" marker and gold highlight, so it reads as an
-   * example-board estimate, never as live board data. */
+   * rows fit on screen at once. A looked-up address's row gets the gold
+   * "you" highlight with a "· you" marker. */
   function renderRows(rows) {
     var html = "";
     rows.forEach(function (r) {
@@ -153,91 +137,42 @@
     else renderPending();
   }
 
-  /* Wallet checker: eligibility is real (live balances vs the minimums).
-   * Rank estimates can't be honest yet — there are no published scores to
-   * rank against — so the checker says so instead of inventing a rank. */
-  function afterCheck(results) {
-    if (liveBoardActive) {
-      $("my-rank").textContent = "The live board above ranks persistent scores — find your dogtag up there. (This checker only reads today's balances; the engine scores a 7-day trailing average of your daily snapshots, capped by what you hold today.)";
-    } else {
-      $("my-rank").textContent = "Rank estimates appear once the first board is published — the engine is still taking daily snapshots.";
-    }
-  }
-
-  /* Reads always go through the dedicated Robinhood Chain RPC — never through
-   * the wallet's provider, so a wallet sitting on the wrong chain can't skew
-   * the numbers. The wallet is only ever asked for an address. */
-  function readBalances(addr, onDone) {
-    var provider = new ethers.JsonRpcProvider(RPC_URL, CHAIN_ID);
-    var keys = ["porch", "mdog"];
-    var results = {};
-    var chain = Promise.resolve();
-    keys.forEach(function (k) {
-      chain = chain.then(function () {
-        var c = new ethers.Contract(TOKENS[k].address, ERC20_ABI, provider);
-        return Promise.all([c.balanceOf(addr), c.decimals()]).then(function (res) {
-          results[k] = Number(ethers.formatUnits(res[0], res[1]));
-        }).catch(function () { results[k] = null; });
-      });
-    });
-    return chain.then(function () { onDone(results); });
-  }
-
-  function eligibilityText(results) {
-    var lines = [];
-    var qualified = [];
-    ["porch", "mdog"].forEach(function (k) {
-      var t = TOKENS[k];
-      var bal = results[k];
-      if (bal === null) { lines.push("<li><strong>" + t.symbol + ":</strong> couldn't read balance — try again.</li>"); return; }
-      var ok = bal >= t.min;
-      if (ok) qualified.push(t.symbol);
-      lines.push("<li><strong>" + t.symbol + ":</strong> " + fmt(bal, 0) +
-        (ok ? " — meets the " + fmt(t.min, 0) + " minimum ✓" : " — below the " + fmt(t.min, 0) + " minimum") + "</li>");
-    });
-    var verdict = qualified.length
-      ? "<p style=\"margin:6px 0 0\"><strong>You're in</strong> — " + qualified.join(" + ") + " qualifies. Either token on its own gets you in.</p>"
-      : "<p style=\"margin:6px 0 0\">Not in yet — hold 1M $PORCH <em>or</em> 1K $MDOG to get in.</p>";
-    return "<ul>" + lines.join("") + "</ul>" + verdict;
-  }
-
+  /* Find-my-row: paste the address you registered and your dogtag row
+   * lights up as "· you". Fully local — the address never leaves the page,
+   * nothing is read from chain, nothing is signed. This is the muse-friendly
+   * path: an agent with no browser wallet just pastes its registered address. */
   function setStatus(msg) { $("status").textContent = msg; }
 
-  function afterBalances(addr, results, note) {
-    $("eligibility").innerHTML = eligibilityText(results);
-    afterCheck(results);
-    setStatus("Done. " + note);
-  }
-
-  function onConnect() {
-    setStatus("Your wallet will pop up its own standard connect prompt asking to share your address — that's the safe, familiar one. Nothing is signed, no transaction.");
-    if (window.ethereum) {
-      window.ethereum.request({ method: "eth_requestAccounts" }).then(function (accounts) {
-        if (!accounts || !accounts.length) { setStatus("No wallet account shared."); return; }
-        currentAddr = accounts[0];
-        readBalances(currentAddr, function (results) {
-          afterBalances(currentAddr, results, "Balances read live from Robinhood Chain. The ranked board fills in once epoch 1 scoring is published.");
-        });
-      }).catch(function () { setStatus("Wallet connection cancelled — you can also paste an address."); });
+  function findMyRow(addr) {
+    var a = String(addr).toLowerCase();
+    boardRows.forEach(function (r) { r.you = (r.wallet === a); });
+    var mine = null;
+    boardRows.forEach(function (r) { if (r.you) mine = r; });
+    renderBoard(boardRows);
+    if (mine) {
+      $("my-rank").textContent = "Your dogtag is " + mine.name + " — row #" +
+        mine.rank + ", highlighted on the board as · you.";
+      setStatus("Found it — your row is highlighted on the board.");
     } else {
-      setStatus("No wallet found in this browser — paste an address below to check it.");
+      $("my-rank").textContent = "That address isn't on this board. It may not be registered, or this epoch's board hasn't published yet.";
+      setStatus("No row matched that address on the published board.");
     }
   }
 
   function onLookup() {
     var v = $("addr-input").value.trim();
     if (!/^0x[a-fA-F0-9]{40}$/.test(v)) { setStatus("That doesn't look like an address — 0x plus 40 hex characters."); return; }
-    setStatus("Reading balances… (read-only)");
-    currentAddr = v;
-    readBalances(v, function (results) {
-      afterBalances(v, results, "Balances read live from Robinhood Chain. The ranked board fills in once epoch 1 scoring is published.");
-    });
+    if (!liveBoardActive) {
+      $("my-rank").textContent = "The ranked board fills in once epoch 1 scoring is published (October 5, 2026) — check back then.";
+      setStatus("No board published yet. Your lookup will work once epoch 1 posts.");
+      return;
+    }
+    findMyRow(v);
   }
 
   document.addEventListener("DOMContentLoaded", function () {
     renderPending(); // replaced by the real board once the engine publishes an epoch
     loadLiveBoard();
-    $("connect-btn").addEventListener("click", onConnect);
     $("lookup-btn").addEventListener("click", onLookup);
   });
 })();
