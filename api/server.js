@@ -457,6 +457,18 @@ function jobPublic(job) {
 
 // --- endpoints -------------------------------------------------------------
 
+app.get('/api/v1/registrations/count', ah(async (req, res) => {
+  // Public registration count (re-added 2026-09-29 at the human's request —
+  // "I want a public count endpoint so it's easier"). Count only; no
+  // identities, addresses, or other personal data ever leave this endpoint.
+  const db = await store.load();
+  res.json({
+    ok: true,
+    registrations: db.registrations.length,
+    open: CURRENT_PHASE === 'registration-open',
+  });
+}));
+
 app.get('/api/v1/config', (req, res) => {
   res.json({
     chain_id: CHAIN_ID, // chain the API reads
