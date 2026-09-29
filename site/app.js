@@ -57,7 +57,10 @@ function wireCopyButtons(root) {
    key only. Per-IP rate limiting is the spam control. */
 function initRegisterPage() {
   var form = document.getElementById('register-form');
-  if (!form) return;
+  // Legacy form wiring only: the redesigned register page uses its own inline
+  // scripts and 'register-form' is a <section> there, so exit unless the legacy
+  // form and its fields actually exist.
+  if (!form || form.tagName !== 'FORM' || !document.getElementById('wallet-question')) return;
 
   var walletQ = document.getElementById('wallet-question');
   var walletSteps = document.getElementById('wallet-steps');
