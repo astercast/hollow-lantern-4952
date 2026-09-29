@@ -39,13 +39,49 @@
   function getWallet() { return window.ethereum || null; }
 
   // Standard connection: the wallet's own familiar popup. Address only —
-  // no signature, no approval, no transaction.
+  // no signature, no approval, no transaction. Only ever called from a
+  // user click — the page never auto-prompts on load.
   function connect() {
     var eth = getWallet();
     if (!eth) return Promise.resolve(null);
     return eth.request({ method: 'eth_requestAccounts' }).then(function (accounts) {
       return accounts && accounts[0] ? accounts[0] : null;
     }).catch(function () { return null; });
+  }
+
+  // Already-authorized account without prompting (eth_accounts never pops up).
+  function connectedAccount() {
+    var eth = getWallet();
+    if (!eth) return Promise.resolve(null);
+    return eth.request({ method: 'eth_accounts' }).then(function (accounts) {
+      return accounts && accounts[0] ? accounts[0] : null;
+    }).catch(function () { return null; });
+  }
+
+  var CHAIN_HEX = '0x1237'; // 4663
+  var CHAIN_PARAMS = {
+    chainId: CHAIN_HEX,
+    chainName: 'Robinhood Chain',
+    nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+    rpcUrls: [RPC_URL],
+    blockExplorerUrls: ['https://robinhoodchain.blockscout.com']
+  };
+
+  // Ask the wallet to switch to Robinhood Chain (adds it if missing) —
+  // the recognized EIP-3326 / EIP-3085 flow, instead of a manual-switch note.
+  function ensureChain() {
+    var eth = getWallet();
+    if (!eth) return Promise.resolve(false);
+    return eth.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: CHAIN_HEX }] })
+      .then(function () { return true; })
+      .catch(function (err) {
+        if (err && err.code === 4902) {
+          return eth.request({ method: 'wallet_addEthereumChain', params: [CHAIN_PARAMS] })
+            .then(function () { return true; })
+            .catch(function () { return false; });
+        }
+        return false;
+      });
   }
 
   function apiGet(path) {
@@ -82,7 +118,12 @@
   }
 
   // Send the claim transaction from the holder's wallet.
-  // Shows the exact amount first; the wallet previews the tx before signing.
+  // Shows the exact amount and the registered wallet it pays FIRST; the
+  // wallet then previews the decoded claim() call before anything is sent.
+  // claim() is permissionless: anyone may submit it for any account, and the
+  // $MUSEBOOK always lands in the REGISTERED wallet — the connected wallet
+  // pays gas only and receives nothing. Claiming never asks for a token
+  // approval and never moves anything OUT of the holder's wallet.
   function claim() {
     if (!isLive()) return Promise.resolve({ ok: false, reason: 'not-live' });
     return connect().then(function (address) {
@@ -91,23 +132,21 @@
         return myClaim(address, epochId).then(function (c) {
           if (!c) return { ok: false, reason: 'no-claim', epochId: epochId };
           var provider = new ethers.BrowserProvider(getWallet());
-          return provider.send('eth_requestAccounts', []).then(function () {
-            return provider.getNetwork().then(function (net) {
-              if (Number(net.chainId) !== CHAIN_ID) {
-                return { ok: false, reason: 'wrong-chain' };
-              }
-              var signer = provider.getSigner();
-              var dist = new ethers.Contract(DISTRIBUTOR, DIST_ABI, signer);
-              // Pre-check: already claimed?
-              return distRead().isClaimed(epochId, c.index).then(function (done) {
-                if (done) return { ok: false, reason: 'already-claimed', epochId: epochId };
-                return signer.sendTransaction({
-                  to: DISTRIBUTOR,
-                  data: dist.interface.encodeFunctionData('claim', [
-                    epochId, c.index, c.account, c.amount, c.proof
-                  ])
-                }).then(function (tx) {
-                  return { ok: true, hash: tx.hash, amount: c.amount, epochId: epochId };
+          return provider.getNetwork().then(function (net) {
+            var onChain = Number(net.chainId) === CHAIN_ID;
+            var ready = onChain ? Promise.resolve(true) : ensureChain();
+            return ready.then(function (switched) {
+              if (!switched) return { ok: false, reason: 'wrong-chain' };
+              return provider.getSigner().then(function (signer) {
+                var dist = new ethers.Contract(DISTRIBUTOR, DIST_ABI, signer);
+                // Pre-check: already claimed?
+                return distRead().isClaimed(epochId, c.index).then(function (done) {
+                  if (done) return { ok: false, reason: 'already-claimed', epochId: epochId };
+                  // Decoded contract call — the wallet preview shows claim()
+                  // with its parameters, not opaque hex data.
+                  return dist.claim(epochId, c.index, c.account, c.amount, c.proof).then(function (tx) {
+                    return { ok: true, hash: tx.hash, amount: c.amount, epochId: epochId, account: c.account };
+                  });
                 });
               });
             });
@@ -123,6 +162,8 @@
   }
 
   // Fill the claim panel: pot, epoch, and (once connected) the holder's share.
+  // Never prompts for a wallet on its own — it only reads an already-
+  // authorized account (eth_accounts). The user connects via the button.
   function refresh() {
     if (!isLive()) return Promise.resolve(false);
     return latestEpoch().then(function (epochId) {
@@ -135,16 +176,24 @@
         setText('claim-pot', fmt(epoch.pot) + ' $MUSEBOOK');
         setText('claim-unclaimed', unclaimed === null ? '—' : fmt(unclaimed) + ' $MUSEBOOK');
         setText('claim-root', String(epoch.root).slice(0, 18) + '…');
+        setText('claim-dist', 'Claim contract: ' + DISTRIBUTOR);
         var nn = document.getElementById('claim-notlive-note');
         if (nn) nn.style.display = 'none';
-        return connect().then(function (address) {
-          if (!address) { setText('claim-mine', 'Connect a wallet to see your share.'); return true; }
+        var connectBtn = document.querySelector('[data-connect-wallet]');
+        return connectedAccount().then(function (address) {
+          if (!address) {
+            setText('claim-mine', 'Connect a wallet to see your share.');
+            if (connectBtn) connectBtn.style.display = '';
+            return true;
+          }
+          if (connectBtn) connectBtn.style.display = 'none';
           return myClaim(address, epochId).then(function (c) {
             if (!c) { setText('claim-mine', 'No claim for this wallet in epoch ' + epochId + '.'); return true; }
             return distRead().isClaimed(epochId, c.index).then(function (done) {
+              var where = ' It pays the registered wallet ' + shortAddr(c.account) + ' — the connected wallet only pays gas.';
               setText('claim-mine', done
-                ? 'Claimed. ' + fmt(c.amount) + ' $MUSEBOOK received.'
-                : 'You can claim ' + fmt(c.amount) + ' $MUSEBOOK.');
+                ? 'Claimed. ' + fmt(c.amount) + ' $MUSEBOOK received.' + where
+                : 'You can claim ' + fmt(c.amount) + ' $MUSEBOOK.' + where);
               var btn = document.querySelector('[data-claim-rewards]');
               if (btn && !done) { btn.disabled = false; btn.removeAttribute('title'); }
               return true;
@@ -155,12 +204,30 @@
     }).catch(function () { return false; });
   }
 
+  function shortAddr(a) {
+    a = String(a || '');
+    return a.length > 12 ? a.slice(0, 6) + '…' + a.slice(-4) : a;
+  }
+
   function setText(id, text) {
     var el = document.getElementById(id);
     if (el) el.textContent = text;
   }
 
   function wireButtons() {
+    var connectBtns = document.querySelectorAll('[data-connect-wallet]');
+    Array.prototype.forEach.call(connectBtns, function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        if (!isLive()) return;
+        setText('claim-status', 'Waiting for your wallet… (address only — nothing is signed)');
+        connect().then(function (address) {
+          if (!address) { setText('claim-status', 'No wallet connected.'); return; }
+          setText('claim-status', '');
+          refresh();
+        });
+      });
+    });
     var buttons = document.querySelectorAll('[data-claim-rewards]');
     Array.prototype.forEach.call(buttons, function (btn) {
       btn.addEventListener('click', function (e) {
@@ -176,7 +243,7 @@
           } else if (res.reason === 'already-claimed') {
             setText('claim-status', 'Already claimed for this epoch.');
           } else if (res.reason === 'wrong-chain') {
-            setText('claim-status', 'Switch your wallet to Robinhood Chain and try again.');
+            setText('claim-status', 'Couldn\'t switch to Robinhood Chain — approve the network switch in your wallet and try again.');
           } else if (res.reason === 'no-wallet') {
             setText('claim-status', 'No wallet connected.');
           }
