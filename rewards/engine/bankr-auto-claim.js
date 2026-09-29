@@ -40,7 +40,10 @@ const RPC_URL = 'https://rpc.mainnet.chain.robinhood.com';
 const CHAIN_ID = 4663;
 const DISTRIBUTOR_FALLBACK = '0xc050c5d452a9733a2d951c97166eb3ca7b78e90b';
 const VEST_SECONDS = 7 * 24 * 3600;
-const MIN_PAYOUT_WEI = ethers.parseUnits('1', 18); // contract dust floor: 1 $MUSEBOOK
+const MIN_PAYOUT_WEI = ethers.parseUnits('1', 18); // dust gate: the scoring engine
+// never creates leaves under 1 $MUSEBOOK (dust stays as carryover), and the
+// contract itself has no minimum — so skip anything under 1 $MUSEBOOK rather
+// than burn gas delivering dust.
 
 const DIST_ABI = [
   'function claim(uint256 epochId, uint256 index, address account, uint256 amount, bytes32[] proof)',
