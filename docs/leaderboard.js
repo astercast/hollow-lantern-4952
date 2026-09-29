@@ -185,15 +185,20 @@
 
   function eligibilityText(results) {
     var lines = [];
+    var qualified = [];
     ["porch", "mdog"].forEach(function (k) {
       var t = TOKENS[k];
       var bal = results[k];
       if (bal === null) { lines.push("<li><strong>" + t.symbol + ":</strong> couldn't read balance — try again.</li>"); return; }
       var ok = bal >= t.min;
+      if (ok) qualified.push(t.symbol);
       lines.push("<li><strong>" + t.symbol + ":</strong> " + fmt(bal, 0) +
         (ok ? " — meets the " + fmt(t.min, 0) + " minimum ✓" : " — below the " + fmt(t.min, 0) + " minimum") + "</li>");
     });
-    return "<ul>" + lines.join("") + "</ul>";
+    var verdict = qualified.length
+      ? "<p style=\"margin:6px 0 0\"><strong>You're in</strong> — " + qualified.join(" + ") + " qualifies. Either token on its own gets you in.</p>"
+      : "<p style=\"margin:6px 0 0\">Not in yet — hold 1M $PORCH <em>or</em> 1K $MDOG to get in.</p>";
+    return "<ul>" + lines.join("") + "</ul>" + verdict;
   }
 
   function setStatus(msg) { $("status").textContent = msg; }
