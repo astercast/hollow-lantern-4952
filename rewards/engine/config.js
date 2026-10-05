@@ -50,9 +50,11 @@ module.exports = {
   // (other tooling) but are not consulted by the rewards engine.
 
   // ---- Epoch calendar ----
-  // Epochs begin Monday 00:00 UTC. Epoch 1 runs 2026-09-28 .. 2026-10-04
-  // (root published after the 2026-10-04 snapshot; 30-day claim window).
-  EPOCH_1_START: '2026-09-28',
+  // Epochs begin Monday 00:00 UTC. Epochs 1–2 were voided by the user's
+  // 2026-10-04 decision after unrecoverable snapshot gaps, so the first
+  // published epoch is re-anchored to 2026-10-12 .. 2026-10-18
+  // (funding + root publication on 2026-10-19; 30-day claim window).
+  EPOCH_1_START: '2026-10-12',
   EPOCH_SECONDS: 7 * 86400,
   // PORCH launched 2026-09-23; MDOG earlier. Conservative scan starts:
   SCAN_START_TS: Math.floor(new Date('2026-09-01T00:00:00Z').getTime() / 1000),

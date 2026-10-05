@@ -163,7 +163,7 @@
     var v = $("addr-input").value.trim();
     if (!/^0x[a-fA-F0-9]{40}$/.test(v)) { setStatus("That doesn't look like an address — 0x plus 40 hex characters."); return; }
     if (!liveBoardActive) {
-      $("my-rank").textContent = "The ranked board fills in once epoch 1 scoring is published (October 5, 2026) — check back then.";
+      $("my-rank").textContent = "The ranked board fills in once epoch 1 scoring is published (October 19, 2026) — check back then.";
       setStatus("No board published yet. Your lookup will work once epoch 1 posts.");
       return;
     }

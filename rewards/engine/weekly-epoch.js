@@ -92,7 +92,7 @@ async function main() {
   const snapshots = snapDates.map((dt) => {
     const p = path.join(snapDir, 'day-' + dt + '.json');
     if (!fs.existsSync(p)) {
-      fail('missing snapshot ' + p + ' — backfill with: node daily-snapshot.js --date ' + dt);
+      fail('missing snapshot ' + p + ' — fail closed; never backfill or reconstruct a missed snapshot');
     }
     return JSON.parse(fs.readFileSync(p, 'utf8'));
   });

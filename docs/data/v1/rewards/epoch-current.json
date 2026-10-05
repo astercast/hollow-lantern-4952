@@ -7,7 +7,7 @@
   "potMusebookDisplay": "set at epoch start (1/8 of the treasury $MUSEBOOK balance)",
   "potRule": "1/8 of treasury $MUSEBOOK balance at epoch start, plus unclaimed carryover from prior epochs",
   "scoring": "one persistent live score per wallet per day: min(today whale-capped weighted snapshot, 7-day trailing average); no weekly reset; each day 1/7 of the pot is split by that day scores; weekly total is the sum of the 7 daily allocations",
-  "status": "live — epoch 1 running Sept 28 – Oct 4, 2026; funding and root publish Oct 5",
+  "status": "Epoch 1 (Sept 28 – Oct 4) was voided — a daily snapshot was lost to an infrastructure outage and cannot be reconstructed honestly. A clean epoch runs Oct 12 – 18; funding and root publish Oct 19. No funds were allocated or lost.",
   "vesting": "1/7 of each epoch allocation unlocks per 24h after publishRoot; unclaimed slices pile up; 30-day claim window per epoch",
   "weights": {
     "mdog": 30,
