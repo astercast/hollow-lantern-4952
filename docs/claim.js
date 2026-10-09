@@ -147,10 +147,11 @@
   // pays gas only and receives nothing. Claiming never asks for a token
   // approval and never moves anything OUT of the holder's wallet.
   function claim() {
-    if (!isLive()) return Promise.resolve({ ok: false, reason: 'not-live' });
-    return connect().then(function (address) {
-      if (!address) return { ok: false, reason: 'no-wallet' };
-      return latestEpoch().then(function (epochId) {
+    return loadManifest().then(function () {
+      if (!isLive()) return { ok: false, reason: 'not-live' };
+      return connect().then(function (address) {
+        if (!address) return { ok: false, reason: 'no-wallet' };
+        return latestEpoch().then(function (epochId) {
         return myClaim(address, epochId).then(function (c) {
           if (!c) return { ok: false, reason: 'no-claim', epochId: epochId };
           var provider = new ethers.BrowserProvider(getWallet());
@@ -177,6 +178,7 @@
           });
         });
       });
+    });
     });
   }
 
