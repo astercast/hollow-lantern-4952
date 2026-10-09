@@ -33,13 +33,25 @@ async function main() {
 
   if (!epoch.distributor) throw new Error('epoch has no distributor address — set it before publishing');
   if (epoch.publishedTx) throw new Error('epoch already published: ' + epoch.publishedTx);
-  if (!epoch.merkleRoot || /^0x0+$/.test(epoch.merkleRoot))
+  // Field names as written by weekly-epoch.js (dry-run): root, pot.
+  // Older/alternate writers used merkleRoot / potMusebook / carryover — accept both.
+  const root = epoch.root || epoch.merkleRoot;
+  if (!root || /^0x0+$/.test(root))
     throw new Error('epoch has zero merkle root — nothing to publish (empty tree)');
   if (BigInt(epoch.totalAllocated) <= 0n)
     throw new Error('epoch totalAllocated is zero — the distributor would revert');
 
-  const pot = BigInt(epoch.potMusebook);
-  const carryover = BigInt(epoch.carryover || '0');
+  const pot = BigInt(epoch.pot ?? epoch.potMusebook);
+  // Carryover into this epoch: free balance already sitting in the distributor
+  // from finalized prior epochs (tracked in snapshots/epoch-state.json).
+  let carryover = 0n;
+  try {
+    const state = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'snapshots', 'epoch-state.json'), 'utf8'));
+    // epoch-state holds carryover FORWARD (carryoverNext of the last completed
+    // epoch); only count it if that epoch is older than this one.
+    if (Number(state.lastCompletedEpoch) < Number(epochId)) carryover = BigInt(state.carryoverWei || '0');
+  } catch { /* first epoch or unreadable state — carryover stays 0 */ }
+  if (epoch.carryover !== undefined) carryover = BigInt(epoch.carryover);
   if (carryover > pot) throw new Error('carryover exceeds pot — bad epoch math');
   // Carryover funds already sit in the distributor as free balance (they were
   // finalized from a prior epoch). The Safe only tops up the remainder.
@@ -62,7 +74,7 @@ async function main() {
   txs.push({
     to: ethers.getAddress(epoch.distributor),
     value: '0',
-    data: distIface.encodeFunctionData('publishRoot', [epoch.epochId, epoch.merkleRoot, epoch.totalAllocated]),
+    data: distIface.encodeFunctionData('publishRoot', [epoch.epochId, root, epoch.totalAllocated]),
     description: `Publish merkle root for epoch ${epochId}`,
   });
 
@@ -75,7 +87,7 @@ async function main() {
       description: `Fund + publish epoch ${epochId}. Pot ${ethers.formatUnits(pot, 18)} MUSEBOOK ` +
         `(carryover already in distributor: ${ethers.formatUnits(carryover, 18)}; ` +
         `Safe tops up ${ethers.formatUnits(topUp, 18)}), ` +
-        `allocated ${ethers.formatUnits(epoch.totalAllocated, 18)}, root ${epoch.merkleRoot}. ` +
+        `allocated ${ethers.formatUnits(epoch.totalAllocated, 18)}, root ${root}. ` +
         `Claims stay open 30 days after publish; unclaimed then finalizes to carryover.`,
     },
     transactions: txs,

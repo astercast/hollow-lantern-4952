@@ -3,17 +3,19 @@
  * How it works:
  *   1. Each weekly epoch, the scoring engine publishes epoch-<id>.json and
  *      claims-<id>.json under api/v1/rewards/ (see rewards/engine/).
- *   2. The treasury Safe funds the RewardsDistributor contract and publishes
- *      the epoch's merkle root on-chain via publishRoot().
- *   3. This page: holder connects (standard wallet prompt — address only, no
+ *   2. The user signs fund + publishRoot himself; epoch-pipeline.js activate
+ *      verifies the root on-chain and writes manifest.json {published:true}.
+ *   3. This page reads the manifest — distributor address and live-ness come
+ *      from there, so the claim UI activates itself the moment a root exists.
+ *      There is no hardcoded address and no manual flip, ever.
+ *   4. Holder connects (standard wallet prompt — address only, no
  *      signature, no approval), finds their leaf + proof in the claims file,
  *      and calls claim(epochId, index, account, amount, proof).
- *   4. The contract verifies the proof and sends $MUSEBOOK. Pull only — the
+ *   5. The contract verifies the proof and sends $MUSEBOOK. Pull only — the
  *      claimer pays their own gas. Claiming never asks for a token approval
  *      and never moves anything OUT of the holder's wallet.
  *
- * Until DISTRIBUTOR is set (the contract is deployed but epoch 1 is not
- * yet funded and no root is published), the claim buttons stay disabled
+ * Until the manifest says published:true, the claim buttons stay disabled
  * and the page says so plainly.
  */
 
@@ -23,18 +25,38 @@
   var CHAIN_ID = 4663; // Robinhood Chain
   var RPC_URL = 'https://rpc.mainnet.chain.robinhood.com';
 
-  var DISTRIBUTOR = null; // Deployed at 0xc050c5d452a9733a2d951c97166eb3ca7b78e90b — stays null until epoch 1 is funded and the first root publishes
+  // Live-ness comes from manifest.json, written by the epoch pipeline only
+  // after the root is confirmed on-chain. Never hardcoded, never a manual flip.
+  var DISTRIBUTOR = null;
+  var PUBLISHED = false;
   var API_BASE = 'api/v1/rewards/';
 
-  // Minimal ABI for the distributor.
+  // Minimal ABI for the distributor. NOTE: the contract has no isClaimed() —
+  // the public claimedAmount mapping getter is the truth (fully claimed when
+  // it reaches the allocation). claimableNow is the contract's own view of
+  // what's unlocked right now (discrete 1/7-per-day steps from publish).
   var DIST_ABI = [
     'function claim(uint256 epochId, uint256 index, address account, uint256 amount, bytes32[] proof)',
-    'function isClaimed(uint256 epochId, uint256 index) view returns (bool)',
+    'function claimedAmount(uint256 epochId, uint256 index) view returns (uint256)',
+    'function claimableNow(uint256 epochId, uint256 index, uint256 allocation) view returns (uint256)',
     'function epochUnclaimed(uint256 epochId) view returns (uint256)',
     'function latestEpoch() view returns (uint256)'
   ];
 
-  function isLive() { return !!DISTRIBUTOR; }
+  function isLive() { return !!DISTRIBUTOR && PUBLISHED; }
+
+  // Manifest is the single source of truth: { latestEpochId, distributor,
+  // published, publishedTx, root, ... }. published is true only after
+  // epoch-pipeline.js activate verifies the root on-chain.
+  function loadManifest() {
+    return apiGet('manifest.json').then(function (m) {
+      DISTRIBUTOR = (m && m.distributor) || null;
+      PUBLISHED = !!(m && m.published);
+      return m || null;
+    }).catch(function () {
+      DISTRIBUTOR = null; PUBLISHED = false; return null;
+    });
+  }
 
   function getWallet() { return window.ethereum || null; }
 
@@ -139,8 +161,10 @@
               if (!switched) return { ok: false, reason: 'wrong-chain' };
               return provider.getSigner().then(function (signer) {
                 var dist = new ethers.Contract(DISTRIBUTOR, DIST_ABI, signer);
-                // Pre-check: already claimed?
-                return distRead().isClaimed(epochId, c.index).then(function (done) {
+                // Pre-check: already claimed? (claimedAmount reaches the allocation)
+                return distRead().claimedAmount(epochId, c.index).then(function (paid) {
+                  var done = false;
+                  try { done = BigInt(paid.toString()) >= BigInt(c.amount); } catch (e) { done = false; }
                   if (done) return { ok: false, reason: 'already-claimed', epochId: epochId };
                   // Decoded contract call — the wallet preview shows claim()
                   // with its parameters, not opaque hex data.
@@ -164,9 +188,12 @@
   // Fill the claim panel: pot, epoch, and (once connected) the holder's share.
   // Never prompts for a wallet on its own — it only reads an already-
   // authorized account (eth_accounts). The user connects via the button.
+  // Vesting: the contract unlocks 1/7 per day, so the panel shows both the
+  // total allocation and what's claimable RIGHT NOW (claimableNow on-chain).
   function refresh() {
-    if (!isLive()) return Promise.resolve(false);
-    return latestEpoch().then(function (epochId) {
+    return loadManifest().then(function (m) {
+      if (!isLive()) return false;
+      var epochId = m.latestEpochId;
       return Promise.all([
         apiGet('epoch-' + epochId + '.json'),
         distRead().epochUnclaimed(epochId).catch(function () { return null; })
@@ -189,11 +216,24 @@
           if (connectBtn) connectBtn.style.display = 'none';
           return myClaim(address, epochId).then(function (c) {
             if (!c) { setText('claim-mine', 'No claim for this wallet in epoch ' + epochId + '.'); return true; }
-            return distRead().isClaimed(epochId, c.index).then(function (done) {
+            return Promise.all([
+              distRead().claimedAmount(epochId, c.index),
+              distRead().claimableNow(epochId, c.index, c.amount).catch(function () { return null; })
+            ]).then(function (rr) {
+              var paid = rr[0], now = rr[1];
+              var done = false;
+              try { done = BigInt(paid.toString()) >= BigInt(c.amount); } catch (e) { done = false; }
               var where = ' It pays the registered wallet ' + shortAddr(c.account) + ' — the connected wallet only pays gas.';
-              setText('claim-mine', done
-                ? 'Claimed. ' + fmt(c.amount) + ' $MUSEBOOK received.' + where
-                : 'You can claim ' + fmt(c.amount) + ' $MUSEBOOK.' + where);
+              var line;
+              if (done) {
+                line = 'Claimed. ' + fmt(c.amount) + ' $MUSEBOOK received.' + where;
+              } else if (now === null) {
+                line = 'You can claim ' + fmt(c.amount) + ' $MUSEBOOK total.' + where;
+              } else {
+                line = fmt(now) + ' $MUSEBOOK claimable now, of ' + fmt(c.amount) +
+                  ' total (unlocks 1/7 per day).' + where;
+              }
+              setText('claim-mine', line);
               var btn = document.querySelector('[data-claim-rewards]');
               if (btn && !done) { btn.disabled = false; btn.removeAttribute('title'); }
               return true;

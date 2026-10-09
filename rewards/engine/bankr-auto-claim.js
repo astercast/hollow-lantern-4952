@@ -47,7 +47,11 @@ const MIN_PAYOUT_WEI = ethers.parseUnits('1', 18); // dust gate: the scoring eng
 
 const DIST_ABI = [
   'function claim(uint256 epochId, uint256 index, address account, uint256 amount, bytes32[] proof)',
-  'function isClaimed(uint256 epochId, uint256 index) view returns (bool)',
+  // NOTE: the contract has no isClaimed() — the public claimedAmount mapping
+  // getter is the truth. Fully claimed = claimedAmount >= allocation.
+  'function claimedAmount(uint256 epochId, uint256 index) view returns (uint256)',
+  'function claimableNow(uint256 epochId, uint256 index, uint256 allocation) view returns (uint256)',
+  'function epochs(uint256 epochId) view returns (bytes32 root,uint256 totalAllocated,uint256 totalClaimed,uint64 publishTime,uint64 claimDeadline,bool finalized,bool exists)',
 ];
 
 function arg(name, def = null) {
@@ -133,35 +137,37 @@ async function main() {
 
   // --- on-chain state -------------------------------------------------------
   const iface = new ethers.Interface(DIST_ABI);
-  const callData = (d) => '0x' + d.slice(2);
-  let isClaimedHex;
+  let epHex;
   try {
-    isClaimedHex = await rpc('eth_call', [{ to: distributor, data: iface.encodeFunctionData('isClaimed', [epochId, leaf.index]) }, 'latest']);
+    epHex = await rpc('eth_call', [{ to: distributor, data: iface.encodeFunctionData('epochs', [epochId]) }, 'latest']);
   } catch (e) {
-    if (/execution reverted/i.test(e.message)) {
-      console.log(`epoch ${epochId}: not published on the distributor contract yet — nothing to do.`);
-      return;
-    }
-    throw e;
+    console.log(`epoch ${epochId}: could not read the distributor contract — nothing to do (${e.message}).`);
+    return;
   }
-  const already = iface.decodeFunctionResult('isClaimed', isClaimedHex)[0];
-  if (already) {
+  const ep = iface.decodeFunctionResult('epochs', epHex);
+  if (!ep.exists) {
+    console.log(`epoch ${epochId}: not published on the distributor contract yet — nothing to do.`);
+    return;
+  }
+  const paidHex = await rpc('eth_call', [{ to: distributor, data: iface.encodeFunctionData('claimedAmount', [epochId, leaf.index]) }, 'latest']);
+  const paid = BigInt(iface.decodeFunctionResult('claimedAmount', paidHex)[0].toString());
+  if (paid >= BigInt(leaf.amount)) {
     console.log(`epoch ${epochId} index ${leaf.index}: already claimed — nothing to do.`);
     return;
   }
 
-  // --- vested estimate (contract vests pro-rata daily over 7 days) -----------
-  const now = Math.floor(Date.now() / 1000);
-  const startTs = Number(epochFile.startTs || 0);
-  const elapsed = Math.max(0, now - startTs);
-  const vestedWei = (BigInt(leaf.amount) * BigInt(Math.min(elapsed, VEST_SECONDS))) / BigInt(VEST_SECONDS);
-  const vested = Number(ethers.formatUnits(vestedWei, 18));
-  if (vestedWei < MIN_PAYOUT_WEI) {
+  // --- claimable now: the contract's own view is the truth ------------------
+  // (discrete daily 1/7 steps from publishTime — no wall-clock guessing).
+  const nowHex = await rpc('eth_call', [{ to: distributor, data: iface.encodeFunctionData('claimableNow', [epochId, leaf.index, leaf.amount]) }, 'latest']);
+  const claimableWei = BigInt(iface.decodeFunctionResult('claimableNow', nowHex)[0].toString());
+  const vested = Number(ethers.formatUnits(claimableWei, 18));
+  if (claimableWei < MIN_PAYOUT_WEI) {
     console.log(`epoch ${epochId}: only ~${vested.toFixed(2)} $MUSEBOOK vested so far (under the 1 $MUSEBOOK floor) — nothing to do yet.`);
     return;
   }
 
   // --- schedule gating -------------------------------------------------------
+  const now = Math.floor(Date.now() / 1000);
   const lastTs = Number(pref.lastClaimTs || 0);
   const thresholdWei = pref.thresholdMusebook != null
     ? ethers.parseUnits(String(pref.thresholdMusebook), 18) : null;
@@ -169,11 +175,11 @@ async function main() {
   if (schedule === 'daily') {
     due = (now - lastTs) >= 24 * 3600; why = 'daily schedule';
   } else if (schedule === 'weekly') {
-    const fullyVested = elapsed >= VEST_SECONDS;
+    const fullyVested = claimableWei >= BigInt(leaf.amount);
     due = fullyVested && (now - lastTs) >= VEST_SECONDS;
     why = 'weekly schedule (full 7-day vest)';
     if (!fullyVested) {
-      console.log(`epoch ${epochId}: weekly schedule — waiting for the full 7-day vest (${Math.ceil((VEST_SECONDS - elapsed) / 86400)}d left). ~${vested.toFixed(2)} $MUSEBOOK vested so far.`);
+      console.log(`epoch ${epochId}: weekly schedule — waiting for the full 7-day vest. ~${vested.toFixed(2)} of ${ethers.formatUnits(leaf.amount, 18)} $MUSEBOOK unlocked so far.`);
       return;
     }
   } else if (schedule === 'threshold') {
@@ -206,7 +212,7 @@ async function main() {
 
   if (!live) {
     console.log('DRY RUN — would submit via Bankr POST /wallet/submit:');
-    console.log(JSON.stringify({ to: tx.transaction.to, chainId, value: '0', data: data.slice(0, 66) + '…(' + data.length + ' chars)' }, null, 2));
+    console.log(JSON.stringify({ to: tx.transaction.to, chainId: CHAIN_ID, value: '0', data: data.slice(0, 66) + '…(' + data.length + ' chars)' }, null, 2));
     console.log(`leaf: index=${leaf.index} amount=${ethers.formatUnits(leaf.amount, 18)} $MUSEBOOK vested≈${vested.toFixed(2)}`);
     console.log('The Bankr wallet pays its own gas. Re-run with --live to submit for real.');
     return;

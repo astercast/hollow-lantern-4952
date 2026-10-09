@@ -66,6 +66,17 @@ function check(cond, reason) {
 }
 
 async function main() {
+  // HUMAN-SIGNS MODEL (user's standing order 2026-10-08): the automation key
+  // must never sign publishRoot on its own. Live (non-dry-run) mode refuses
+  // to run unless ALLOW_AUTOMATION_SIGNING=1 is explicitly set in the
+  // environment. Normal operation is --dry-run scoring via epoch-pipeline.js
+  // prepare; the human signs fund + publishRoot; epoch-pipeline.js activate
+  // verifies and publishes.
+  if (!DRY_RUN && process.env.ALLOW_AUTOMATION_SIGNING !== '1') {
+    fail('refusing live publishRoot: automation signing is disabled by the user\'s standing order. ' +
+      'Run with --dry-run (scoring only), then let the human sign via epoch-pipeline.js prepare. ' +
+      'Set ALLOW_AUTOMATION_SIGNING=1 only for an explicitly authorized exception.');
+  }
   const provider = new ethers.JsonRpcProvider(cfg.RPC_URL);
   const keyData = JSON.parse(fs.readFileSync(KEY_PATH, 'utf8'));
   const wallet = new ethers.Wallet(keyData.privateKey, provider);
@@ -308,7 +319,10 @@ async function main() {
   fs.mkdirSync(SITE_REWARDS, { recursive: true });
   fs.copyFileSync(path.join(API_DIR, 'epoch-' + epochId + '.json'), path.join(SITE_REWARDS, 'epoch-' + epochId + '.json'));
   fs.copyFileSync(path.join(API_DIR, 'claims-' + epochId + '.json'), path.join(SITE_REWARDS, 'claims-' + epochId + '.json'));
-  const manifest = { latestEpochId: epochId, distributor: DISTRIBUTOR, updatedAt: new Date().toISOString() };
+  // Manifest is the claim page's single source of truth for live-ness.
+  // published:false until a human signs and epoch-pipeline.js activate confirms
+  // the root on-chain and flips it. claim.js never needs a manual address flip.
+  const manifest = { latestEpochId: epochId, distributor: DISTRIBUTOR, published: !DRY_RUN, publishedTx: txHash, updatedAt: new Date().toISOString() };
   fs.writeFileSync(path.join(SITE_REWARDS, 'manifest.json'), JSON.stringify(manifest, null, 2));
 
   if (!DRY_RUN) {

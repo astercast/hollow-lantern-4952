@@ -1313,7 +1313,7 @@ app.get('/api/v1/receipt/:registration_id', ah(async (req, res) => {
 app.get('/api/v1/rewards/config', (req, res) => {
   res.json({
     epoch_days: 7,
-    epoch_ids: 'integers starting at 1 (1 = 2026-09-28..2026-10-04)',
+    epoch_ids: 'integers starting at 1 (1 = 2026-10-12..2026-10-18, the first clean epoch)',
     snapshot: 'daily 00:00 UTC',
     payout: 'weekly',
     pot_source: '1/8 of the treasury MUSEBOOK balance at epoch start, plus unclaimed carryover from prior epochs. 100% of every epoch pot goes to holders — no reserve, no treasury cut.',
@@ -1335,8 +1335,8 @@ app.get('/api/v1/rewards/config', (req, res) => {
     },
     epoch_1: {
       epoch_id: 1,
-      snapshot_window: '2026-09-28..2026-10-04 (daily 00:00 UTC snapshots)',
-      funding_and_root: 'signed and published by the treasury owner on 2026-10-05 — claims open only after the Merkle root is published on-chain',
+      snapshot_window: '2026-10-12..2026-10-18 (daily 00:00 UTC snapshots; first clean epoch after the Sept 28–Oct 4 and Oct 5–11 epochs were voided over unrecoverable snapshot gaps)',
+      funding_and_root: 'signed by the treasury owner on 2026-10-18/19 — claims open only after the Merkle root is published on-chain',
       status: 'not yet funded, no root published — nothing is claimable yet',
     },
     data_dir: 'api/data/rewards',
