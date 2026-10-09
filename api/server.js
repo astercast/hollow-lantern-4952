@@ -1318,7 +1318,6 @@ app.get('/api/v1/rewards/config', (req, res) => {
     payout: 'weekly',
     pot_source: '1/8 of the treasury MUSEBOOK balance at epoch start, plus unclaimed carryover from prior epochs. 100% of every epoch pot goes to holders — no reserve, no treasury cut.',
     vesting: '1/7 of each epoch allocation unlocks per 24h after publishRoot; unclaimed slices pile up; 30-day claim window per epoch.',
-    publisher: REWARDS_PUBLISHER,
     rewards_contract: REWARDS_CONTRACT,
     chain_id: NFT_CHAIN_ID,
     claim_fn: 'claim(uint256 epochId, uint256 index, address account, uint256 amount, bytes32[] proof)',
