@@ -1343,11 +1343,11 @@ app.get('/api/v1/rewards/config', (req, res) => {
 });
 
 app.get('/api/v1/rewards/claim', (req, res) => {
-  // Serves the scoring engine's output verbatim: rewards/engine/run-epoch.js
-  // writes claims-<epochId>.json = {epochId, root, totalAllocated,
-  // claims:[{epochId,index,account,amount,proof}]}. After scoring, copy that
-  // file to api/data/rewards/claims-<epochId>.json, commit, and redeploy —
-  // the API serves it from there. Epoch ids are integers starting at 1.
+  // Serves the scoring engine's output verbatim: rewards/engine/epoch-pipeline.js
+  // activate deploys claims-<epochId>.json (a bare array of
+  // {index,account,amount,proof,root,totalAllocated}) to
+  // api/data/rewards/claims-<epochId>.json, commits, and redeploys — the API
+  // serves it from there. Epoch ids are integers starting at 1.
   const epochRaw = String(req.query.epoch || '');
   if (!/^\d+$/.test(epochRaw)) {
     return err(res, 400, 'INVALID_EPOCH', 'Query param epoch must be the integer epoch id (1, 2, 3, ...).');
@@ -1364,7 +1364,12 @@ app.get('/api/v1/rewards/claim', (req, res) => {
   } catch {
     return err(res, 404, 'NOT_FOUND', 'No published rewards for that epoch yet.', { epoch: epochRaw });
   }
-  const claims = Array.isArray(doc.claims) ? doc.claims : [];
+  // The scoring engine (weekly-epoch.js) writes claims-<N>.json as a bare
+  // array of claim objects, each carrying index/account/amount/proof plus
+  // the epoch-level root and totalAllocated. Older run-epoch.js wrote an
+  // object {epochId, root, totalAllocated, claims:[...]}. Accept both;
+  // fail closed (NO_CLAIM) when neither shape is present.
+  const claims = Array.isArray(doc) ? doc : (Array.isArray(doc.claims) ? doc.claims : []);
   const claim = claims.find((c) => {
     try { return checksumAddress(c.account) === holder; } catch { return false; }
   });
@@ -1372,13 +1377,13 @@ app.get('/api/v1/rewards/claim', (req, res) => {
     return err(res, 404, 'NO_CLAIM', 'This holder has no claim in that epoch.', { epoch: epochRaw, holder });
   }
   res.json({
-    epochId: doc.epochId,
+    epochId: doc.epochId || Number(epochRaw),
     index: claim.index,
     holder,
     amount: String(claim.amount),
     proof: claim.proof,
-    root: doc.root,
-    totalAllocated: String(doc.totalAllocated),
+    root: claim.root || doc.root,
+    totalAllocated: String(claim.totalAllocated || doc.totalAllocated),
   });
 });
 

@@ -6,7 +6,7 @@
 
 module.exports = {
   CHAIN_ID: 4663,
-  RPC_URL: 'https://rpc.mainnet.chain.robinhood.com',
+  RPC_URL: process.env.MUSEDOG_RPC_URL || 'https://rpc.mainnet.chain.robinhood.com', // env override added 2026-10-13 for archive-endpoint recovery runs; default unchanged
 
   TOKENS: {
     porch:    '0x4B434541873f171aB70D7d2F3a48b0f0b0f13ba3',
@@ -58,6 +58,6 @@ module.exports = {
   EPOCH_SECONDS: 7 * 86400,
   // PORCH launched 2026-09-23; MDOG earlier. Conservative scan starts:
   SCAN_START_TS: Math.floor(new Date('2026-09-01T00:00:00Z').getTime() / 1000),
-  LOG_CHUNK: 10000,          // blocks per getLogs chunk
-  CALL_CONCURRENCY: 25,
+  LOG_CHUNK: Number(process.env.MUSEDOG_LOG_CHUNK || 10000), // blocks per getLogs chunk; env override added 2026-10-13 for endpoints that time out on wide ranges
+  CALL_CONCURRENCY: Number(process.env.MUSEDOG_CONCURRENCY || 25), // env override added 2026-10-13 for throttled archive endpoints; default unchanged
 };

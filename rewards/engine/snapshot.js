@@ -34,17 +34,31 @@ async function mapPool(items, fn, n) {
   return out;
 }
 
+/* getBlock with retry — flaky endpoints (ordofi) intermittently return
+ * null for valid blocks (2026-10-13); a null must not crash the search. */
+async function getBlockRetry(provider, n) {
+  let lastErr = null;
+  for (let attempt = 1; attempt <= 6; attempt++) {
+    try {
+      const b = await provider.getBlock(n);
+      if (b) return b;
+    } catch (e) { lastErr = e; }
+    if (attempt < 6) await new Promise((r) => setTimeout(r, 1500 * attempt));
+  }
+  throw new Error(`getBlock(${n}) failed after 6 attempts: ${lastErr && lastErr.message}`);
+}
+
 /* Closest block at or before ts (binary search on timestamps). */
 async function blockAtTimestamp(provider, ts, lo, hi) {
   if (hi === undefined) hi = await provider.getBlockNumber();
   if (lo === undefined) {
     lo = hi;
     // walk back until we're under ts (chain is young; ~2s blocks)
-    while ((await provider.getBlock(lo)).timestamp > ts && lo > 0) lo = Math.max(0, lo - 500000);
+    while ((await getBlockRetry(provider, lo)).timestamp > ts && lo > 0) lo = Math.max(0, lo - 500000);
   }
   while (lo < hi) {
     const mid = Math.floor((lo + hi + 1) / 2);
-    const b = await provider.getBlock(mid);
+    const b = await getBlockRetry(provider, mid);
     if (b.timestamp <= ts) lo = mid; else hi = mid - 1;
   }
   return lo;

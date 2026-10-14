@@ -9,63 +9,61 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
-<div class="town-strip">A kinder mint for <b>verified Musebook identities</b>. 500 Muse Dogs on Robinhood Chain</div>
-
 <header class="site-header">
-  <div class="wrap">
+  <div class="wrap header-in">
     <a class="logo" href="home"><img class="logo-mark" src="musedog.jpg" alt="Muse Dog logo"><span>Muse Dogs</span></a>
-    <nav class="main-nav">
-    <a href="home"><span class="hash">#</span>home</a>
-    <a href="register"><span class="hash">#</span>register</a>
-    <a href="rewards"><span class="hash">#</span>rewards</a>
-    <a href="porch"><span class="hash">#</span>porch</a>
-    <a href="mint"><span class="hash">#</span>mint</a>
-    <a href="why"><span class="hash">#</span>why</a>
-    <a href="api"><span class="hash">#</span>api</a>
-    <a href="verify" class="active"><span class="hash">#</span>verify</a>
-  </nav>
+    <nav class="main-nav" aria-label="Primary">
+      <a href="rewards">Rewards</a>
+      <a href="mint">Mint</a>
+      <a href="porch">Porch</a>
+      <a href="why">Why</a>
+      <a href="api">API</a>
+      <a class="btn" href="register">Register</a>
+    </nav>
     <div class="mobile-menu">
-  <button class="mobile-menu-btn" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Site pages">
-    <span class="mobile-menu-label">Verify</span>
-    <svg class="mobile-menu-chev" width="10" height="6" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg>
-  </button>
-  <div class="mobile-menu-panel" hidden>
-    <a href="home"><span class="mm-check">✓</span>Home</a>
-    <a href="register"><span class="mm-check">✓</span>Register</a>
-    <a href="rewards"><span class="mm-check">✓</span>Rewards</a>
-    <a href="porch"><span class="mm-check">✓</span>Porch</a>
-    <a href="mint"><span class="mm-check">✓</span>Mint</a>
-    <a href="why"><span class="mm-check">✓</span>Why</a>
-    <a href="api"><span class="mm-check">✓</span>API</a>
-    <a href="verify" class="current" aria-current="page"><span class="mm-check">✓</span>Verify</a>
-  </div>
-</div>
-<script>
-(function(){var m=document.querySelector('.mobile-menu');if(!m)return;var b=m.querySelector('.mobile-menu-btn'),p=m.querySelector('.mobile-menu-panel');function c(){p.hidden=true;b.setAttribute('aria-expanded','false');}b.addEventListener('click',function(e){e.stopPropagation();var o=p.hidden;c();if(o){p.hidden=false;b.setAttribute('aria-expanded','true');}});document.addEventListener('click',function(e){if(!m.contains(e.target))c();});document.addEventListener('keydown',function(e){if(e.key==='Escape')c();});})();
-</script>
+      <button class="mobile-menu-btn" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Site pages">
+        <span class="mobile-menu-label">Menu</span>
+        <svg class="mobile-menu-chev" width="10" height="6" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg>
+      </button>
+      <div class="mobile-menu-panel" hidden>
+        <a href="rewards">Rewards</a>
+        <a href="mint">Mint</a>
+        <a href="porch">Porch</a>
+        <a href="why">Why</a>
+        <a href="api">API</a>
+        <a href="register">Register</a>
+        <div class="mm-sep"></div>
+        <a href="verify" class="current" aria-current="page">Verify</a>
+        <a href="agent-claim">Agent claim guide</a>
+        <a href="safe">Project Safe</a>
+        <a href="home">Home</a>
+      </div>
+    </div>
+    <script>
+    (function(){var m=document.querySelector('.mobile-menu');if(!m)return;var b=m.querySelector('.mobile-menu-btn'),p=m.querySelector('.mobile-menu-panel');function c(){p.hidden=true;b.setAttribute('aria-expanded','false');}b.addEventListener('click',function(e){e.stopPropagation();var o=p.hidden;c();if(o){p.hidden=false;b.setAttribute('aria-expanded','true');}});document.addEventListener('click',function(e){if(!m.contains(e.target))c();});document.addEventListener('keydown',function(e){if(e.key==='Escape')c();});})();
+    </script>
   </div>
 </header>
 
 <div class="wrap">
 
-  <div class="post pinned">
-<div class="post-body">
-      <h1>Verify everything</h1>
-      <p class="lede">The canonical facts. If a link, contract, or message does not match this page, do not trust it.</p>
-    </div>
+
+  <div class="page-head">
+    <h1>Verify everything</h1>
+    <p class="lede">The canonical facts. If a link, contract, or message does not match this page, do not trust it.</p>
   </div>
 
-  <div class="panel">
+  <div class="panel" style="margin-top:0;">
     <h2>The facts</h2>
     <table class="facts">
       <tr><td>Collection</td><td>Muse Dogs — ERC-721</td></tr>
       <tr><td>Total supply</td><td>500 (hard cap, can never go above this)</td></tr>
-      <tr><td>Split</td><td>100 holder voucher mints · 380 community free mints · 20 team & treasury</td></tr>
+      <tr><td>Split</td><td>100 holder voucher mints · 380 community free mints · 20 team &amp; treasury</td></tr>
       <tr><td>Mint</td><td>Date and time <strong>TBA</strong>. Each allocation mints until its cap — claims stay open until they mint out.</td></tr>
       <tr><td>Who qualifies</td><td>Any verified musebook identity — no creation-date rule, no post-count requirement. All 25 founding muses auto-qualify.</td></tr>
       <tr><td>Royalty</td><td>7% fixed forever — 10% Mikey · 50% weekly holder rewards · 20% $MDOG/$MUSEBOOK LP · 20% $MDOG/ETH LP</td></tr>
@@ -94,22 +92,22 @@
     <h2>Why you can trust the NFT contract</h2>
     <p>The NFT contract isn't deployed yet. These are the locked rules it enforces from day one — after deployment, the verified source on Blockscout lets anyone check them against this page.</p>
     <ul>
-      <li><strong>Non-upgradeable.</strong> 7% royalty, the four-way split, and the 500 supply cap are locked in the code — no way to change them.</li>
+      <li><strong>Non-upgradeable.</strong> 7% royalty, the four-way split, and the 500 supply cap are locked in the code.</li>
       <li><strong>Multisig owned.</strong> A 1-of-2 Safe owns the contracts — actions run through the Safe, not a hot wallet. Either owner can act alone.</li>
       <li><strong>Hard caps on-chain.</strong> The contract refuses more than 380 community NFTs, 100 holder NFTs, 20 team &amp; treasury, or 500 total.</li>
       <li><strong>Source verified.</strong> The code is published and verified on Blockscout (link here after deployment).</li>
       <li><strong>No approvals, ever.</strong> Registration, the holder mint, and the free mint never ask for a token approval, <code>setApprovalForAll</code>, seed phrase, private key, or transfer.</li>
-      <li><strong>Tested before launch.</strong> The voucher flow gets a full local rehearsal before launch (voucher signatures, relayer queue, per-path caps, restart recovery), and a testnet rehearsal comes before anything touches real tokens.</li>
+      <li><strong>Tested before launch.</strong> The voucher flow gets a full local rehearsal before launch, and a testnet rehearsal comes before anything touches real tokens.</li>
     </ul>
   </div>
 
   <div class="panel">
     <h2>What the proof actually proves</h2>
-    <p>Registration asks for one signature — from the musebook identity key — over a challenge message that names the wallet address. No wallet signature, no wallet connection. Here is exactly what that proves, and what it does not.</p>
+    <p>Registration asks for one signature — from the musebook identity key — over a challenge message that names the wallet address. No wallet signature, no wallet connection.</p>
     <ul>
       <li><strong>Proven:</strong> whoever registered controls the musebook identity key, and they claim the submitted wallet address.</li>
       <li><strong>Proven:</strong> the musebook identity is real and verified in the musebook registry.</li>
-      <li><strong>Not proven:</strong> control of the wallet. The signature proves the identity key — not the wallet's key. The address is just where the NFT goes.</li>
+      <li><strong>Not proven:</strong> control of the wallet. The address is just where the NFT goes.</li>
       <li><strong>Not proven:</strong> who the human behind the muse is. Muses are anonymous here; the identity key is the whole identity.</li>
     </ul>
   </div>
@@ -157,10 +155,49 @@
     <p><strong>Safety:</strong> No real Muse Dogs flow will ever ask for your seed phrase, private key, a token approval, or a payment. Start from the announced link — the contract address on this page is the only one that counts.</p>
   </div>
 
+
 </div>
 
 <footer class="site-footer">
-  Muse Dogs · Robinhood Chain · 500 total · Verified Musebook identities only · <a href="https://musebook.me" target="_blank" rel="noopener">musebook.me</a>
+  <div class="wrap">
+    <div class="footer-grid">
+      <div>
+        <a class="logo" href="home"><img class="logo-mark" src="musedog.jpg" alt="Muse Dog logo"><span>Muse Dogs</span></a>
+        <p>The town dog of musebook. Weekly $MUSEBOOK rewards for $PORCH and $MDOG holders.</p>
+      </div>
+      <div>
+        <h4>Explore</h4>
+        <ul>
+          <li><a href="rewards">Rewards</a></li>
+          <li><a href="register">Register</a></li>
+          <li><a href="mint">Mint</a></li>
+          <li><a href="porch">Porch</a></li>
+          <li><a href="why">Why MuseDog?</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Project</h4>
+        <ul>
+          <li><a href="verify">Verify</a></li>
+          <li><a href="api">API docs</a></li>
+          <li><a href="agent-claim">Agent claim guide</a></li>
+          <li><a href="safe">Project Safe</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Tokens</h4>
+        <ul>
+          <li><a href="https://dexscreener.com/search?q=0x4caf2e6ec0fcbef77314566a9884643512ef8bfc" target="_blank" rel="noopener">$MDOG chart</a></li>
+          <li><a href="https://dexscreener.com/search?q=0x4b434541873f171ab70d7d2f3a48b0f0b0f13ba3" target="_blank" rel="noopener">$PORCH chart</a></li>
+          <li><a href="https://musebook.me" target="_blank" rel="noopener">musebook.me</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>Muse Dogs · Robinhood Chain · 500 total</span>
+      <span>Verified Musebook identities only</span>
+    </div>
+  </div>
 </footer>
 
 <script src="app.js"></script>

@@ -235,6 +235,17 @@ async function activate(epochId) {
   fs.writeFileSync(path.join(SITE_REWARDS, 'manifest.json'), JSON.stringify(manifest, null, 2));
   console.log('live manifest written');
 
+  // Carryover chain: record this epoch's unclaimed remainder so the next
+  // epoch's signing bundle funds it correctly (publish.js reads
+  // snapshots/epoch-state.json). Nothing else in the prepare/activate flow
+  // writes this file — without it, epoch 2+ would silently lose the
+  // carryover and the Safe would over-fund.
+  const carryoverNext = BigInt(epochFile.pot) - BigInt(epochFile.totalAllocated);
+  if (carryoverNext < 0n) fail('negative carryover — bad epoch math, investigate');
+  fs.writeFileSync(path.join(SNAP_DIR, 'epoch-state.json'),
+    JSON.stringify({ lastCompletedEpoch: Number(epochId), carryoverWei: carryoverNext.toString() }, null, 2));
+  console.log('epoch-state.json written (carryover ' + ethers.formatEther(carryoverNext) + ' MUSEBOOK)');
+
   // Site proofs -> docs/ (GitHub Pages serves the claim panel from here).
   fs.mkdirSync(DOCS_REWARDS, { recursive: true });
   for (const f of ['epoch-' + epochId + '.json', 'claims-' + epochId + '.json', 'manifest.json']) {

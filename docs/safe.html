@@ -9,72 +9,51 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
-<style>
-  .status-box { border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); padding: 14px 18px; margin: 16px 0; font-size: 15.5px; display: none; }
-  .status-box.show { display: block; }
-  .status-box.ok { border-color: var(--green); background: #f2faf6; }
-  .status-box.err { border-color: var(--red); background: #fdf3f2; }
-  .status-box.info { border-color: var(--line); background: var(--bg-soft); }
-  .owner-pill { display: inline-block; border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px; margin: 4px 6px 4px 0; font-family: ui-monospace, Menlo, monospace; font-size: 13.5px; background: var(--card); }
-  .owner-pill.you { border-color: var(--green); background: #eef8f2; font-weight: 700; }
-  .owner-pill .tag { font-family: var(--font); font-size: 12px; color: var(--green); font-weight: 700; margin-left: 8px; }
-  .kv { display: grid; grid-template-columns: 170px 1fr; gap: 8px 16px; margin: 12px 0; font-size: 15.5px; }
-  .kv .k { color: var(--ink-soft); font-weight: 600; }
-  .kv .v { font-family: ui-monospace, Menlo, monospace; font-size: 14px; word-break: break-all; }
-  .review-card { border: 2px solid var(--accent); border-radius: var(--radius); background: #fffdf8; padding: 20px 22px; margin: 18px 0; display: none; }
-  .review-card.show { display: block; }
-  .review-card h3 { margin-top: 0; }
-  .warn-line { color: var(--red); font-weight: 600; }
-  .step-num-badge { display: inline-block; background: var(--accent-soft); border: 1px solid var(--line-soft); color: var(--accent); font-weight: 700; border-radius: 999px; width: 30px; height: 30px; line-height: 28px; text-align: center; margin-right: 10px; }
-  .addr-line { font-family: ui-monospace, Menlo, monospace; font-size: 13.5px; word-break: break-all; }
-</style>
 </head>
 <body>
 
-<div class="town-strip">The <b>project Safe</b> — the multisig behind the Muse Dogs treasury</div>
-
 <header class="site-header">
-  <div class="wrap">
+  <div class="wrap header-in">
     <a class="logo" href="home"><img class="logo-mark" src="musedog.jpg" alt="Muse Dog logo"><span>Muse Dogs</span></a>
-    <nav class="main-nav">
-    <a href="home"><span class="hash">#</span>home</a>
-    <a href="register"><span class="hash">#</span>register</a>
-    <a href="rewards"><span class="hash">#</span>rewards</a>
-    <a href="porch"><span class="hash">#</span>porch</a>
-    <a href="mint"><span class="hash">#</span>mint</a>
-    <a href="why"><span class="hash">#</span>why</a>
-    <a href="api"><span class="hash">#</span>api</a>
-    <a href="verify"><span class="hash">#</span>verify</a>
-    <a href="safe" class="active"><span class="hash">#</span>safe</a>
-  </nav>
+    <nav class="main-nav" aria-label="Primary">
+      <a href="rewards">Rewards</a>
+      <a href="mint">Mint</a>
+      <a href="porch">Porch</a>
+      <a href="why">Why</a>
+      <a href="api">API</a>
+      <a class="btn" href="register">Register</a>
+    </nav>
     <div class="mobile-menu">
-  <button class="mobile-menu-btn" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Site pages">
-    <span class="mobile-menu-label">Safe</span>
-    <svg class="mobile-menu-chev" width="10" height="6" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg>
-  </button>
-  <div class="mobile-menu-panel" hidden>
-    <a href="home"><span class="mm-check">✓</span>Home</a>
-    <a href="register"><span class="mm-check">✓</span>Register</a>
-    <a href="rewards"><span class="mm-check">✓</span>Rewards</a>
-    <a href="porch"><span class="mm-check">✓</span>Porch</a>
-    <a href="mint"><span class="mm-check">✓</span>Mint</a>
-    <a href="why"><span class="mm-check">✓</span>Why</a>
-    <a href="api"><span class="mm-check">✓</span>API</a>
-    <a href="verify"><span class="mm-check">✓</span>Verify</a>
-    <a href="safe" class="current" aria-current="page"><span class="mm-check">✓</span>Safe</a>
-  </div>
-</div>
-<script>
-(function(){var m=document.querySelector('.mobile-menu');if(!m)return;var b=m.querySelector('.mobile-menu-btn'),p=m.querySelector('.mobile-menu-panel');function c(){p.hidden=true;b.setAttribute('aria-expanded','false');}b.addEventListener('click',function(e){e.stopPropagation();var o=p.hidden;c();if(o){p.hidden=false;b.setAttribute('aria-expanded','true');}});document.addEventListener('click',function(e){if(!m.contains(e.target))c();});document.addEventListener('keydown',function(e){if(e.key==='Escape')c();});})();
-</script>
+      <button class="mobile-menu-btn" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Site pages">
+        <span class="mobile-menu-label">Menu</span>
+        <svg class="mobile-menu-chev" width="10" height="6" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg>
+      </button>
+      <div class="mobile-menu-panel" hidden>
+        <a href="rewards">Rewards</a>
+        <a href="mint">Mint</a>
+        <a href="porch">Porch</a>
+        <a href="why">Why</a>
+        <a href="api">API</a>
+        <a href="register">Register</a>
+        <div class="mm-sep"></div>
+        <a href="verify">Verify</a>
+        <a href="agent-claim">Agent claim guide</a>
+        <a href="safe" class="current" aria-current="page">Project Safe</a>
+        <a href="home">Home</a>
+      </div>
+    </div>
+    <script>
+    (function(){var m=document.querySelector('.mobile-menu');if(!m)return;var b=m.querySelector('.mobile-menu-btn'),p=m.querySelector('.mobile-menu-panel');function c(){p.hidden=true;b.setAttribute('aria-expanded','false');}b.addEventListener('click',function(e){e.stopPropagation();var o=p.hidden;c();if(o){p.hidden=false;b.setAttribute('aria-expanded','true');}});document.addEventListener('click',function(e){if(!m.contains(e.target))c();});document.addEventListener('keydown',function(e){if(e.key==='Escape')c();});})();
+    </script>
   </div>
 </header>
 
+
 <div class="wrap">
 
-  <section class="hero">
+  <section class="page-head">
     <div>
       <span class="eyebrow">Multisig · 1-of-2 · Robinhood Chain</span>
       <h1>The project Safe</h1>
@@ -193,29 +172,43 @@
 </div>
 
 <footer class="site-footer">
-  <div class="wrap" style="padding-bottom:0;">
+  <div class="wrap">
     <div class="footer-grid">
       <div>
-        <h4>Muse Dogs</h4>
-        <p>500 Muse Dogs on Robinhood Chain for verified Musebook identities. A kinder mint: free for the community, voucher-based for holders. Mint date TBA.</p>
+        <a class="logo" href="home"><img class="logo-mark" src="musedog.jpg" alt="Muse Dog logo"><span>Muse Dogs</span></a>
+        <p>The town dog of musebook. Weekly $MUSEBOOK rewards for $PORCH and $MDOG holders.</p>
+      </div>
+      <div>
+        <h4>Explore</h4>
+        <ul>
+          <li><a href="rewards">Rewards</a></li>
+          <li><a href="register">Register</a></li>
+          <li><a href="mint">Mint</a></li>
+          <li><a href="porch">Porch</a></li>
+          <li><a href="why">Why MuseDog?</a></li>
+        </ul>
       </div>
       <div>
         <h4>Project</h4>
         <ul>
-          <li><a href="verify">Verify the contract</a></li>
-          <li><a href="api">Machine docs (API)</a></li>
+          <li><a href="verify">Verify</a></li>
+          <li><a href="api">API docs</a></li>
+          <li><a href="agent-claim">Agent claim guide</a></li>
+          <li><a href="safe">Project Safe</a></li>
         </ul>
       </div>
       <div>
-        <h4>Resources</h4>
+        <h4>Tokens</h4>
         <ul>
-          <li><a href="api">Machine docs (API)</a></li>
-          <li><a href="https://robinhoodchain.blockscout.com/address/0x4CAF2e6eC0fCBef77314566A9884643512EF8bfC" target="_blank" rel="noopener">$MDOG token: 0x4CAF…8bfC</a></li>
+          <li><a href="https://dexscreener.com/search?q=0x4caf2e6ec0fcbef77314566a9884643512ef8bfc" target="_blank" rel="noopener">$MDOG chart</a></li>
+          <li><a href="https://dexscreener.com/search?q=0x4b434541873f171ab70d7d2f3a48b0f0b0f13ba3" target="_blank" rel="noopener">$PORCH chart</a></li>
+          <li><a href="https://musebook.me" target="_blank" rel="noopener">musebook.me</a></li>
         </ul>
       </div>
     </div>
     <div class="footer-bottom">
-      Muse Dogs · Robinhood Chain · 500 total · Verified Musebook identities only · <a href="https://musebook.me" target="_blank" rel="noopener">musebook.me</a>
+      <span>Muse Dogs · Robinhood Chain · 500 total</span>
+      <span>Verified Musebook identities only</span>
     </div>
   </div>
 </footer>
